@@ -805,14 +805,14 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
           disabled={!newMessage.trim() || sending}
           style={{
             ...styles.sendBtn,
-            opacity: !newMessage.trim() || sending ? 0.6 : 1,
+            opacity: !newMessage.trim() || sending ? 0.5 : 1,
             cursor: !newMessage.trim() || sending ? 'not-allowed' : 'pointer',
           }}
         >
           {sending ? (
             <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
           ) : (
-            <Send size={16} />
+            <Send size={16} style={{ marginLeft: '-1px' }} />
           )}
         </button>
       </form>
@@ -961,12 +961,15 @@ const styles = {
   chatWrapper: (height: string, fullScreen: boolean): React.CSSProperties => ({
     display: 'flex',
     flexDirection: 'column',
-    height: fullScreen ? 'calc(100vh - 120px)' : height,
+    height: fullScreen ? '100%' : (height || '100%'),
+    maxHeight: '100%',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: '16px',
     border: `1px solid ${H.border}`,
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
     overflow: 'hidden',
+    position: 'relative',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
   }),
 
@@ -979,6 +982,7 @@ const styles = {
     justifyContent: 'space-between',
     flexWrap: 'wrap' as const,
     gap: '12px',
+    flexShrink: 0,
   },
 
   headerIconWrapper: {
@@ -1038,7 +1042,8 @@ const styles = {
   },
 
   messagesContainer: {
-    flex: 1,
+    flex: '1 1 0%',
+    minHeight: 0,
     overflowY: 'auto' as const,
     padding: '20px',
     display: 'flex',
@@ -1333,8 +1338,10 @@ const styles = {
     display: 'flex',
     gap: '12px',
     alignItems: 'center',
-    position: 'relative' as const,
-    zIndex: 10,
+    flexShrink: 0,
+    position: 'sticky' as const,
+    bottom: 0,
+    zIndex: 20,
     boxSizing: 'border-box' as const,
     width: '100%',
   },
@@ -1342,7 +1349,8 @@ const styles = {
   textInput: {
     width: '100%',
     boxSizing: 'border-box' as const,
-    padding: '11px 16px',
+    height: '42px',
+    padding: '0 16px',
     borderRadius: '12px',
     border: `1.5px solid ${H.border}`,
     backgroundColor: '#FAFAF8',
@@ -1363,10 +1371,11 @@ const styles = {
     color: '#FFFFFF',
     border: 'none',
     fontWeight: '700',
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    cursor: 'pointer',
     position: 'relative' as const,
     zIndex: 12,
     boxSizing: 'border-box' as const,
