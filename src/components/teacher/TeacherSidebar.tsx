@@ -41,16 +41,16 @@ export const TEACHER_NAV_SECTIONS: TeacherNavSectionDef[] = [
   {
     title: 'Schedule',
     items: [
-      { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: H.skyBlue },
-      { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: H.skyBlue },
-      { href: '/teacher/swaps', label: 'Swaps', icon: ArrowRightLeft, color: H.skyBlue },
+      { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
+      { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: H.purple },
+      { href: '/teacher/swaps', label: 'Swaps', icon: ArrowRightLeft, color: H.purple },
     ],
   },
   {
     title: 'Communications',
     items: [
-      { href: '/teacher/chat', label: 'Staff Chat', icon: MessageSquare, color: H.accent },
-      { href: '/teacher/announcements', label: 'Announcements', icon: Megaphone, color: H.softPink },
+      { href: '/teacher/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/teacher/announcements', label: 'Announcements', icon: Megaphone, color: H.skyBlue },
     ],
   },
   {

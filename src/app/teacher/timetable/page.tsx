@@ -96,17 +96,17 @@ export default function TeacherTimetablePage() {
       <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
         <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: H.surface }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: '#D97706' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Weekly Timetable</h1>
             </div>
           </div>
-          <div style={{ padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: H.skyLight, margin: '24px', borderRadius: '14px', border: `1px solid ${H.skyBlue}40` }}>
-            <Info size={24} style={{ color: H.skyBlue, flexShrink: 0 }} />
+          <div style={{ padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: H.purpleLight, margin: '24px', borderRadius: '14px', border: `1px solid ${H.purple}40` }}>
+            <Info size={24} style={{ color: H.purple, flexShrink: 0 }} />
             <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: H.skyDark }}>No Active Timetable</h3>
+              <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: H.purpleDark }}>No Active Timetable</h3>
               <p style={{ margin: 0, fontSize: '13px', color: H.textSec }}>No active timetable template has been published by the administration yet.</p>
             </div>
           </div>
@@ -122,8 +122,8 @@ export default function TeacherTimetablePage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: '#D97706' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Weekly Timetable</h1>
@@ -139,7 +139,7 @@ export default function TeacherTimetablePage() {
               <tr>
                 <th style={styles.thTime}>Period</th>
                 {DAYS.map((day, i) => (
-                  <th key={day} style={{ ...styles.th, ...(i + 1 === today && { background: H.skyLight, color: H.skyDark, borderRadius: '12px' }) }}>
+                  <th key={day} style={{ ...styles.th, ...(i + 1 === today && { background: H.purpleLight, color: H.purpleDark, borderRadius: '12px' }) }}>
                     {day} {i + 1 === today && '(Today)'}
                   </th>
                 ))}

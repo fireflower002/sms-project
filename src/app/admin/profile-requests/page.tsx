@@ -30,7 +30,7 @@ const styles: { [key: string]: React.CSSProperties } = {
 };
 
 const STATUS_STYLES: Record<string, { label: string; style: React.CSSProperties }> = {
-  pending: { label: 'Pending', style: { ...styles.badge, background: H.softPinkLight, color: '#831843' } },
+  pending: { label: 'Pending', style: { ...styles.badge, background: H.skyLight, color: H.skyDark } },
   approved: { label: 'Approved', style: { ...styles.badge, background: H.successLight, color: '#065F46' } },
   rejected: { label: 'Rejected', style: { ...styles.badge, background: H.dangerLight, color: H.danger } },
 };
@@ -111,8 +111,8 @@ export default function ProfileRequestsPage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserCog size={20} style={{ color: '#0284C7' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserCog size={20} style={{ color: H.skyDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Profile Change Requests</h1>
@@ -131,8 +131,8 @@ export default function ProfileRequestsPage() {
         {/* Contiguous Metric Strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', borderBottom: `1px solid ${H.border}`, backgroundColor: H.surface }}>
           <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px', borderRight: `1px solid ${H.border}` }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.softPinkLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertCircle size={18} style={{ color: '#831843' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle size={18} style={{ color: H.skyDark }} />
             </div>
             <div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: H.textPrimary, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{stats.pending}</div>

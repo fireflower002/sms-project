@@ -14,6 +14,8 @@ export const H = {
   dangerLight:'#FEF2F2',              // error background tint
   warning:    '#F59E0B',              // warning amber
   purple:     '#8B5CF6',              // purple accent
+  purpleLight:'#F3E8FF',
+  purpleDark: '#6B21A8',
 
   // Light-theme aliases
   cardBg:     '#FFFFFF',
@@ -28,9 +30,10 @@ export const H = {
   skyBlue:    '#3B82F6',
   skyLight:   '#EFF6FF',
   skyDark:    '#1E40AF',
-  scheduleBlue:     '#3B82F6',
-  scheduleLight:    '#EFF6FF',
-  scheduleDark:     '#1E40AF',
+  scheduleBlue:     '#8B5CF6',
+  schedulePurple:   '#8B5CF6',
+  scheduleLight:    '#F3E8FF',
+  scheduleDark:     '#6B21A8',
   softPink:   '#EC4899',
   softPinkLight:'#FDF2F8',
   softPinkDark:'#9D174D',

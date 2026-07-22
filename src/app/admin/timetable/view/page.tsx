@@ -91,8 +91,8 @@ export default function AdminTimetableViewPage() {
         <header style={{ borderBottom:`1px solid ${H.border}`, background:H.surface, padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <Link href="/admin/timetable" style={ghost()}>←</Link>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: '#D97706' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontFamily:H.font, fontSize:22, fontWeight:600, letterSpacing:'-0.02em', color:H.text, margin:0 }}>School Timetable</h1>

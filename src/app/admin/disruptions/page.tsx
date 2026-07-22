@@ -32,7 +32,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   pageSubtitle: { fontSize: '13px', fontWeight: 400, color: H.textSec, margin: '4px 0 0 0' },
   actionsWrapper: { display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' },
   button: { border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', minHeight: '38px', padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.15s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.skyBlue, color: '#FFFFFF' },
+  buttonPrimary: { background: H.purple, color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
   buttonSuccess: { background: H.successGreen, color: '#FFFFFF' },
   buttonDanger: { background: H.dangerLight, color: H.danger },
@@ -226,8 +226,8 @@ function DisruptionsContent() {
         {/* Contiguous Header Bar */}
         <div style={styles.headerBar}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FFEDD5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertTriangle size={20} style={{ color: '#C2410C' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={styles.pageTitle}>Disruptions & Coverage</h1>
@@ -259,8 +259,8 @@ function DisruptionsContent() {
             onClick={() => setActiveTab('absences')}
             style={{
               ...styles.tabButton,
-              color: activeTab === 'absences' ? H.skyBlue : H.textSec,
-              borderBottom: activeTab === 'absences' ? `3px solid ${H.skyBlue}` : '3px solid transparent',
+              color: activeTab === 'absences' ? H.purple : H.textSec,
+              borderBottom: activeTab === 'absences' ? `3px solid ${H.purple}` : '3px solid transparent',
             }}
           >
             <ClipboardList size={16} />

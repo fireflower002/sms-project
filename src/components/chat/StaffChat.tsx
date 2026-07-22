@@ -510,7 +510,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       <div style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={styles.headerIconWrapper}>
-            <MessageSquare size={18} color="#D97706" />
+            <MessageSquare size={18} color={H.skyDark} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -528,7 +528,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
         {/* Header Right Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={styles.retentionBanner}>
-            <Info size={13} color="#B45309" />
+            <Info size={13} color={H.skyDark} />
             <span>Messages kept <strong>30 days</strong></span>
           </div>
 
@@ -593,7 +593,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
         ) : messages.length === 0 ? (
           <div style={styles.emptyState}>
             <div style={styles.emptyIconCircle}>
-              <Sparkles size={24} color="#D97706" />
+              <Sparkles size={24} color={H.skyDark} />
             </div>
             <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 600, color: H.textPrimary }}>
               Welcome to Staff Channel!
@@ -791,7 +791,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
 
       {/* Message Input Form */}
       <form onSubmit={handleSend} style={styles.inputForm}>
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: '1 1 auto', minWidth: 0, position: 'relative' }}>
           <input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -985,7 +985,7 @@ const styles = {
     width: '38px',
     height: '38px',
     borderRadius: '10px',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: H.skyLight,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1029,9 +1029,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#FEF3C7',
-    border: '1px solid #FDE68A',
-    color: '#B45309',
+    backgroundColor: H.skyLight,
+    border: `1px solid ${H.skyBlue}40`,
+    color: H.skyDark,
     padding: '6px 12px',
     borderRadius: '20px',
     fontSize: '12px',
@@ -1105,7 +1105,7 @@ const styles = {
     width: '48px',
     height: '48px',
     borderRadius: '50%',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: H.skyLight,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1160,8 +1160,8 @@ const styles = {
   },
 
   bubbleSelf: {
-    backgroundColor: '#F59E0B',
-    color: '#78350F',
+    backgroundColor: H.skyBlue,
+    color: '#FFFFFF',
     borderBottomRightRadius: '2px',
   },
 
@@ -1217,7 +1217,7 @@ const styles = {
   editTextarea: {
     width: '100%',
     borderRadius: '8px',
-    border: '1px solid #F59E0B',
+    border: `1px solid ${H.skyBlue}`,
     padding: '6px 10px',
     fontSize: '13px',
     fontFamily: 'inherit',
@@ -1245,7 +1245,7 @@ const styles = {
   },
 
   editSaveBtn: {
-    backgroundColor: '#D97706',
+    backgroundColor: H.skyBlue,
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
@@ -1333,10 +1333,15 @@ const styles = {
     display: 'flex',
     gap: '12px',
     alignItems: 'center',
+    position: 'relative' as const,
+    zIndex: 10,
+    boxSizing: 'border-box' as const,
+    width: '100%',
   },
 
   textInput: {
     width: '100%',
+    boxSizing: 'border-box' as const,
     padding: '11px 16px',
     borderRadius: '12px',
     border: `1.5px solid ${H.border}`,
@@ -1351,15 +1356,20 @@ const styles = {
   sendBtn: {
     width: '42px',
     height: '42px',
+    minWidth: '42px',
+    minHeight: '42px',
     borderRadius: '12px',
-    backgroundColor: H.accent,
-    color: '#78350F',
+    backgroundColor: H.skyBlue,
+    color: '#FFFFFF',
     border: 'none',
     fontWeight: '700',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    position: 'relative' as const,
+    zIndex: 12,
+    boxSizing: 'border-box' as const,
     transition: 'transform 0.1s ease',
   },
 }

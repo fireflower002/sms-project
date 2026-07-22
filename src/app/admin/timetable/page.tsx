@@ -14,7 +14,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   shell: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
   // Buttons
   button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '38px', padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.skyBlue, color: '#FFFFFF' },
+  buttonPrimary: { background: H.purple, color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
   buttonDanger: { background: H.dangerLight, color: H.danger, border: `1px solid ${'#FECACA'}` },
   // Template card (within the shell body)
@@ -34,7 +34,7 @@ const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { 
   const breaks = template.breaks || [];
 
   return (
-    <div style={{ ...styles.templateCard, border: `2px solid ${template.is_active ? H.skyBlue : H.border}` }}>
+    <div style={{ ...styles.templateCard, border: `2px solid ${template.is_active ? H.purple : H.border}` }}>
       <div style={{ padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <h3 style={{ fontSize: '17px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>{template.name}</h3>
@@ -53,7 +53,7 @@ const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { 
           <Eye size={15} /> View Schedule
         </Link>
         {!template.is_active && (
-          <button onClick={() => onSetActive(template.id)} disabled={activating} style={{ ...styles.button, background: H.skyLight, color: H.skyDark }}>
+          <button onClick={() => onSetActive(template.id)} disabled={activating} style={{ ...styles.button, background: H.purpleLight, color: H.purpleDark }}>
             {activating ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Star size={15} />} Set Active
           </button>
         )}
@@ -146,8 +146,8 @@ export default function TimetablePage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: '#D97706' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Timetable Templates</h1>
@@ -163,10 +163,10 @@ export default function TimetablePage() {
         </div>
 
         {/* Info Banner — integrated, borderless */}
-        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${H.border}`, backgroundColor: H.skyLight, display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-          <Info size={20} style={{ color: H.skyDark, flexShrink: 0, marginTop: '1px' }} />
+        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${H.border}`, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+          <Info size={20} style={{ color: H.purpleDark, flexShrink: 0, marginTop: '1px' }} />
           <div>
-            <p style={{ fontWeight: 700, fontSize: '14px', color: H.skyDark, margin: '0 0 4px' }}>How Timetable Templates Work</p>
+            <p style={{ fontWeight: 700, fontSize: '14px', color: H.purpleDark, margin: '0 0 4px' }}>How Timetable Templates Work</p>
             <p style={{ fontSize: '13px', color: H.textSec, lineHeight: 1.6, margin: 0 }}>
               Create a template by setting school hours, period duration, and breaks. The system automatically calculates all periods. Only one template can be <strong>active</strong> at a time — this becomes the Master Schedule for generating daily timetables.
             </p>

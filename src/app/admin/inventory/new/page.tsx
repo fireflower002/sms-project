@@ -75,7 +75,7 @@ export default function NewInventoryPage() {
     }
   }
 
-  const focusStyle = (e: React.FocusEvent<any>) => e.target.style.borderColor = H.honey
+  const focusStyle = (e: React.FocusEvent<any>) => e.target.style.borderColor = H.mintGreen
   const blurStyle  = (e: React.FocusEvent<any>) => e.target.style.borderColor = H.border
 
   return (
@@ -84,16 +84,14 @@ export default function NewInventoryPage() {
       {/* Header */}
       <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <Link href="/admin/inventory" style={ghost()}>←</Link>
-          <Package size={20} style={{ color: H.honey }} />
+          <Package size={20} style={{ color: H.mintGreen }} />
           <div>
             <h1 style={{ fontFamily:H.font, fontSize:17, fontWeight:800, color:H.text, margin:0 }}>Add Inventory Item</h1>
             <p style={{ fontFamily:H.font, fontSize:11, color:H.muted, margin:0 }}>Barcode auto-generated on save</p>
           </div>
         </div>
       </header>
-
-      <main style={{ maxWidth:720, margin:'0 auto', padding:'28px 28px', display:'flex', flexDirection:'column', gap:16 }}>
+      <main style={{ maxWidth:720, margin:'0 auto', padding:'28px 28px 160px', display:'flex', flexDirection:'column', gap:16 }}>
 
         {error && (
           <div style={{ padding:'12px 16px', borderRadius:12, background:'rgba(239,68,68,0.1)', border:'2px solid rgba(239,68,68,0.3)', display:'flex', gap:8, alignItems:'center', fontFamily:H.font, fontSize:13, color:'#f87171' }}>
@@ -116,13 +114,13 @@ export default function NewInventoryPage() {
                 <div>
                   <Label>Category <span style={{ color:'#f87171' }}>*</span></Label>
                   <select style={{ ...inp(), cursor:'pointer', appearance:'none' as const }} value={form.category} onChange={e=>set('category',e.target.value)}>
-                    {CATEGORIES.map(c=><option key={c} style={{ background:H.surface, color:H.honey }}>{c}</option>)}
+                    {CATEGORIES.map(c=><option key={c} style={{ background:H.surface, color:H.mintGreen }}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <Label>Condition</Label>
                   <select style={{ ...inp(), cursor:'pointer', appearance:'none' as const }} value={form.condition} onChange={e=>set('condition',e.target.value)}>
-                    {CONDITIONS.map(c=><option key={c} style={{ background:H.surface, color:H.honey }}>{c}</option>)}
+                    {CONDITIONS.map(c=><option key={c} style={{ background:H.surface, color:H.mintGreen }}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -170,9 +168,9 @@ export default function NewInventoryPage() {
                   onChange={e=>set('serial_number',e.target.value)}
                   onFocus={focusStyle} onBlur={blurStyle}/>
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', borderRadius:10, background:'rgba(238,189,43,0.06)', border:`2px solid rgba(238,189,43,0.2)` }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', borderRadius:10, background:'rgba(6,182,212,0.06)', border:`2px solid rgba(6,182,212,0.2)` }}>
                 <span style={{ fontFamily:H.font, fontSize:12, color:H.muted }}>Barcode auto-generated: </span>
-                <span style={{ fontFamily:'DM Mono, monospace', fontWeight:700, color:H.honey, fontSize:12 }}>PENDING</span>
+                <span style={{ fontFamily:'DM Mono, monospace', fontWeight:700, color:H.mintGreen, fontSize:12 }}>PENDING</span>
               </div>
             </div>
           </Section>
@@ -204,17 +202,60 @@ export default function NewInventoryPage() {
             </div>
           </Section>
 
-          {/* Submit */}
-          <button type="submit" disabled={loading}
-            style={{ background:H.grass, color:'#fff', border:`3px solid ${H.border}`, borderRadius:14, fontFamily:H.font, fontWeight:900, fontSize:15, padding:'14px', cursor:loading?'not-allowed':'pointer', boxShadow:`4px 4px 0 ${H.border}`, display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:loading?0.7:1, transition:'transform 0.1s, box-shadow 0.1s' }}
-            onMouseEnter={e=>{ if(!loading){(e.currentTarget as HTMLElement).style.transform='translateY(2px)';(e.currentTarget as HTMLElement).style.boxShadow=`2px 2px 0 ${H.border}`} }}
-            onMouseLeave={e=>{ (e.currentTarget as HTMLElement).style.transform='translateY(0)';(e.currentTarget as HTMLElement).style.boxShadow=`4px 4px 0 ${H.border}` }}>
-            {loading ? <Loader2 size={16} style={{ animation:'spin 0.7s linear infinite' }}/> : <><Package size={16}/> Save Item</>}
-          </button>
+          {/* Form Action Bar (Normal Layout Flow with generous bottom clearance) */}
+          <div style={{
+            display:'flex',
+            alignItems:'center',
+            justifyContent:'flex-end',
+            gap: 12,
+            marginTop: 12,
+            paddingTop: 8,
+          }}>
+            <Link href="/admin/inventory" style={{
+              background: '#F5F5F4',
+              color: H.textSec,
+              border: `1px solid ${H.border}`,
+              borderRadius: 12,
+              fontFamily: H.font,
+              fontWeight: 700,
+              fontSize: 14,
+              padding: '12px 20px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: 44,
+              boxSizing: 'border-box'
+            }}>
+              Cancel
+            </Link>
+            <button type="submit" disabled={loading}
+              style={{
+                background: H.grass,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 12,
+                fontFamily: H.font,
+                fontWeight: 800,
+                fontSize: 14,
+                padding: '12px 24px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                opacity: loading ? 0.7 : 1,
+                minHeight: 44,
+                boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+                boxSizing: 'border-box'
+              }}>
+              {loading ? <Loader2 size={16} style={{ animation:'spin 0.7s linear infinite' }}/> : <><Package size={16}/> Save Item</>}
+            </button>
+          </div>
         </form>
       </main>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}select option{background:#ffffff;color:#eebd2b}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(6,182,212,0.3);border-radius:99px}select option{background:#ffffff;color:#06b6d4}`}</style>
     </div>
   )
 }

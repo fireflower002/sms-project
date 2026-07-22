@@ -125,8 +125,8 @@ export default function InventoryPage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Package size={20} style={{ color: '#059669' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.mintLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Package size={20} style={{ color: H.mintGreen }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Inventory Management</h1>

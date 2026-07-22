@@ -153,12 +153,12 @@ export default function ClassesPage() {
     headerContent: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '64px', maxWidth: '760px', margin: '0 auto', padding: '12px 20px', flexWrap: 'wrap', gap: '12px' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
     backButton: { background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, minHeight: '44px', padding:'8px 14px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none' },
-    iconWrapper: { width: '32px', height: '32px', borderRadius: '8px', background: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    icon: { color: H.skyDark },
+    iconWrapper: { width: '32px', height: '32px', borderRadius: '8px', background: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    icon: { color: H.purpleDark },
     headerTitle: { fontWeight: 800, fontSize: '14px', color:H.text },
     headerSubtitle: { fontSize: '11px', color: H.sub },
     headerRight: { display: 'flex', gap: '8px', alignItems: 'center' },
-    addGradeButton: { background:H.skyBlue, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight: '44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
+    addGradeButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight: '44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
     
     toast: {
       position: 'fixed', top: '76px', left: '50%', transform: 'translateX(-50%)',
@@ -177,7 +177,7 @@ export default function ClassesPage() {
     emptyStateIcon: { margin: '0 auto 16px', color: H.sub },
     emptyStateTitle: { fontWeight: 700, fontSize: '18px', marginBottom: '8px' },
     emptyStateSubtitle: { fontSize: '14px', color: H.muted, marginBottom: '24px' },
-    emptyStateButton: { background:H.skyBlue, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
+    emptyStateButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
     
     gradesList: { display: 'flex', flexDirection: 'column', gap: '14px' },
     gradeCard: { background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', padding: '0' },
@@ -296,7 +296,7 @@ export default function ClassesPage() {
     previewClassName: { padding: '0 8px', fontSize: '12px', fontWeight: 600, color:H.text },
     modalButtons: { display: 'flex', gap: '10px', marginTop: '4px' },
     cancelButton: { background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:10, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', flex: 1 },
-    createGradeButton: { background:H.skyBlue, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', flex: 1 },
+    createGradeButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', flex: 1 },
   });
 
   return (
@@ -306,9 +306,8 @@ export default function ClassesPage() {
         {/* Contiguous Header Bar */}
         <header style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link href="/admin" style={styles.backButton}><ArrowLeft size={16} /></Link>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <GraduationCap size={20} style={{ color: H.skyDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GraduationCap size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Grades & Classes</h1>

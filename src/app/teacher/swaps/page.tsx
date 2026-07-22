@@ -16,8 +16,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   pageTitle: { fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0 },
   pageSubtitle: { fontSize: '14px', color: H.textSec, marginTop: '4px', margin: '4px 0 0' },
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
-  button: { border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s ease', textDecoration: 'none', minHeight: '40px' },
-  buttonPrimary: { background: H.skyBlue, color: '#FFFFFF' },
+  button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '13px', minHeight: '38px', padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
+  buttonPrimary: { background: H.purple, color: '#FFFFFF' },
   buttonSuccess: { background: H.successLight, color: H.grass, border: `1px solid ${H.grass}40` },
   buttonDanger: { background: H.dangerLight, color: H.danger, border: `1px solid ${H.danger}40` },
 }
@@ -91,8 +91,8 @@ export default function TeacherSwapsPage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FDE8D8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <ArrowRightLeft size={20} style={{ color: '#C2410C' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowRightLeft size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Class Swaps</h1>
@@ -101,7 +101,7 @@ export default function TeacherSwapsPage() {
               </p>
             </div>
           </div>
-          <Link href="/teacher/swaps/new" style={{ ...styles.button, ...styles.buttonPrimary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
+          <Link href="/teacher/swaps/new" style={{ ...styles.button, ...styles.buttonPrimary }}>
             <Plus size={14} /> New Swap Request
           </Link>
         </div>
@@ -109,7 +109,7 @@ export default function TeacherSwapsPage() {
         {/* Integrated Filter Toolbar */}
         <div style={{ padding: '12px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', backgroundColor: '#FAF9F6' }}>
           {(['active', 'all'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{ ...styles.button, background: filter === f ? H.skyLight : H.surface, color: filter === f ? H.skyDark : H.textSec, border: `1px solid ${filter === f ? H.skyBlue : H.border}` }}>
+            <button key={f} onClick={() => setFilter(f)} style={{ ...styles.button, background: filter === f ? H.purpleLight : H.surface, color: filter === f ? H.purpleDark : H.textSec, border: `1px solid ${filter === f ? H.purple : H.border}` }}>
               {f === 'active' ? 'Active Requests' : 'All History'}
             </button>
           ))}

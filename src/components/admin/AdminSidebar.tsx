@@ -49,9 +49,9 @@ export const ADMIN_NAV_SECTIONS: NavSectionDef[] = [
   {
     title: 'Schedule',
     items: [
-      { href: '/admin/classes', label: 'Classes', icon: BookOpen, color: H.skyBlue },
-      { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.skyBlue },
-      { href: '/admin/disruptions', label: 'Disruptions', icon: ClipboardList, color: H.skyBlue },
+      { href: '/admin/classes', label: 'Classes', icon: BookOpen, color: H.purple },
+      { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
+      { href: '/admin/disruptions', label: 'Disruptions', icon: ClipboardList, color: H.purple },
     ],
   },
   {
@@ -63,9 +63,9 @@ export const ADMIN_NAV_SECTIONS: NavSectionDef[] = [
   {
     title: 'Communications',
     items: [
-      { href: '/admin/chat', label: 'Staff Chat', icon: MessageSquare, color: H.accent },
-      { href: '/admin/announcements', label: 'Notices', icon: Megaphone, color: H.softPink },
-      { href: '/admin/profile-requests', label: 'Requests', icon: Bell, color: H.softPink },
+      { href: '/admin/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/admin/announcements', label: 'Notices', icon: Megaphone, color: H.skyBlue },
+      { href: '/admin/profile-requests', label: 'Requests', icon: Bell, color: H.skyBlue },
     ],
   },
 ]

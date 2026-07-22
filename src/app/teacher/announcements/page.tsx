@@ -73,8 +73,8 @@ export default function TeacherAnnouncementsPage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FCE7F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Megaphone size={20} style={{ color: '#DB2777' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Megaphone size={20} style={{ color: H.skyDark }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Announcements</h1>
@@ -87,10 +87,10 @@ export default function TeacherAnnouncementsPage() {
 
         {/* Integrated Filter Toolbar */}
         <div style={{ padding: '12px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', backgroundColor: '#FAF9F6' }}>
-          <button onClick={() => setFilter('unread')} style={{ ...styles.button, background: filter === 'unread' ? H.softPinkLight : H.surface, color: filter === 'unread' ? '#831843' : H.textSec, border: `1px solid ${filter === 'unread' ? H.softPink : H.border}` }}>
+          <button onClick={() => setFilter('unread')} style={{ ...styles.button, background: filter === 'unread' ? H.skyLight : H.surface, color: filter === 'unread' ? H.skyDark : H.textSec, border: `1px solid ${filter === 'unread' ? H.skyBlue : H.border}` }}>
             <Bell size={14} /> Unread {unreadCount > 0 && `(${unreadCount})`}
           </button>
-          <button onClick={() => setFilter('all')} style={{ ...styles.button, background: filter === 'all' ? H.softPinkLight : H.surface, color: filter === 'all' ? '#831843' : H.textSec, border: `1px solid ${filter === 'all' ? H.softPink : H.border}` }}>
+          <button onClick={() => setFilter('all')} style={{ ...styles.button, background: filter === 'all' ? H.skyLight : H.surface, color: filter === 'all' ? H.skyDark : H.textSec, border: `1px solid ${filter === 'all' ? H.skyBlue : H.border}` }}>
             <List size={14} /> All Notices
           </button>
         </div>
