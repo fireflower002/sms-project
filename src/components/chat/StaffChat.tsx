@@ -80,16 +80,17 @@ function getDateLabel(isoString: string): string {
 
 // Helper to format raw database rows safely
 function formatRawMessage(m: any): ChatMessage {
-  const authorObj = Array.isArray(m.author) ? m.author[0] : m.author
+  const rawAuthor = m.author || m.profiles
+  const authorObj = Array.isArray(rawAuthor) ? rawAuthor[0] : rawAuthor
   return {
     id: m.id,
     sender_id: m.sender_id,
     body: m.body,
     created_at: m.created_at,
     is_edited: m.is_edited || false,
-    updated_at: m.updated_at,
+    updated_at: m.updated_at || null,
     is_deleted: m.is_deleted || false,
-    deleted_at: m.deleted_at,
+    deleted_at: m.deleted_at || null,
     author: {
       full_name: authorObj?.full_name || 'Staff Member',
       role: authorObj?.role || 'teacher',
@@ -158,22 +159,12 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     try {
       const { data, error: fetchErr } = await supabase
         .from('hive_messages')
-        .select('id, sender_id, body, created_at, is_edited, updated_at, is_deleted, deleted_at, author:profiles!sender_id(full_name, role)')
+        .select('id, sender_id, body, created_at, profiles!sender_id(full_name, role)')
         .order('created_at', { ascending: false })
         .limit(35)
 
       if (fetchErr) {
-        // Fallback query if new columns aren't in PostgREST cache yet
-        const { data: fallbackData, error: fbErr } = await supabase
-          .from('hive_messages')
-          .select('id, sender_id, body, created_at, author:profiles!sender_id(full_name, role)')
-          .order('created_at', { ascending: false })
-          .limit(35)
-
-        if (fbErr) throw fbErr
-        const formattedFallback: ChatMessage[] = (fallbackData || []).map(formatRawMessage).reverse()
-        setMessages(formattedFallback)
-        setHasMore(formattedFallback.length === 35)
+        throw fetchErr
       } else {
         const formatted: ChatMessage[] = (data || []).map(formatRawMessage).reverse()
         setMessages(formatted)
@@ -214,27 +205,13 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     try {
       const { data, error: olderErr } = await supabase
         .from('hive_messages')
-        .select('id, sender_id, body, created_at, is_edited, updated_at, is_deleted, deleted_at, author:profiles!sender_id(full_name, role)')
+        .select('id, sender_id, body, created_at, profiles!sender_id(full_name, role)')
         .lt('created_at', oldestTimestamp)
         .order('created_at', { ascending: false })
         .limit(35)
 
       if (olderErr) {
-        // Fallback without new columns
-        const { data: fallbackData } = await supabase
-          .from('hive_messages')
-          .select('id, sender_id, body, created_at, author:profiles!sender_id(full_name, role)')
-          .lt('created_at', oldestTimestamp)
-          .order('created_at', { ascending: false })
-          .limit(35)
-
-        if (fallbackData && fallbackData.length > 0) {
-          const older: ChatMessage[] = fallbackData.map(formatRawMessage).reverse()
-          setMessages((prev) => [...older, ...prev])
-          setHasMore(fallbackData.length === 35)
-        } else {
-          setHasMore(false)
-        }
+        setHasMore(false)
       } else if (data && data.length > 0) {
         const older: ChatMessage[] = data.map(formatRawMessage).reverse()
         setMessages((prev) => [...older, ...prev])
@@ -431,40 +408,22 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     }
   }
 
-  // 8. Delete Message (Soft delete for continuous UI timeline)
+  // 8. Delete Message (Permanent DB deletion via server API)
   const handleDelete = async (msgId: string) => {
     setDeletingId(msgId)
-    const nowIso = new Date().toISOString()
 
     try {
-      // Try soft-delete first
-      const { error: softErr } = await supabase
-        .from('hive_messages')
-        .update({
-          is_deleted: true,
-          body: 'This message was deleted',
-          deleted_at: nowIso,
-        })
-        .eq('id', msgId)
+      const res = await fetch('/api/chat/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'single', messageId: msgId }),
+      })
+      const data = await res.json()
 
-      if (softErr) {
-        // Fallback to hard delete if is_deleted column is not present
-        const { error: hardErr } = await supabase
-          .from('hive_messages')
-          .delete()
-          .eq('id', msgId)
-
-        if (hardErr) {
-          setError(`Delete failed: ${hardErr.message}`)
-        } else {
-          setMessages((prev) => prev.filter((m) => m.id !== msgId))
-        }
+      if (!res.ok || data.error) {
+        setError(`Delete failed: ${data.error || 'Server error'}`)
       } else {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === msgId ? { ...m, is_deleted: true, body: 'This message was deleted', deleted_at: nowIso } : m
-          )
-        )
+        setMessages((prev) => prev.filter((m) => m.id !== msgId))
       }
     } catch (err: any) {
       setError(err.message || 'Failed to delete message')
@@ -473,18 +432,20 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     }
   }
 
-  // 9. Clear Chat Functions
+  // 9. Clear Chat Functions (Permanent DB deletion via server API)
   const handleClearMyMessages = async () => {
     if (!user) return
     setClearing(true)
     try {
-      const { error: delErr } = await supabase
-        .from('hive_messages')
-        .delete()
-        .eq('sender_id', user.id)
+      const res = await fetch('/api/chat/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'my_messages' }),
+      })
+      const data = await res.json()
 
-      if (delErr) {
-        setError(`Failed to clear your messages: ${delErr.message}`)
+      if (!res.ok || data.error) {
+        setError(`Failed to clear your messages: ${data.error || 'Server error'}`)
       } else {
         setMessages((prev) => prev.filter((m) => m.sender_id !== user.id))
         setShowClearModal(false)
@@ -500,13 +461,15 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     if (user?.role !== 'admin') return
     setClearing(true)
     try {
-      const { error: delErr } = await supabase
-        .from('hive_messages')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000')
+      const res = await fetch('/api/chat/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'all_messages' }),
+      })
+      const data = await res.json()
 
-      if (delErr) {
-        setError(`Failed to clear channel: ${delErr.message}`)
+      if (!res.ok || data.error) {
+        setError(`Failed to clear channel: ${data.error || 'Server error'}`)
       } else {
         setMessages([])
         setShowClearModal(false)
