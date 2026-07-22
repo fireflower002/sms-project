@@ -507,7 +507,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
   return (
     <div style={styles.chatWrapper(height, fullScreen)}>
       {/* Top Bar Header */}
-      <div style={styles.header}>
+      <div className="staff-chat-header" style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={styles.headerIconWrapper}>
             <MessageSquare size={18} color={H.skyDark} />
@@ -790,7 +790,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       )}
 
       {/* Message Input Form */}
-      <form onSubmit={handleSend} style={styles.inputForm}>
+      <form onSubmit={handleSend} className="staff-chat-input-form" style={styles.inputForm}>
         <div style={{ flex: '1 1 auto', minWidth: 0, position: 'relative' }}>
           <input
             value={newMessage}
@@ -816,6 +816,19 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
           )}
         </button>
       </form>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .staff-chat-header {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+          .staff-chat-input-form {
+            padding: 10px 12px !important;
+            gap: 8px !important;
+          }
+        }
+      `}</style>
 
       {/* Clear Chat Confirmation Modal */}
       {showClearModal && (
