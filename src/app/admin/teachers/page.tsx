@@ -1,0 +1,292 @@
+'use client'
+import { useEffect, useState, useCallback, Fragment } from 'react'
+import Link from 'next/link'
+import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import AddTeacherModal from '@/components/admin/AddTeacherModal'
+import TeacherActions from '@/components/admin/TeacherActions'
+import { H } from '@/lib/honey'
+import Badge from '@/components/ui/Badge'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { TableSkeleton } from '@/components/ui/Skeleton'
+import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+
+const PAGE_SIZE = 10;
+
+const styles: { [key: string]: React.CSSProperties } = {
+  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 32px)', boxSizing: 'border-box' },
+  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
+  pageTitle: { fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0 },
+  pageSubtitle: { fontSize: '14px', color: H.textSec, marginTop: '4px', margin: '4px 0 0 0' },
+  actionsWrapper: { display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' },
+  card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
+  // Table
+  tableWrapper: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
+  table: { width: '100%', minWidth: '600px', borderCollapse: 'collapse' },
+  th: { fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '14px 20px', textAlign: 'left', borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
+  td: { padding: '16px 20px', fontSize: '14px', color: H.textSec, borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
+  trHover: { backgroundColor: H.bg },
+  // Badges
+  badge: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600 },
+  badgeActive: { backgroundColor: H.successLight, color: '#065F46' },
+  badgeInactive: { backgroundColor: '#F5F5F4', color: H.textSec },
+  badgePending: { backgroundColor: H.accentLight, color: H.accentDark },
+  // Buttons
+  button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '44px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
+  buttonPrimary: { background: H.successGreen, color: '#FFFFFF' },
+  buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
+  // Filters
+  filterContainer: { display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
+  // Pagination
+  paginationContainer: { padding: '16px 20px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' },
+  paginationText: { fontSize: '13px', color: H.textSec },
+};
+
+// SUB-COMPONENTS ==============================================================
+
+const PageHeader = ({ stats, onRefresh, onAddSuccess }: { stats: any; onRefresh: () => void; onAddSuccess: () => void }) => (
+  <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Users size={20} style={{ color: '#0E7490' }} />
+      </div>
+      <div>
+        <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Teacher Management</h1>
+        <p style={{ fontSize: '13px', fontWeight: 400, color: H.textSec, margin: '4px 0 0', fontVariantNumeric: 'tabular-nums' }}>
+          {stats.total} total staff • {stats.active} active • {stats.pending} pending
+        </p>
+      </div>
+    </div>
+    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+      <button onClick={onRefresh} title="Refresh" style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px', minHeight: '38px' }}>
+        <RefreshCw size={14} />
+      </button>
+      <Link href="/admin/teachers/bulk" style={{ ...styles.button, ...styles.buttonSecondary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
+        <Upload size={14} /> Bulk Import
+      </Link>
+      <AddTeacherModal onSuccess={onAddSuccess} />
+    </div>
+  </div>
+);
+
+const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter }: { search: string; setSearch: (s: string) => void; statusFilter: string; setStatusFilter: (s: any) => void }) => {
+  const [isFocused, setIsFocused] = useState(false);
+  return (
+    <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+      <div style={{ position: 'relative', flex: '1 1 240px', display: 'flex', alignItems: 'center' }}>
+        <Search size={15} style={{ position: 'absolute', left: 12, color: H.textMuted, pointerEvents: 'none' }} />
+        <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by teacher name..." style={{ width: '100%', minHeight: '38px', padding: '8px 14px 8px 36px', borderRadius: '8px', border: `1px solid ${isFocused ? H.successGreen : H.border}`, background: H.surface, color: H.textPrimary, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} />
+      </div>
+      <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden', minHeight: '38px' }}>
+        {(['all', 'active', 'inactive'] as const).map(s => (
+          <button key={s} onClick={() => setStatusFilter(s)} style={{
+            padding: '7px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+            border: 'none', borderLeft: s !== 'all' ? `1px solid ${H.border}` : 'none',
+            background: statusFilter === s ? H.surface : H.bg,
+            color: statusFilter === s ? H.textPrimary : H.textSec, textTransform: 'capitalize',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+          }}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDone: () => void }) => {
+  const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  if (teachers.length === 0) return <p style={{ textAlign: 'center', padding: '48px', color: H.textMuted }}>No teachers match the current filters.</p>;
+  
+  return (
+    <div style={styles.tableWrapper}>
+      <table style={styles.table}>
+        <thead><tr>
+          {['Teacher', 'Email', 'Status', 'Joined', 'Actions'].map(h => <th key={h} style={styles.th}>{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {teachers.map((t: any) => (
+            <tr key={t.id} onMouseEnter={() => setHoveredRow(t.id)} onMouseLeave={() => setHoveredRow(null)} style={hoveredRow === t.id ? styles.trHover : {}}>
+              <td style={{ ...styles.td, color: H.textPrimary, fontWeight: 600 }}>{t.full_name}</td>
+              <td style={styles.td}>{t.email}</td>
+              <td style={styles.td}>
+                {t.must_change_password ? (
+                  <Badge variant="pending">Password Reset Required</Badge>
+                ) : t.is_active ? (
+                  <Badge variant="active">Active</Badge>
+                ) : (
+                  <Badge variant="inactive">Inactive</Badge>
+                )}
+              </td>
+              <td style={styles.td}>{new Date(t.created_at).toLocaleDateString('en-GB')}</td>
+              <td style={styles.td}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <TeacherActions teacherId={t.id} isActive={t.is_active} teacherName={t.full_name} onDone={onActionDone} />
+                  <Link href={`/admin/teachers/${t.id}`} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px' }}><ChevronRight size={16}/></Link>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const PendingTable = ({ pending, deletePending, deletingId }: { pending: any[]; deletePending: (id: string, name: string) => Promise<void> | void; deletingId: string | null }) => (
+  <div>
+    {/* Section header strip */}
+    <div style={{ padding: '12px 24px', borderTop: `1px solid ${H.border}`, backgroundColor: '#FAF9F6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <AlertTriangle size={15} style={{ color: '#B45309' }} />
+      <span style={{ fontSize: '13px', fontWeight: 700, color: H.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Sign-ups</span>
+      <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: '4px' }}>({pending.length})</span>
+    </div>
+    <div style={styles.tableWrapper}>
+      <table style={styles.table}>
+        <thead><tr>
+          {['Name', 'Email', 'Added On', ''].map(h => <th key={h} style={styles.th}>{h}</th>)}
+        </tr></thead>
+        <tbody>
+          {pending.map((u: any) => (
+            <tr key={u.id}>
+              <td style={{ ...styles.td, fontWeight: 600, color: H.textPrimary }}>{u.full_name}</td>
+              <td style={styles.td}>{u.email}</td>
+              <td style={{ ...styles.td, fontVariantNumeric: 'tabular-nums' }}>{new Date(u.created_at).toLocaleDateString('en-GB')}</td>
+              <td style={{ ...styles.td, textAlign: 'right' }}>
+                <button onClick={() => deletePending(u.id, u.full_name)} disabled={deletingId === u.id} style={{
+                  background: 'none', border: 'none', cursor: 'pointer', color: H.danger, padding: '6px 8px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {deletingId === u.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={16} />}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
+
+const Pagination = ({ page, totalPages, setPage, totalCount }: { page: number; totalPages: number; setPage: (fn: (p: number) => number) => void; totalCount: number }) => {
+    if (totalPages <= 1) return null;
+    return (
+        <div style={styles.paginationContainer}>
+            <span style={styles.paginationText}>{page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount} teachers</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => setPage((p: number) => Math.max(0, p - 1))} disabled={page === 0} style={{ ...styles.button, ...styles.buttonSecondary, opacity: page === 0 ? 0.5 : 1 }}>Prev</button>
+                <button onClick={() => setPage((p: number) => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} style={{ ...styles.button, ...styles.buttonSecondary, opacity: page >= totalPages - 1 ? 0.5 : 1 }}>Next</button>
+            </div>
+        </div>
+    )
+};
+
+
+// MAIN PAGE COMPONENT ========================================================
+export default function TeachersPage() {
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [pending, setPending] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [page, setPage] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0, pending: 0 })
+  const [addSuccess, setAddSuccess] = useState(false)
+  const [deletingPending, setDeletingPending] = useState<string | null>(null)
+  const [modal, setModal] = useState<ConfirmModalState | null>(null)
+  const supabase = createClient();
+
+  const fetchTeachers = useCallback(async () => {
+    setLoading(true)
+    try {
+      let query = supabase.from('profiles').select('*', { count: 'exact' }).eq('role', 'teacher').order('full_name').range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1)
+      if (statusFilter === 'active') query = query.eq('is_active', true)
+      if (statusFilter === 'inactive') query = query.eq('is_active', false)
+      if (search.trim()) query = query.ilike('full_name', `%${search.trim()}%`)
+      const { data, count } = await query;
+      setTeachers(data || []);
+      setTotalCount(count || 0);
+
+      const [{ count: total }, { count: active }, { count: inactive }, { data: pendingData }, { data: profileEmails }] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', false),
+        supabase.from('allowed_users').select('*').eq('is_registered', false).order('created_at', { ascending: false }),
+        supabase.from('profiles').select('email').eq('role', 'teacher'),
+      ]);
+
+      const registeredEmails = new Set((profileEmails || []).map(p => p.email?.toLowerCase()));
+      const actualPending = (pendingData || []).filter(u => !registeredEmails.has(u.email?.toLowerCase()));
+
+      setStats({ total: total || 0, active: active || 0, inactive: inactive || 0, pending: actualPending.length });
+      setPending(actualPending);
+    } finally { setLoading(false) }
+  }, [search, statusFilter, page]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => fetchTeachers(), search ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [fetchTeachers, search]);
+  
+  useEffect(() => { setPage(0) }, [search, statusFilter]);
+
+  const handleAddSuccess = () => {
+    setAddSuccess(true);
+    fetchTeachers();
+    setTimeout(() => setAddSuccess(false), 5000);
+  };
+  
+  const deletePending = (id: string, name: string) => {
+    setModal({
+      title: 'Delete Pre-Registration?',
+      message: `This will permanently delete the pre-registration for "${name}". They will not be able to sign up. Are you sure?`,
+      variant: 'danger',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setModal(null);
+        setDeletingPending(id);
+        await supabase.from('allowed_users').delete().eq('id', id);
+        setDeletingPending(null);
+        fetchTeachers();
+      }
+    });
+  };
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  return (
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', paddingBottom: '80px', fontFamily: H.font, boxSizing: 'border-box' }}>
+      <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
+        <PageHeader stats={stats} onRefresh={fetchTeachers} onAddSuccess={handleAddSuccess} />
+        
+        {addSuccess && (
+          <div style={{ padding: '12px 24px', background: H.successLight, borderBottom: `1px solid ${H.successGreen}`, display: 'flex', alignItems: 'center', gap: '12px', color: '#065F46', fontWeight: 600, fontSize: '13px' }}>
+            <CheckCircle2 size={18}/> Teacher account created. The teacher can now sign in using their temporary password.
+          </div>
+        )}
+
+        <FilterControls search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+
+        <div>
+          {loading ? (
+            <TableSkeleton rows={5} columns={4} />
+          ) : (
+            <Fragment>
+              <TeachersTable teachers={teachers} onActionDone={fetchTeachers} />
+              <Pagination page={page} totalPages={totalPages} setPage={setPage} totalCount={totalCount} />
+            </Fragment>
+          )}
+        </div>
+
+        {pending.length > 0 && (
+          <PendingTable pending={pending} deletePending={deletePending} deletingId={deletingPending} />
+        )}
+      </div>
+
+      <ConfirmModal
+        open={!!modal}
+        {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
+        onCancel={() => setModal(null)}
+      />
+    </div>
+  )
+}

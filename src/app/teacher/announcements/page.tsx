@@ -1,0 +1,134 @@
+'use client'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Bell, List, Megaphone } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { formatSLT } from '@/lib/utils'
+import { H } from '@/lib/honey'
+import Badge from '@/components/ui/Badge'
+import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import EmptyState from '@/components/ui/EmptyState'
+
+const styles: { [key: string]: React.CSSProperties } = {
+  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font },
+  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
+  pageTitle: { fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0 },
+  pageSubtitle: { fontSize: '14px', color: H.textSec, marginTop: '4px', margin: '4px 0 0' },
+  card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
+  button: { border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', minHeight: '40px', transition: 'all 0.15s ease' },
+}
+
+const getPriorityBadgeVariant = (priority: string) => {
+  switch (priority) {
+    case 'high': return 'danger'
+    case 'medium': return 'pending'
+    default: return 'inactive'
+  }
+}
+
+export default function TeacherAnnouncementsPage() {
+  const [items, setItems] = useState<any[]>([])
+  const [readIds, setReadIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'unread' | 'all'>('unread')
+  const supabase = createClient()
+  const router = useRouter()
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user) { router.push('/teacher/login'); return }
+
+      const [{ data: anns }, { data: reads }] = await Promise.all([
+        supabase.from('announcements').select('*').eq('is_published', true).eq('is_active', true).in('target_audience', ['all', 'teachers']).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
+        supabase.from('announcement_reads').select('announcement_id').eq('user_id', session.user.id),
+      ])
+
+      const initialReadIds = new Set((reads || []).map((r: any) => r.announcement_id))
+      setItems(anns || [])
+      setReadIds(initialReadIds)
+      setLoading(false)
+
+      // Auto-mark as read after a short delay
+      setTimeout(async () => {
+        const unreadItems = (anns || []).filter((a: any) => !initialReadIds.has(a.id))
+        if (unreadItems.length > 0) {
+          const newReads = unreadItems.map(item => ({ announcement_id: item.id, user_id: session.user.id }))
+          await supabase.from('announcement_reads').upsert(newReads)
+          const updatedReadIds = new Set([...Array.from(initialReadIds), ...unreadItems.map(i => i.id)])
+          setReadIds(updatedReadIds)
+        }
+      }, 2500)
+    }
+    fetchData()
+  }, [router, supabase])
+
+  const unreadCount = items.filter(i => !readIds.has(i.id)).length
+  const filteredItems = filter === 'unread' ? items.filter(i => !readIds.has(i.id)) : items
+
+  return (
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '48px' }}>
+      <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
+
+        {/* Contiguous Header Bar */}
+        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FCE7F3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Megaphone size={20} style={{ color: '#DB2777' }} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Announcements</h1>
+              <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0', fontVariantNumeric: 'tabular-nums' }}>
+                {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Integrated Filter Toolbar */}
+        <div style={{ padding: '12px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center', backgroundColor: '#FAF9F6' }}>
+          <button onClick={() => setFilter('unread')} style={{ ...styles.button, background: filter === 'unread' ? H.softPinkLight : H.surface, color: filter === 'unread' ? '#831843' : H.textSec, border: `1px solid ${filter === 'unread' ? H.softPink : H.border}` }}>
+            <Bell size={14} /> Unread {unreadCount > 0 && `(${unreadCount})`}
+          </button>
+          <button onClick={() => setFilter('all')} style={{ ...styles.button, background: filter === 'all' ? H.softPinkLight : H.surface, color: filter === 'all' ? '#831843' : H.textSec, border: `1px solid ${filter === 'all' ? H.softPink : H.border}` }}>
+            <List size={14} /> All Notices
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '24px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px' }}>
+              <LoadingSpinner size={32} color={H.softPink} />
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <div style={{ padding: '20px 0' }}>
+              <EmptyState title="All Caught Up!" description="There are no announcements to display for this view." />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {filteredItems.map(item => {
+                const isRead = readIds.has(item.id)
+                return (
+                  <div key={item.id} style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderLeft: `4px solid ${item.priority === 'high' ? H.danger : item.priority === 'medium' ? H.accent : H.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+                    <div style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        {!isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: H.skyBlue, flexShrink: 0 }} title="Unread" />}
+                        {item.is_pinned && <Badge variant="pending">Pinned</Badge>}
+                        {item.priority && <Badge variant={getPriorityBadgeVariant(item.priority)}>{item.priority} Priority</Badge>}
+                        <Badge variant="category">{item.target_audience || 'All'}</Badge>
+                        <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{formatSLT(item.created_at, 'dd MMM, h:mm a')}</span>
+                      </div>
+                      <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>{item.title}</h2>
+                      <p style={{ fontSize: '14px', color: H.textSec, lineHeight: 1.7, margin: 0 }}>{item.body}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
