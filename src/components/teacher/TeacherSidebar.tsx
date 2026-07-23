@@ -43,7 +43,6 @@ export const TEACHER_NAV_SECTIONS: TeacherNavSectionDef[] = [
     items: [
       { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
       { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: H.purple },
-      { href: '/teacher/swaps', label: 'Swaps', icon: ArrowRightLeft, color: H.purple },
     ],
   },
   {

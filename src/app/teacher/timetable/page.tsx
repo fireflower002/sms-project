@@ -82,6 +82,16 @@ export default function TeacherTimetablePage() {
 
   const periods = template ? generatePeriods(template.start_time, template.end_time, template.period_duration, template.breaks || []) : []
   const today = todayDayOfWeek()
+  const initialDay = today >= 1 && today <= 5 ? today : 1
+  const [selectedDay, setSelectedDay] = useState<number>(initialDay)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   if (loading) {
     return (
@@ -115,92 +125,283 @@ export default function TeacherTimetablePage() {
     )
   }
 
+  const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+
   return (
-    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '48px' }}>
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '64px' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
 
         {/* Contiguous Header Bar */}
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Calendar size={20} style={{ color: H.purpleDark }} />
             </div>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Weekly Timetable</h1>
-              <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0', fontVariantNumeric: 'tabular-nums' }}>{schedule.length} periods assigned this week</p>
+              <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Weekly Timetable</h1>
+              <p style={{ fontSize: '12.5px', color: H.textSec, margin: '2px 0 0', fontVariantNumeric: 'tabular-nums' }}>{schedule.length} periods assigned this week</p>
             </div>
           </div>
           <Badge variant="category"><Calendar size={13} style={{ marginRight: 4 }} /> Active Schedule</Badge>
         </div>
 
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.thTime}>Period</th>
-                {DAYS.map((day, i) => (
-                  <th key={day} style={{ ...styles.th, ...(i + 1 === today && { background: H.purpleLight, color: H.purpleDark, borderRadius: '12px' }) }}>
-                    {day} {i + 1 === today && '(Today)'}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
+        {/* Day Selector Tabs for Mobile / Single Day Navigation */}
+        <div style={{
+          padding: '12px 16px',
+          borderBottom: `1px solid ${H.border}`,
+          backgroundColor: H.bg,
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          {DAYS.map((dayName, idx) => {
+            const dayNum = idx + 1
+            const isSelected = selectedDay === dayNum
+            const isToday = dayNum === today
+            return (
+              <button
+                key={dayName}
+                onClick={() => setSelectedDay(dayNum)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '10px',
+                  border: `1px solid ${isSelected ? H.purple : H.border}`,
+                  backgroundColor: isSelected ? H.purple : H.surface,
+                  color: isSelected ? '#FFFFFF' : isToday ? H.purpleDark : H.textPrimary,
+                  fontWeight: isSelected || isToday ? 700 : 500,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.25)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <span>{isMobile ? DAY_SHORT[idx] : dayName}</span>
+                {isToday && (
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '1px 5px',
+                    borderRadius: '6px',
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : H.purpleLight,
+                    color: isSelected ? '#FFFFFF' : H.purpleDark,
+                  }}>
+                    Today
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Single-Day View (Rendered on Mobile or when viewing single day) */}
+        {isMobile ? (
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: H.textPrimary }}>
+                {DAYS[selectedDay - 1]} Schedule
+              </h2>
+              <span style={{ fontSize: '12px', color: H.textSec, fontWeight: 600 }}>
+                {schedule.filter(s => s.day_of_week === selectedDay).length} Classes
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {periods.map((p, i) => {
                 if (p.is_break) {
                   return (
-                    <tr key={`break-${i}`}>
-                      <td style={styles.td}>
-                        <div style={{ ...styles.tdContent, background: H.bg, alignItems: 'center', flexDirection: 'row', gap: '8px' }}>
-                          <Coffee size={16} style={{ color: H.textMuted }} />
-                          <div style={{ textAlign: 'center' }}>
-                            <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: H.textSec }}>{(p as any).label || 'Break'}</p>
-                            <p style={{ margin: 0, fontSize: '11px', color: H.textMuted }}>{formatTime(p.start_time)} - {formatTime(p.end_time)}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td colSpan={5} style={styles.td}>
-                        <div style={{ ...styles.tdContent, background: H.bg, justifyContent: 'center', alignItems: 'center' }}></div>
-                      </td>
-                    </tr>
+                    <div key={`mob-break-${i}`} style={{
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      backgroundColor: H.bg,
+                      border: `1px dashed ${H.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                    }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        backgroundColor: H.accentLight, color: H.accentDark,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                      }}>
+                        <Coffee size={16} />
+                      </div>
+                      <div>
+                        <p style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: H.textSec }}>{(p as any).label || 'Break'}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: '11.5px', color: H.textMuted }}>{formatTime(p.start_time)} - {formatTime(p.end_time)}</p>
+                      </div>
+                    </div>
                   )
                 }
 
+                const slot = schedule.find((s: any) => s.day_of_week === selectedDay && s.period_number === p.period_number)
+                const cellStyle = slot ? subjectColor(slot.subject || '') : { background: H.surface, color: H.textSec }
+
                 return (
-                  <tr key={p.period_number}>
-                    <td style={styles.td}>
-                      <div style={{ ...styles.tdContent, justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
-                        <p style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: H.textPrimary }}>P{p.period_number}</p>
-                        <p style={{ margin: 0, fontSize: '11px', color: H.textMuted }}>{formatTime(p.start_time)}</p>
+                  <div key={`mob-p-${p.period_number}`} style={{
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: slot ? cellStyle.background : H.surface,
+                    border: `1px solid ${slot ? H.border : H.border}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        backgroundColor: slot ? 'rgba(255,255,255,0.6)' : H.bg,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0, border: `1px solid ${H.border}`
+                      }}>
+                        <span style={{ fontSize: '13px', fontWeight: 800, color: H.textPrimary }}>P{p.period_number}</span>
                       </div>
-                    </td>
-                    {DAYS.map((_, dayIndex) => {
-                      const dayNum = dayIndex + 1
-                      const slot = schedule.find((s: any) => s.day_of_week === dayNum && s.period_number === p.period_number)
-                      const cellStyle = slot ? subjectColor(slot.subject || '') : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec }
-                      return (
-                        <td key={dayIndex} style={styles.td}>
-                          <div style={{ ...styles.tdContent, background: cellStyle.background, border: `1px solid ${H.border}` }}>
-                            {slot ? (
-                              <>
-                                <p style={{ color: cellStyle.color, fontWeight: 800, fontSize: '14px', margin: 0 }}>{slot.subject}</p>
-                                <p style={{ color: cellStyle.color, opacity: 0.8, fontSize: '12px', fontWeight: 600, margin: '4px 0 0' }}>{slot.class?.name}</p>
-                              </>
-                            ) : (
-                              <p style={{ margin: 0, fontSize: '13px', color: H.textMuted, textAlign: 'center' }}>—</p>
-                            )}
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
+                      <div>
+                        {slot ? (
+                          <>
+                            <p style={{ margin: 0, fontWeight: 800, fontSize: '14px', color: cellStyle.color }}>{slot.subject}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '12px', fontWeight: 600, color: cellStyle.color, opacity: 0.85 }}>{slot.class?.name}</p>
+                          </>
+                        ) : (
+                          <p style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: H.textMuted }}>Free Period</p>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: H.textMuted }}>{formatTime(p.start_time)}</span>
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
+            </div>
+          </div>
+        ) : (
+          /* Full Weekly Grid with Sticky Left-0 Period Column for Desktop / Tablet */
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
+            <table style={{ width: '100%', minWidth: '750px', borderCollapse: 'separate', borderSpacing: '6px' }}>
+              <thead>
+                <tr>
+                  <th style={{
+                    position: 'sticky', left: 0, zIndex: 20,
+                    backgroundColor: H.surface,
+                    padding: '12px 14px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: H.textSec,
+                    textAlign: 'center',
+                    width: '100px',
+                    minWidth: '100px',
+                    borderRight: `2px solid ${H.border}`,
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
+                  }}>
+                    Period
+                  </th>
+                  {DAYS.map((day, i) => (
+                    <th key={day} style={{
+                      padding: '12px 14px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: i + 1 === today ? H.purpleDark : H.textSec,
+                      textAlign: 'center',
+                      backgroundColor: i + 1 === today ? H.purpleLight : 'transparent',
+                      borderRadius: '10px',
+                    }}>
+                      {day} {i + 1 === today && '(Today)'}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {periods.map((p, i) => {
+                  if (p.is_break) {
+                    return (
+                      <tr key={`break-${i}`}>
+                        <td style={{
+                          position: 'sticky', left: 0, zIndex: 10,
+                          backgroundColor: H.bg,
+                          padding: '8px 12px',
+                          verticalAlign: 'middle',
+                          borderRight: `2px solid ${H.border}`,
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                            <Coffee size={14} style={{ color: H.textMuted }} />
+                            <div style={{ textAlign: 'center' }}>
+                              <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: H.textSec }}>{(p as any).label || 'Break'}</p>
+                              <p style={{ margin: 0, fontSize: '10px', color: H.textMuted }}>{formatTime(p.start_time)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td colSpan={5} style={{ padding: 0 }}>
+                          <div style={{ height: '50px', background: H.bg, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '12px', color: H.textMuted, fontWeight: 500 }}>— {(p as any).label || 'Break'} ({formatTime(p.start_time)} - {formatTime(p.end_time)}) —</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  }
+
+                  return (
+                    <tr key={p.period_number}>
+                      <td style={{
+                        position: 'sticky', left: 0, zIndex: 10,
+                        backgroundColor: H.surface,
+                        padding: '8px 12px',
+                        verticalAlign: 'middle',
+                        borderRight: `2px solid ${H.border}`,
+                        boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
+                      }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: H.textPrimary }}>P{p.period_number}</p>
+                          <p style={{ margin: 0, fontSize: '10.5px', color: H.textMuted, fontVariantNumeric: 'tabular-nums' }}>{formatTime(p.start_time)}</p>
+                        </div>
+                      </td>
+                      {DAYS.map((_, dayIndex) => {
+                        const dayNum = dayIndex + 1
+                        const slot = schedule.find((s: any) => s.day_of_week === dayNum && s.period_number === p.period_number)
+                        const cellStyle = slot ? subjectColor(slot.subject || '') : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec }
+                        return (
+                          <td key={dayIndex} style={{ padding: '0', verticalAlign: 'top' }}>
+                            <div style={{
+                              minHeight: '80px',
+                              height: '100%',
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'center',
+                              background: cellStyle.background,
+                              border: `1px solid ${H.border}`,
+                              boxSizing: 'border-box',
+                            }}>
+                              {slot ? (
+                                <>
+                                  <p style={{ color: cellStyle.color, fontWeight: 800, fontSize: '13.5px', margin: 0 }}>{slot.subject}</p>
+                                  <p style={{ color: cellStyle.color, opacity: 0.8, fontSize: '11.5px', fontWeight: 600, margin: '3px 0 0' }}>{slot.class?.name}</p>
+                                </>
+                              ) : (
+                                <p style={{ margin: 0, fontSize: '13px', color: H.textMuted, textAlign: 'center' }}>—</p>
+                              )}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
 

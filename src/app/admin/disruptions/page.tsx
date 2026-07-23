@@ -173,7 +173,7 @@ function DisruptionsContent() {
           type: 'swap_decision',
           title: `Class Swap ${approve ? 'Approved' : 'Rejected'}`,
           body: notifBody,
-          link: '/teacher/swaps',
+          link: '/teacher',
           is_read: false
         })
       }
@@ -183,7 +183,7 @@ function DisruptionsContent() {
           type: 'swap_decision',
           title: `Class Swap ${approve ? 'Approved' : 'Rejected'}`,
           body: notifBody,
-          link: '/teacher/swaps',
+          link: '/teacher',
           is_read: false
         })
       }

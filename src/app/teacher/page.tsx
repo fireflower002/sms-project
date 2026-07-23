@@ -13,9 +13,9 @@ import { DashboardSkeleton } from '@/components/ui/Skeleton'
 import Badge from '@/components/ui/Badge'
 
 const styles: { [key: string]: React.CSSProperties } = {
-  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font },
-  pageGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' },
-  mainColumn: { display: 'flex', flexDirection: 'column', gap: '24px' },
+  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 24px)', fontFamily: H.font },
+  pageGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'start' },
+  mainColumn: { display: 'flex', flexDirection: 'column', gap: '20px' },
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow },
   pageTitle: { fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0 },
   pageSubtitle: { fontSize: '14px', color: H.textSec, display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0 0' },
@@ -23,12 +23,12 @@ const styles: { [key: string]: React.CSSProperties } = {
   button: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '10px', fontWeight: 600, fontSize: '13px', textDecoration: 'none', cursor: 'pointer', minHeight: '38px' },
   metricStrip: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
     borderBottom: `1px solid ${H.border}`,
     backgroundColor: H.surface,
   },
   metricCell: {
-    padding: '16px 24px',
+    padding: '16px 20px',
     textDecoration: 'none',
     color: 'inherit',
     display: 'flex',
@@ -80,7 +80,6 @@ const NotificationCard = ({ icon, color, bg, border, title, children, onDismiss 
 const QuickActionGrid = () => {
   const actions = [
     { label: 'Report Absence', desc: 'Notify admin of upcoming leave', href: '/teacher/report-absence', icon: ClipboardList, color: '#0284C7', bg: '#E0F2FE' },
-    { label: 'Request Class Swap', desc: 'Exchange periods with teachers', href: '/teacher/swaps', icon: ArrowRightLeft, color: '#C2410C', bg: '#FDE8D8' },
     { label: 'Weekly Timetable', desc: 'View complete teaching schedule', href: '/teacher/timetable', icon: Calendar, color: '#D97706', bg: '#FEF3C7' },
     { label: 'Staff Notices', desc: 'Read school announcements', href: '/teacher/announcements', icon: Megaphone, color: '#9D174D', bg: '#FCE7F3' },
   ]
@@ -88,7 +87,7 @@ const QuickActionGrid = () => {
   return (
     <div>
       <h2 style={styles.sectionHeader}>Quick Actions</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
         {actions.map(act => {
           const Icon = act.icon
           return (
@@ -184,12 +183,12 @@ const ScheduleTimeline = ({ schedule, template, substitutions }: any) => {
   const now = new Date()
 
   return (
-    <div style={{ ...styles.card, position: 'sticky', top: '24px' }}>
-      <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ ...styles.card }}>
+      <div style={{ padding: '16px 20px', borderBottom: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2 style={{ ...styles.sectionHeader, margin: 0 }}>Today's Schedule</h2>
         <Badge variant="category">P1 - P{periods.filter((p: any) => !p.is_break).length}</Badge>
       </div>
-      <div style={{ maxHeight: 'calc(100vh - 140px)', overflowY: 'auto', padding: '16px 20px 20px' }}>
+      <div style={{ maxHeight: '480px', overflowY: 'auto', padding: '16px 20px' }}>
         {periods.map((p: any, index: number) => {
           const isNow = now >= new Date(now.toDateString() + ' ' + p.start_time) && now < new Date(now.toDateString() + ' ' + p.end_time)
           const slot = schedule.find((s: any) => s.period_number === p.period_number)
@@ -240,8 +239,7 @@ const ScheduleTimeline = ({ schedule, template, substitutions }: any) => {
 export default function TeacherDashboard() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<any>({ schedule: [], template: null, swaps: [], announcements: [], substitutions: [] })
-  const [showSwaps, setShowSwaps] = useState(true)
+  const [data, setData] = useState<any>({ schedule: [], template: null, announcements: [], substitutions: [] })
   const [showSubs, setShowSubs] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -297,10 +295,9 @@ export default function TeacherDashboard() {
       const today = todaySLT()
       const todayDay = todayDayOfWeek()
 
-      const [schedule, template, swaps, announcements, substitutions] = await Promise.all([
+      const [schedule, template, announcements, substitutions] = await Promise.all([
         supabase.from('schedule_assignments').select('*,class:classes(name,grade_level)').eq('teacher_id', session.user.id).eq('day_of_week', todayDay).order('period_number'),
         supabase.from('timetable_templates').select('*').eq('is_active', true).maybeSingle(),
-        supabase.from('swap_requests').select('*,requester:profiles!requester_id(full_name)').eq('target_teacher_id', session.user.id).eq('status', 'pending'),
         supabase.from('announcements').select('id,title,body,created_at,priority').eq('is_published', true).eq('is_active', true).in('target_audience', ['all', 'teachers']).order('created_at', { ascending: false }).limit(3),
         supabase.from('substitutions').select('*,class:classes(name),original:profiles!original_teacher_id(full_name)').eq('substitute_teacher_id', session.user.id).eq('substitution_date', today).eq('status', 'assigned'),
       ])
@@ -308,7 +305,6 @@ export default function TeacherDashboard() {
       setData({
         schedule: schedule.data || [],
         template: template.data,
-        swaps: swaps.data || [],
         announcements: announcements.data || [],
         substitutions: substitutions.data || [],
       })
@@ -328,27 +324,27 @@ export default function TeacherDashboard() {
   if (loading) return <DashboardSkeleton />
 
   return (
-    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 24px)', fontFamily: H.font, boxSizing: 'border-box' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
         
         {/* Contiguous Greeting Header */}
-        <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
+        <div style={{ padding: '18px 20px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <LayoutDashboard size={20} style={{ color: '#0284C7' }} />
             </div>
             <div>
-              <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>
+              <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>
                 {greetingText}, {profile?.full_name?.split(' ')[0]}
               </h1>
-              <p style={{ fontSize: '13px', fontWeight: 400, color: H.textSec, margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '6px', fontVariantNumeric: 'tabular-nums' }}>
+              <p style={{ fontSize: '12.5px', fontWeight: 400, color: H.textSec, margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: '6px', fontVariantNumeric: 'tabular-nums' }}>
                 {greetingIcon} {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Contiguous Metric Strip */}
+        {/* Contiguous Metric Strip (3 cells) */}
         <div style={styles.metricStrip}>
           <div style={styles.metricCell}>
             <div style={styles.metricLabel}>Classes Today</div>
@@ -368,16 +364,6 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          <div style={styles.metricCell}>
-            <div style={styles.metricLabel}>Pending Swaps</div>
-            <div style={styles.metricValueRow}>
-              <span style={{ ...styles.metricValue, color: data.swaps.length > 0 ? '#831843' : H.textPrimary }}>
-                {data.swaps.length}
-              </span>
-              <span style={{ fontSize: '12px', color: H.textMuted }}>requests</span>
-            </div>
-          </div>
-
           <div style={{ ...styles.metricCell, borderRight: 'none' }}>
             <div style={styles.metricLabel}>Announcements</div>
             <div style={styles.metricValueRow}>
@@ -387,24 +373,9 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: 'clamp(16px, 3vw, 24px)' }}>
           <div style={styles.pageGrid}>
             <div style={styles.mainColumn}>
-              {data.swaps.length > 0 && showSwaps && (
-                <NotificationCard
-                  icon={<ArrowRightLeft size={22} />}
-                  color="#831843"
-                  bg={H.softPinkLight}
-                  border={H.softPink}
-                  title={`You have ${data.swaps.length} pending swap request(s)`}
-                  onDismiss={() => setShowSwaps(false)}
-                >
-                  <Link href="/teacher/swaps" style={{ ...styles.button, background: H.surface, color: '#831843', border: `1px solid ${H.softPink}` }}>
-                    Review Requests <ArrowRight size={14} />
-                  </Link>
-                </NotificationCard>
-              )}
-
               {data.substitutions.length > 0 && showSubs && (
                 <NotificationCard
                   icon={<ClipboardList size={22} />}
@@ -429,3 +400,4 @@ export default function TeacherDashboard() {
     </div>
   )
 }
+
