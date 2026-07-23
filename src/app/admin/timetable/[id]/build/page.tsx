@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 
@@ -138,12 +138,11 @@ export default function TimetableBuildPage() {
         const alt=(subjectTeachers[subject]||[]).find((t:any)=>t.id!==conflict.teacher_id&&!busyMap[t.id]?.has(slotKey))
         if (alt) {
           const oldTeacher=teachers.find(t=>t.id===conflict.teacher_id)
-          busyMap[conflict.teacher_id].delete(slotKey); if(!busyMap[alt.id])busyMap[alt.id]=new Set(); busyMap[alt.id].add(slotKey)
-          updates.push({id:conflict.id,teacher_id:alt.id})
-          fixed.push({ className:cls?.name||'Unknown', day:conflict.day_of_week, period:conflict.period_number, oldTeacher:oldTeacher?.full_name||'Unknown', newTeacher:alt.full_name, subject })
+          updates.push({id:conflict.id,teacher_id:alt.id}); busyMap[alt.id].add(slotKey)
+          fixed.push({ className:cls?.name||'Class', day:conflict.day_of_week, period:conflict.period_number, oldTeacher:oldTeacher?.full_name||'Teacher', newTeacher:alt.full_name, subject })
         } else {
-          const teacher=teachers.find(t=>t.id===conflict.teacher_id)
-          unresolved.push({ className:cls?.name||'Unknown', day:conflict.day_of_week, period:conflict.period_number, teacher:teacher?.full_name||'Unknown', subject, reason:`No other teacher available for ${subject} at P${conflict.period_number} ${DAYS[conflict.day_of_week-1]}` })
+          const tName=teachers.find(t=>t.id===conflict.teacher_id)?.full_name||'Teacher'
+          unresolved.push({ className:cls?.name||'Class', day:conflict.day_of_week, period:conflict.period_number, teacher:tName, subject, reason:'No free teacher available for subject' })
         }
       }
     }
@@ -167,22 +166,26 @@ export default function TimetableBuildPage() {
   return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', background:H.bg, fontFamily:H.font, color:H.text }}>
 
-      {/* HEADER */}
+      {/* HEADER — ArrowLeft back button to return to template view */}
       <header style={{ height:64, padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30, flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <Link href={`/admin/timetable/${templateId}`} style={ghost({ padding:'6px 10px' })}>←</Link>
-          <span style={{ fontSize:18 }}>📅</span>
+          <Link href={`/admin/timetable/${templateId}`} style={ghost({ padding:'6px 12px' })} title="Back to Template Overview">
+            <ArrowLeft size={14} /> Back
+          </Link>
+          <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Calendar size={18} style={{ color: H.purpleDark }} />
+          </div>
           <div>
             <h1 style={{ fontFamily:H.font, fontSize:15, fontWeight:800, color:H.text, margin:0 }}>{template?.name}</h1>
             <p style={{ fontFamily:H.font, fontSize:11, color:H.muted, margin:0 }}>
-              {draggingCard ? `↓ Dropping: ${draggingCard.subject} — ${draggingCard.teacherName}` : 'Fill all periods freely · then auto-fix teacher conflicts'}
+              {draggingCard ? `Dropping: ${draggingCard.subject} — ${draggingCard.teacherName}` : 'Drag cards to period slots'}
             </p>
           </div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
           <button onClick={fetchData} style={ghost({ padding:'6px 10px' })} title="Refresh"><RefreshCw size={13}/></button>
           <button onClick={autoFixConflicts} disabled={autoFixing}
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 18px', borderRadius:12, border:`3px solid ${H.border}`, cursor:autoFixing?'wait':'pointer', fontFamily:H.font, fontWeight:800, fontSize:13, background: conflictCount>0?'linear-gradient(135deg,#f97316,#ef4444)':'linear-gradient(135deg,#22c55e,#10b981)', color:'#fff', boxShadow: conflictCount>0?`0 4px 14px rgba(249,115,22,0.45)`:`0 4px 14px rgba(34,197,94,0.35)`, transition:'all 0.25s' }}>
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:10, border:`1px solid ${H.border}`, cursor:autoFixing?'wait':'pointer', fontFamily:H.font, fontWeight:700, fontSize:13, background: conflictCount>0?H.accent:H.purple, color:'#fff', transition:'all 0.2s' }}>
             {autoFixing ? <><Loader2 size={14} style={{ animation:'spin 0.7s linear infinite' }}/> Auto-Fixing…</>
               : conflictCount>0 ? <><AlertTriangle size={14}/> {conflictCount} Conflict{conflictCount!==1?'s':''} · Auto-Fix</>
               : <><Wand2 size={14}/> Auto-Fix Conflicts</>}
@@ -192,7 +195,7 @@ export default function TimetableBuildPage() {
 
       {/* Error banner */}
       {errorMsg && (
-        <div style={{ background:'rgba(239,68,68,0.12)', borderBottom:`2px solid rgba(239,68,68,0.3)`, padding:'10px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        <div style={{ background:'rgba(239,68,68,0.12)', borderBottom:`1px solid rgba(239,68,68,0.3)`, padding:'10px 20px', display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
           <AlertTriangle size={14} style={{ color:'#f87171', flexShrink:0 }}/>
           <span style={{ fontFamily:H.font, fontSize:13, color:'#f87171', flex:1 }}>{errorMsg}</span>
           <button onClick={()=>setErrorMsg(null)} style={{ background:'none', border:'none', cursor:'pointer', color:'#f87171' }}><X size={13}/></button>
@@ -201,14 +204,14 @@ export default function TimetableBuildPage() {
 
       {/* Fix result banner */}
       {fixResult && (
-        <div style={{ borderBottom:`2px solid ${fixResult.unresolved.length>0?'#fb923c':H.grass}`, background:fixResult.unresolved.length>0?'rgba(251,146,60,0.08)':`rgba(143,179,57,0.08)`, flexShrink:0 }}>
+        <div style={{ borderBottom:`1px solid ${fixResult.unresolved.length>0?'#fb923c':H.grass}`, background:fixResult.unresolved.length>0?'rgba(251,146,60,0.08)':`rgba(143,179,57,0.08)`, flexShrink:0 }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 20px', gap:12 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10 }}>
               {fixResult.unresolved.length===0 ? <CheckCircle2 size={16} color={H.grass}/> : <AlertTriangle size={16} color="#fb923c"/>}
               <div>
                 <div style={{ fontFamily:H.font, fontWeight:700, fontSize:13, color:fixResult.unresolved.length>0?'#fb923c':H.grass }}>
-                  {fixResult.fixed.length===0&&fixResult.unresolved.length===0 ? '✓ No conflicts — timetable is clean!'
-                    : fixResult.unresolved.length===0 ? `✓ All conflicts resolved! ${fixResult.fixed.length} teacher${fixResult.fixed.length!==1?'s':''} reassigned.`
+                  {fixResult.fixed.length===0&&fixResult.unresolved.length===0 ? 'No conflicts — timetable is clean!'
+                    : fixResult.unresolved.length===0 ? `All conflicts resolved! ${fixResult.fixed.length} teacher${fixResult.fixed.length!==1?'s':''} reassigned.`
                     : `Fixed ${fixResult.fixed.length} · ${fixResult.unresolved.length} need manual attention`}
                 </div>
                 {fixResult.unresolved.length>0 && <div style={{ fontFamily:H.font, fontSize:11, color:'#fb923c', marginTop:2 }}>No alternative teacher available — reassign manually.</div>}
@@ -242,12 +245,12 @@ export default function TimetableBuildPage() {
         </div>
       )}
 
-      {/* BODY */}
-      <div style={{ display:'flex', flex:1, overflow:'hidden', height:'calc(100vh - 64px)' }}>
+      {/* BODY — Responsive Flex Layout */}
+      <div className="builder-body-container" style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
-        {/* SIDEBAR — Teachers & Subjects */}
-        <div style={{ width:230, flexShrink:0, borderRight:`1px solid ${H.border}`, background:H.surface, overflowY:'auto', display:'flex', flexDirection:'column' }}>
-          <div style={{ padding:'10px 14px', borderBottom:`1px solid ${H.border}`, fontFamily:H.font, fontSize:10, fontWeight:900, textTransform:'uppercase' as const, letterSpacing:'0.07em', color:H.muted, flexShrink:0 }}>
+        {/* SIDEBAR — Teachers & Subjects (Stacked horizontally on mobile) */}
+        <aside className="builder-sidebar" style={{ width:250, flexShrink:0, borderRight:`1px solid ${H.border}`, background:H.surface, overflowY:'auto', display:'flex', flexDirection:'column' }}>
+          <div style={{ padding:'10px 14px', borderBottom:`1px solid ${H.border}`, fontFamily:H.font, fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.07em', color:H.muted, flexShrink:0 }}>
             Teachers & Subjects
           </div>
 
@@ -257,57 +260,57 @@ export default function TimetableBuildPage() {
             </div>
           )}
 
-          {teachers.map((teacher:any)=>{
-            const subs:string[]=teacher.subjects||[]
-            if (subs.length===0) return null
-            const busyPeriods=assignments.filter(a=>a.teacher_id===teacher.id&&a.day_of_week===selectedDay).map(a=>a.period_number).sort((a:number,b:number)=>a-b)
-            const teacherConflicts=assignments.filter(a=>conflictIds.has(a.id)&&a.teacher_id===teacher.id).length
-            return (
-              <div key={teacher.id} style={{ borderBottom:`1px solid ${H.border}` }}>
-                <div style={{ padding:'8px 12px 4px', display:'flex', alignItems:'center', gap:7 }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:avatarColor(teacher.full_name), color:'#fff', fontWeight:700, fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
-                    {teacher.full_name.charAt(0)}
-                    {teacherConflicts>0 && <div style={{ position:'absolute', top:-3, right:-3, width:10, height:10, borderRadius:'50%', background:'#f97316', border:`2px solid ${H.bg}` }}/>}
-                  </div>
-                  <div style={{ minWidth:0, flex:1 }}>
-                    <div style={{ fontFamily:H.font, fontSize:12, fontWeight:800, color:H.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{teacher.full_name}</div>
-                    <div style={{ fontFamily:H.font, fontSize:10, color:teacherConflicts>0?'#f97316':H.muted }}>
-                      {teacherConflicts>0 ? `⚠ ${teacherConflicts} conflict${teacherConflicts!==1?'s':''}` : busyPeriods.length>0 ? `Busy P${busyPeriods.join(', ')} today` : 'Free today'}
+          <div className="builder-sidebar-items" style={{ display:'flex', flexDirection:'column' }}>
+            {teachers.map((teacher:any)=>{
+              const subs:string[]=teacher.subjects||[]
+              if (subs.length===0) return null
+              const busyPeriods=assignments.filter(a=>a.teacher_id===teacher.id&&a.day_of_week===selectedDay).map(a=>a.period_number).sort((a:number,b:number)=>a-b)
+              const teacherConflicts=assignments.filter(a=>conflictIds.has(a.id)&&a.teacher_id===teacher.id).length
+              return (
+                <div key={teacher.id} className="teacher-card" style={{ borderBottom:`1px solid ${H.border}`, paddingBottom:6 }}>
+                  <div style={{ padding:'8px 12px 4px', display:'flex', alignItems:'center', gap:7 }}>
+                    <div style={{ width:24, height:24, borderRadius:'50%', background:avatarColor(teacher.full_name), color:'#fff', fontWeight:700, fontSize:11, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
+                      {teacher.full_name.charAt(0)}
+                      {teacherConflicts>0 && <div style={{ position:'absolute', top:-3, right:-3, width:8, height:8, borderRadius:'50%', background:'#f97316' }}/>}
+                    </div>
+                    <div style={{ minWidth:0, flex:1 }}>
+                      <div style={{ fontFamily:H.font, fontSize:12, fontWeight:700, color:H.text, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{teacher.full_name}</div>
+                      <div style={{ fontFamily:H.font, fontSize:10, color:teacherConflicts>0?'#f97316':H.muted }}>
+                        {teacherConflicts>0 ? `${teacherConflicts} conflict${teacherConflicts!==1?'s':''}` : busyPeriods.length>0 ? `Busy P${busyPeriods.join(', ')} today` : 'Free today'}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div style={{ padding:'4px 10px 10px', display:'flex', flexDirection:'column', gap:5 }}>
-                  {subs.map((subject:string)=>{
-                    const color=subjectColors[subject]||H.honey
-                    const card:CardData={teacherId:teacher.id,teacherName:teacher.full_name,subject,color}
-                    const isBeingDragged=draggingCard?.teacherId===teacher.id&&draggingCard?.subject===subject
-                    return (
-                      <div key={subject} draggable onDragStart={e=>onDragStart(card,e)} onDragEnd={onDragEnd}
-                        style={{ borderRadius:10, background:color, cursor:'grab', userSelect:'none' as const, opacity:isBeingDragged?0.4:1, transform:isBeingDragged?'scale(0.95)':'scale(1)', transition:'opacity 0.15s,transform 0.15s', boxShadow:`0 2px 8px ${hex2rgba(color,0.4)}`, overflow:'hidden', border:`1px solid ${H.border}` }}>
-                        <div style={{ padding:'5px 10px 3px', display:'flex', alignItems:'center', gap:6 }}>
-                          <div style={{ width:16, height:16, borderRadius:4, background:'rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:900, color:'#fff', flexShrink:0 }}>{subject.charAt(0)}</div>
-                          <span style={{ fontFamily:H.font, fontSize:12, fontWeight:700, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subject}</span>
+                  <div style={{ padding:'4px 10px', display:'flex', flexWrap:'wrap', gap:5 }}>
+                    {subs.map((subject:string)=>{
+                      const color=subjectColors[subject]||H.honey
+                      const card:CardData={teacherId:teacher.id,teacherName:teacher.full_name,subject,color}
+                      const isBeingDragged=draggingCard?.teacherId===teacher.id&&draggingCard?.subject===subject
+                      return (
+                        <div key={subject} draggable onDragStart={e=>onDragStart(card,e)} onDragEnd={onDragEnd}
+                          style={{ borderRadius:8, background:color, cursor:'grab', userSelect:'none' as const, opacity:isBeingDragged?0.4:1, transform:isBeingDragged?'scale(0.95)':'scale(1)', transition:'opacity 0.15s,transform 0.15s', boxShadow:`0 2px 6px ${hex2rgba(color,0.3)}`, overflow:'hidden', border:`1px solid ${H.border}` }}>
+                          <div style={{ padding:'4px 8px 2px', display:'flex', alignItems:'center', gap:6 }}>
+                            <span style={{ fontFamily:H.font, fontSize:11, fontWeight:700, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{subject}</span>
+                          </div>
+                          <div style={{ padding:'2px 8px 4px', background:'rgba(0,0,0,0.15)', display:'flex', alignItems:'center', gap:4 }}>
+                            <span style={{ fontFamily:H.font, fontSize:9, color:'rgba(255,255,255,0.9)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{teacher.full_name}</span>
+                          </div>
                         </div>
-                        <div style={{ padding:'2px 10px 6px', background:'rgba(0,0,0,0.2)', display:'flex', alignItems:'center', gap:5 }}>
-                          <div style={{ width:12, height:12, borderRadius:'50%', background:avatarColor(teacher.full_name), display:'flex', alignItems:'center', justifyContent:'center', fontSize:7, fontWeight:700, color:'#fff', flexShrink:0 }}>{teacher.full_name.charAt(0)}</div>
-                          <span style={{ fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.85)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{teacher.full_name}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        </aside>
 
-        {/* MAIN — Period grid */}
+        {/* MAIN — Period grid with STICKY Top Day Tabs & Full Width Drop Boxes */}
         <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
 
-          {/* Class + Day bar */}
-          <div style={{ padding:'10px 16px', borderBottom:`1px solid ${H.border}`, background:H.surface, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' as const, flexShrink:0 }}>
+          {/* Sticky Class + Day selection bar */}
+          <div style={{ padding:'10px 16px', borderBottom:`1px solid ${H.border}`, background:H.surface, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' as const, flexShrink:0, position:'sticky', top:0, zIndex:25 }}>
             <select value={selectedClass} onChange={e=>setSelectedClass(e.target.value)}
-              style={{ padding:'7px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:10, color:H.text, fontFamily:H.font, fontWeight:700, fontSize:13, outline:'none', cursor:'pointer', minWidth:160, maxWidth:220 }}>
+              style={{ padding:'7px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:700, fontSize:13, outline:'none', cursor:'pointer', minWidth:160, maxWidth:220 }}>
               {Object.entries(gradeGroups).sort(([a],[b])=>Number(a)-Number(b)).map(([grade,cls])=>(
                 <optgroup key={grade} label={`Grade ${grade}`}>
                   {(cls as any[]).map((c:any)=><option key={c.id} value={c.id} style={{ background:H.surface }}>{c.name}</option>)}
@@ -315,10 +318,11 @@ export default function TimetableBuildPage() {
               ))}
             </select>
 
-            <div style={{ display:'flex', gap:4 }}>
+            {/* Mon-Fri Sticky Day Tabs */}
+            <div style={{ display:'flex', border:`1px solid ${H.border}`, borderRadius:8, overflow:'hidden', backgroundColor:H.surface }}>
               {DAYS.map((d,i)=>(
                 <button key={d} onClick={()=>setSelectedDay(i+1)}
-                  style={{ padding:'7px 14px', borderRadius:10, fontFamily:H.font, fontWeight:800, fontSize:12, cursor:'pointer', border:`3px solid ${selectedDay===i+1?H.chocolate:H.border}`, background:selectedDay===i+1?H.honey:'rgba(61,43,31,0.4)', color:selectedDay===i+1?H.chocolate:H.muted, boxShadow:selectedDay===i+1?`3px 3px 0 ${H.border}`:'none', transition:'all 0.12s' }}>
+                  style={{ padding:'7px 14px', fontFamily:H.font, fontWeight:600, fontSize:12, cursor:'pointer', border:'none', borderRight:i<4?`1px solid ${H.border}`:'none', background:selectedDay===i+1?H.honey:H.surface, color:selectedDay===i+1?'#FFFFFF':H.textSec }}>
                   {DAY_SHORT[i]}
                 </button>
               ))}
@@ -332,9 +336,9 @@ export default function TimetableBuildPage() {
             )}
           </div>
 
-          {/* Period slots */}
+          {/* Period slots — Full Container Width */}
           <div style={{ flex:1, overflowY:'auto', padding:16 }}>
-            <div style={{ display:'flex', flexDirection:'column', gap:8, maxWidth:720 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', boxSizing:'border-box' }}>
               {periods.map((period:any)=>{
                 const asgn        = selectedClass?getAssignment(selectedClass,selectedDay,period.period_number):null
                 const asgnTeacher = asgn?teachers.find(t=>t.id===asgn.teacher_id):null
@@ -348,18 +352,23 @@ export default function TimetableBuildPage() {
                   <div key={period.period_number}
                     onDragOver={e=>onDragOver(slotKey,e)} onDragEnter={e=>{e.preventDefault();setDragOverKey(slotKey)}}
                     onDragLeave={e=>onDragLeave(slotKey,e)} onDrop={e=>onDrop(selectedClass,selectedDay,period.period_number,e)}
-                    style={{ display:'flex', borderRadius:14, border:`2px solid`, minHeight:72, borderColor:isConflict?'#f97316':isOver?H.honey:asgn?slotColor:H.border, background:isConflict?hex2rgba('#f97316',0.07):isOver?hex2rgba(H.honey,0.06):asgn?hex2rgba(slotColor,0.07):H.surface, transition:'border-color 0.12s,background 0.12s,transform 0.1s', transform:isOver?'scale(1.01)':'scale(1)', overflow:'hidden', position:'relative' }}>
+                    style={{
+                      display:'flex', width:'100%', boxSizing:'border-box', borderRadius:12, border:`1px solid`, minHeight:68,
+                      borderColor:isConflict?'#f97316':isOver?H.honey:asgn?slotColor:H.border,
+                      background:isConflict?hex2rgba('#f97316',0.07):isOver?hex2rgba(H.honey,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
+                      transition:'all 0.12s', transform:isOver?'scale(1.005)':'scale(1)', overflow:'hidden', position:'relative'
+                    }}>
 
                     {isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:'#f97316' }}/>}
 
                     {/* Period # + time */}
-                    <div style={{ width:72, flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:8, borderRight:`1px solid ${asgn?hex2rgba(slotColor,0.3):H.border}`, background:asgn?hex2rgba(slotColor,0.1):'transparent' }}>
-                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:24, lineHeight:1, color:asgn?slotColor:isOver?H.honey:H.sub }}>{period.period_number}</div>
-                      <div style={{ fontFamily:'DM Mono, monospace', fontSize:9, color:H.sub, textAlign:'center', marginTop:3, lineHeight:1.4 }}>{formatTime(period.start_time)}<br/>{formatTime(period.end_time)}</div>
+                    <div style={{ width:72, flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:8, borderRight:`1px solid ${asgn?hex2rgba(slotColor,0.3):H.border}`, background:asgn?hex2rgba(slotColor,0.1):'#F5F5F4' }}>
+                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:22, lineHeight:1, color:asgn?slotColor:isOver?H.honey:H.sub }}>P{period.period_number}</div>
+                      <div style={{ fontFamily:'monospace', fontSize:9, color:H.sub, textAlign:'center', marginTop:3, lineHeight:1.3 }}>{formatTime(period.start_time)}<br/>{formatTime(period.end_time)}</div>
                     </div>
 
-                    {/* Content */}
-                    <div style={{ flex:1, display:'flex', alignItems:'center', padding:'10px 14px', gap:12, minWidth:0 }}>
+                    {/* Content Slot — Full Width */}
+                    <div style={{ flex:1, display:'flex', alignItems:'center', padding:'10px 14px', gap:12, minWidth:0, width:'100%', boxSizing:'border-box' }}>
                       {isSaving ? (
                         <div style={{ display:'flex', alignItems:'center', gap:8, color:H.sub }}>
                           <Loader2 size={16} style={{ animation:'spin 0.7s linear infinite' }}/>
@@ -367,21 +376,21 @@ export default function TimetableBuildPage() {
                         </div>
                       ) : asgn && asgnTeacher ? (
                         <>
-                          <div style={{ flex:1, borderRadius:10, overflow:'hidden', boxShadow:`0 2px 8px ${hex2rgba(slotColor,0.35)}`, minWidth:0 }}>
+                          <div style={{ flex:1, borderRadius:8, overflow:'hidden', boxShadow:`0 2px 6px ${hex2rgba(slotColor,0.25)}`, minWidth:0 }}>
                             <div style={{ background:slotColor, padding:'5px 10px', display:'flex', alignItems:'center', gap:6 }}>
                               {isConflict && <AlertTriangle size={11} style={{ color:'#fff', flexShrink:0 }}/>}
                               <span style={{ fontFamily:H.font, fontSize:13, fontWeight:800, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asgn.subject}</span>
-                              {isConflict && <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.9)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>⚠ Conflict</span>}
+                              {isConflict && <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.9)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>Conflict</span>}
                             </div>
                             <div style={{ padding:'3px 10px', background:hex2rgba(slotColor,0.14), display:'flex', alignItems:'center', gap:5 }}>
                               <div style={{ width:14, height:14, borderRadius:'50%', background:avatarColor(asgnTeacher.full_name), display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:'#fff', flexShrink:0 }}>{asgnTeacher.full_name.charAt(0)}</div>
                               <span style={{ fontFamily:H.font, fontSize:11, color:H.muted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asgnTeacher.full_name}</span>
                             </div>
                           </div>
-                          <button onClick={e=>{e.stopPropagation();clearAssignment(selectedClass,selectedDay,period.period_number)}} style={{ background:'rgba(61,43,31,0.4)', border:`2px solid ${H.border}`, borderRadius:8, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:H.muted, flexShrink:0, padding:0 }}><X size={14}/></button>
+                          <button onClick={e=>{e.stopPropagation();clearAssignment(selectedClass,selectedDay,period.period_number)}} style={{ background:'#F5F5F4', border:`1px solid ${H.border}`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:H.muted, flexShrink:0, padding:0 }}><X size={14}/></button>
                         </>
                       ) : isOver && draggingCard ? (
-                        <div style={{ flex:1, borderRadius:10, overflow:'hidden', opacity:0.7, minWidth:0 }}>
+                        <div style={{ flex:1, borderRadius:8, overflow:'hidden', opacity:0.7, minWidth:0 }}>
                           <div style={{ background:draggingCard.color, padding:'5px 10px' }}><span style={{ fontFamily:H.font, fontSize:13, fontWeight:800, color:'#fff' }}>{draggingCard.subject}</span></div>
                           <div style={{ padding:'3px 10px', background:hex2rgba(draggingCard.color,0.15) }}><span style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>{draggingCard.teacherName}</span></div>
                         </div>
@@ -399,7 +408,38 @@ export default function TimetableBuildPage() {
         </div>
       </div>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}select option{background:#2d2719}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        *{box-sizing:border-box}
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}
+        
+        @media (max-width: 767px) {
+          .builder-body-container {
+            flex-direction: column !important;
+            overflow-y: auto !important;
+            height: auto !important;
+          }
+          .builder-sidebar {
+            width: 100% !important;
+            height: auto !important;
+            border-right: none !important;
+            border-bottom: 1px solid ${H.border} !important;
+          }
+          .builder-sidebar-items {
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            padding: 8px 12px !important;
+            gap: 10px !important;
+          }
+          .teacher-card {
+            border-bottom: none !important;
+            border-right: 1px solid ${H.border} !important;
+            padding-right: 10px !important;
+            min-width: 180px !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }
