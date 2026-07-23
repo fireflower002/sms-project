@@ -188,7 +188,7 @@ const ScheduleTimeline = ({ schedule, template, substitutions }: any) => {
         <h2 style={{ ...styles.sectionHeader, margin: 0 }}>Today's Schedule</h2>
         <Badge variant="category">P1 - P{periods.filter((p: any) => !p.is_break).length}</Badge>
       </div>
-      <div style={{ maxHeight: '480px', overflowY: 'auto', padding: '16px 20px' }}>
+      <div style={{ padding: '16px 20px' }}>
         {periods.map((p: any, index: number) => {
           const isNow = now >= new Date(now.toDateString() + ' ' + p.start_time) && now < new Date(now.toDateString() + ' ' + p.end_time)
           const slot = schedule.find((s: any) => s.period_number === p.period_number)

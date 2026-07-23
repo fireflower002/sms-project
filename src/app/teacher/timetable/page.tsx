@@ -128,7 +128,7 @@ export default function TeacherTimetablePage() {
   const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 
   return (
-    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '64px' }}>
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '96px' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
 
         {/* Contiguous Header Bar */}

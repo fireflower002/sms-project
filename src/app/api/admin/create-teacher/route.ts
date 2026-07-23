@@ -21,25 +21,32 @@ export async function POST(request: Request) {
     }
 
     // 2. Verify caller is an authenticated Admin
-    const authHeader = request.headers.get('Authorization')
     const adminSupabase = createAdminClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
     let callerUser = null
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7)
-      const { data: userData, error: userError } = await adminSupabase.auth.getUser(token)
-      if (!userError && userData?.user) {
-        callerUser = userData.user
-      }
-    }
-
-    if (!callerUser) {
+    try {
       const serverSupabase = await createServerClient()
       const { data: userData } = await serverSupabase.auth.getUser()
       callerUser = userData?.user
+    } catch (e) {
+      // Server session check failed, try bearer token fallback
+    }
+
+    if (!callerUser) {
+      const authHeader = request.headers.get('Authorization')
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        if (token && token !== 'undefined' && token !== 'null') {
+          try {
+            const { data: tokenUserData } = await adminSupabase.auth.getUser(token)
+            if (tokenUserData?.user) callerUser = tokenUserData.user
+          } catch (e) {
+            // Ignore bearer token format/signature errors
+          }
+        }
+      }
     }
 
     if (!callerUser) {

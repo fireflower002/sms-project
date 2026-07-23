@@ -40,7 +40,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: H.lightBg }}>
       <TeacherSidebar />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: 0, paddingBottom: '96px' }}>
         {children}
       </div>
     </div>

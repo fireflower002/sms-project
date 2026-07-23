@@ -1,6 +1,6 @@
 "use client"
 import React, { useState } from 'react'
-import { Loader2, GraduationCap, KeyRound, Lock, MailCheck } from 'lucide-react'
+import { Loader2, GraduationCap, KeyRound, Lock, MailCheck, ShieldAlert, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H, STYLE } from '@/lib/honey'
 import { createStyles } from '@/lib/styles'
@@ -23,13 +23,20 @@ export default function LoginForm({
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
   const [isEmailFocused, setIsEmailFocused] = useState(false)
   const [isPassFocused, setIsPassFocused] = useState(false)
+
+  // OTP Admin Password Reset State
+  const [otpStep, setOtpStep] = useState<'request' | 'verify'>('request')
+  const [otpCode, setOtpCode] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccessMsg('')
     setLoading(true)
     try {
       const { data: authData, error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
@@ -82,19 +89,125 @@ export default function LoginForm({
     }
   }
 
-  const handleForgot = async (e: React.FormEvent) => {
+  // Admin Request OTP for Password Reset
+  const handleRequestAdminOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoading(true)
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    })
-    if (err) {
-      setError(err.message)
-    } else {
-      setSent(true)
+    setSuccessMsg('')
+    const trimmedEmail = email.trim().toLowerCase()
+
+    if (!trimmedEmail) {
+      setError('Please enter your administrator email address.')
+      return
     }
-    setLoading(false)
+
+    setLoading(true)
+    try {
+      // 1. Verify user profile exists and is an admin
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('email', trimmedEmail)
+        .maybeSingle()
+
+      if (!prof || prof.role !== 'admin') {
+        setError('No administrator account found matching this email address.')
+        setLoading(false)
+        return
+      }
+
+      // 2. Dispatch OTP code via Supabase Auth
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: trimmedEmail,
+        options: { shouldCreateUser: false },
+      })
+
+      if (otpErr) {
+        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmedEmail)
+        if (resetErr) {
+          setError(resetErr.message || 'Failed to send OTP code to email.')
+          setLoading(false)
+          return
+        }
+      }
+
+      setOtpStep('verify')
+      setSuccessMsg('A 6-digit verification code has been sent to your email.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP code. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Admin Verify OTP and Set New Password
+  const handleVerifyAdminOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setSuccessMsg('')
+
+    if (!otpCode.trim()) {
+      setError('Please enter the 6-digit verification code.')
+      return
+    }
+
+    if (newPassword.length < 8) {
+      setError('New password must be at least 8 characters long.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const trimmedEmail = email.trim().toLowerCase()
+      const trimmedCode = otpCode.trim()
+
+      let verifyRes = await supabase.auth.verifyOtp({
+        email: trimmedEmail,
+        token: trimmedCode,
+        type: 'email',
+      })
+
+      if (verifyRes.error) {
+        verifyRes = await supabase.auth.verifyOtp({
+          email: trimmedEmail,
+          token: trimmedCode,
+          type: 'recovery',
+        })
+      }
+
+      if (verifyRes.error) {
+        setError('Invalid or expired OTP code. Please check your email and try again.')
+        setLoading(false)
+        return
+      }
+
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPassword,
+      })
+
+      if (updateErr) {
+        setError(updateErr.message || 'Failed to update password.')
+        setLoading(false)
+        return
+      }
+
+      setSuccessMsg('Password updated successfully! Please sign in with your new password.')
+      setOtpStep('request')
+      setOtpCode('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setPassword('')
+      setMode('login')
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred during password reset.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const styles = createStyles({
@@ -136,6 +249,12 @@ export default function LoginForm({
       background: H.dangerLight, border: `1px solid ${H.danger}`,
       color: H.danger, fontSize: 13, marginBottom: 18,
     },
+    successBox: {
+      padding: '10px 14px', borderRadius: 10,
+      background: H.successLight, border: `1px solid ${H.grass}40`,
+      color: H.grass, fontSize: 13, marginBottom: 18,
+      display: 'flex', alignItems: 'center', gap: 8,
+    },
     fields: { display: 'flex', flexDirection: 'column', gap: 16 },
     label: {
       display: 'block', fontSize: 11, fontWeight: 700, color: H.muted,
@@ -153,10 +272,11 @@ export default function LoginForm({
       fontWeight: 700, fontSize: 15, cursor: 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 4, boxSizing: 'border-box' as const,
     },
-    sentWrap: { textAlign: 'center', padding: '8px 0' },
-    sentIcon: { fontSize: 40, marginBottom: 12 },
-    sentTitle: { fontWeight: 800, fontSize: 16, color: H.grass, margin: '0 0 8px' },
-    sentText: { fontSize: 13, color: H.muted, lineHeight: 1.6, margin: 0 },
+    infoNotice: {
+      padding: '20px 16px', borderRadius: 14,
+      background: H.purpleLight, border: `1px solid ${H.purple}40`,
+      textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
+    },
     footer: { fontSize: 12, color: H.sub, textAlign: 'center', marginTop: 20 },
   })
 
@@ -181,7 +301,7 @@ export default function LoginForm({
               <button
                 key={m}
                 type="button"
-                onClick={() => { setMode(m); setError(''); setSent(false) }}
+                onClick={() => { setMode(m); setError(''); setSuccessMsg(''); setOtpStep('request') }}
                 style={{ ...styles.tab, ...(mode === m ? styles.tabOn : styles.tabOff) }}
               >
                 {m === 'login' ? (
@@ -199,6 +319,12 @@ export default function LoginForm({
 
           <div style={styles.body}>
             {error && <div style={styles.errBox}>{error}</div>}
+            {successMsg && (
+              <div style={styles.successBox}>
+                <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
             {mode === 'login' ? (
               <form onSubmit={handleLogin} style={styles.fields}>
@@ -230,34 +356,113 @@ export default function LoginForm({
                     : 'Sign In'}
                 </button>
               </form>
-            ) : sent ? (
-              <div style={styles.sentWrap}>
-                <div style={{ ...styles.sentIcon, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <MailCheck size={32} style={{ color: H.honey }} />
-                </div>
-                <h3 style={styles.sentTitle}>Check your email</h3>
-                <p style={styles.sentText}>
-                  Reset link sent to <strong style={{ color: H.textPrimary }}>{email}</strong>
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleForgot} style={styles.fields}>
-                <p style={styles.sentText}>Enter your email and we'll send a reset link.</p>
+            ) : role === 'teacher' ? (
+              /* Teacher-side Password Reset Notice */
+              <div style={styles.infoNotice}>
+                <ShieldAlert size={32} style={{ color: H.purpleDark }} />
                 <div>
-                  <label style={styles.label}>Email</label>
+                  <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 700, color: H.purpleDark }}>
+                    Admin-Managed Password Reset
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '12.5px', color: H.textSec, lineHeight: 1.5 }}>
+                    Teacher account passwords are managed directly by school administrators. If you forgot your password, please contact your administrator to receive a temporary password.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setMode('login')}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8, border: `1px solid ${H.purple}`,
+                    backgroundColor: H.surface, color: H.purpleDark, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
+                  }}
+                >
+                  <ArrowLeft size={14} /> Back to Sign In
+                </button>
+              </div>
+            ) : otpStep === 'request' ? (
+              /* Admin Step 1: Enter Email & Request OTP */
+              <form onSubmit={handleRequestAdminOtp} style={styles.fields}>
+                <p style={{ fontSize: 13, color: H.muted, margin: '0 0 4px', lineHeight: 1.5 }}>
+                  Enter your admin email address to receive a 6-digit OTP verification code.
+                </p>
+                <div>
+                  <label style={styles.label}>Admin Email</label>
                   <input
                     type="email" value={email}
                     onChange={e => setEmail(e.target.value)}
                     onFocus={() => setIsEmailFocused(true)}
                     onBlur={() => setIsEmailFocused(false)}
-                    required placeholder="you@school.lk"
+                    required placeholder="admin@school.lk"
                     style={{ ...styles.input, borderColor: isEmailFocused ? H.honey : H.border }}
                   />
                 </div>
                 <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.7 : 1 }}>
                   {loading
-                    ? <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Sending…</>
-                    : 'Send Reset Link'}
+                    ? <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Sending OTP…</>
+                    : 'Send Verification Code'}
+                </button>
+              </form>
+            ) : (
+              /* Admin Step 2: Enter OTP Code + New Password */
+              <form onSubmit={handleVerifyAdminOtp} style={styles.fields}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 12.5, color: H.textSec }}>Resetting for <strong>{email}</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => { setOtpStep('request'); setError('') }}
+                    style={{ background: 'none', border: 'none', color: H.purple, fontSize: 12, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    Change Email
+                  </button>
+                </div>
+
+                <div>
+                  <label style={styles.label}>6-Digit OTP Code</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    required
+                    placeholder="123456"
+                    style={{
+                      ...styles.input,
+                      letterSpacing: '0.2em',
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      textAlign: 'center',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>New Password</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    required
+                    placeholder="At least 8 characters"
+                    style={styles.input}
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="Re-enter new password"
+                    style={styles.input}
+                  />
+                </div>
+
+                <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.7 : 1 }}>
+                  {loading
+                    ? <><Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> Resetting Password…</>
+                    : 'Verify OTP & Reset Password'}
                 </button>
               </form>
             )}

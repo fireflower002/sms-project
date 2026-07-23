@@ -21,7 +21,9 @@ import {
   X,
   RefreshCw,
   Clock,
-  Briefcase
+  Briefcase,
+  Copy,
+  Check
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
@@ -49,6 +51,10 @@ export default function TeacherDetailPage() {
   const [subjectInput, setSubjectInput] = useState('')
   const [subjectsList, setSubjectsList] = useState<string[]>([])
   const [savingSubjects, setSavingSubjects] = useState(false)
+
+  // Temp Password Reset Modal State
+  const [resetTempPassword, setResetTempPassword] = useState<string | null>(null)
+  const [copiedPass, setCopiedPass] = useState(false)
 
   const fetchTeacherData = useCallback(async () => {
     setLoading(true)
@@ -191,6 +197,49 @@ export default function TeacherDetailPage() {
       fetchTeacherData()
     }
     setActionLoading(false)
+  }
+
+  // Admin Reset Teacher Password (generates temporary password)
+  const handleAdminResetPassword = async () => {
+    if (!teacher) return
+    setActionLoading(true)
+    try {
+      const res = await fetch('/api/admin/reset-teacher-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teacherId: teacher.id,
+          email: teacher.email,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || data.error) {
+        setModal({
+          title: 'Password Reset Failed',
+          message: data.error || 'Failed to reset teacher password.',
+          variant: 'danger',
+          confirmLabel: 'OK',
+          cancelLabel: '',
+          onConfirm: () => setModal(null),
+        })
+      } else {
+        setResetTempPassword(data.tempPassword)
+        fetchTeacherData()
+      }
+    } catch (err: any) {
+      setModal({
+        title: 'Error',
+        message: err.message || 'An error occurred while resetting teacher password.',
+        variant: 'danger',
+        confirmLabel: 'OK',
+        cancelLabel: '',
+        onConfirm: () => setModal(null),
+      })
+    } finally {
+      setActionLoading(false)
+    }
   }
 
   // Save Subject Modifications
@@ -412,6 +461,27 @@ export default function TeacherDetailPage() {
             </button>
 
             <button
+              onClick={handleAdminResetPassword}
+              disabled={actionLoading}
+              style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                fontWeight: 700,
+                fontSize: '13px',
+                border: `1px solid ${H.purple}40`,
+                backgroundColor: H.purpleLight,
+                color: H.purpleDark,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              <Key size={16} /> Reset Password
+            </button>
+
+            <button
               onClick={handleTogglePasswordForce}
               disabled={actionLoading}
               style={{
@@ -429,7 +499,7 @@ export default function TeacherDetailPage() {
                 gap: '8px',
               }}
             >
-              <Key size={16} />
+              <Shield size={16} />
               {teacher.must_change_password ? 'Remove Forced Password Reset' : 'Require Password Change on Next Login'}
             </button>
 
@@ -737,6 +807,75 @@ export default function TeacherDetailPage() {
         {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
         onCancel={() => setModal(null)}
       />
+
+      {/* Temporary Password Reset Result Modal */}
+      {resetTempPassword && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 16,
+        }}>
+          <div style={{
+            backgroundColor: H.surface, border: `1px solid ${H.border}`,
+            borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+            width: '100%', maxWidth: 440, padding: 24, boxSizing: 'border-box',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: H.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CheckCircle2 size={22} style={{ color: H.grass }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: H.textPrimary }}>Password Reset Generated</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: H.textSec }}>Share this temporary password with {teacher?.full_name}</p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: H.bg, border: `1px solid ${H.border}`, borderRadius: 12,
+              padding: '16px', marginBottom: 16, textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
+                New Temporary Password
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', letterSpacing: '0.08em', color: H.textPrimary, userSelect: 'all' }}>
+                {resetTempPassword}
+              </div>
+            </div>
+
+            <p style={{ fontSize: 12.5, color: H.textSec, marginTop: 0, marginBottom: 20, lineHeight: 1.5 }}>
+              The teacher will be required to change this password on their next sign in before accessing their account.
+            </p>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(resetTempPassword)
+                  setCopiedPass(true)
+                  setTimeout(() => setCopiedPass(false), 2000)
+                }}
+                style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                  backgroundColor: H.purple, color: '#FFFFFF', border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                {copiedPass ? <Check size={16} /> : <Copy size={16} />}
+                {copiedPass ? 'Copied to Clipboard!' : 'Copy Password'}
+              </button>
+              <button
+                onClick={() => setResetTempPassword(null)}
+                style={{
+                  padding: '10px 16px', borderRadius: 10, fontWeight: 600, fontSize: 13,
+                  backgroundColor: H.bg, color: H.textPrimary, border: `1px solid ${H.border}`, cursor: 'pointer',
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
