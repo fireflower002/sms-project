@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getItemPublicUrl } from '@/lib/siteUrl'
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
 import { SkeletonBlock } from '@/components/ui/Skeleton'
@@ -78,7 +79,7 @@ const printStickersWindow = (itemsToPrint: any[], title: string) => {
           ${itemsToPrint.map(item => {
             const code = item.barcode || `INV-2026-${(item.id || '').slice(0, 5)}`
             const token = item.public_token || item.id
-            const qrUrl = typeof window !== 'undefined' ? `${window.location.origin}/item/${token}` : token
+            const qrUrl = getItemPublicUrl(token)
             return `
               <div class="sticker">
                 <div class="sticker-title">${item.name}</div>
@@ -407,7 +408,7 @@ export default function InventoryPage() {
                 {singleQrItem.category} | {singleQrItem.barcode || `INV-2026-${singleQrItem.id.slice(0, 5)}`}
               </p>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/item/${singleQrItem.public_token || singleQrItem.id}` : singleQrItem.public_token || singleQrItem.id)}`}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(getItemPublicUrl(singleQrItem.public_token || singleQrItem.id))}`}
                 alt="QR Code"
                 style={{ width: 140, height: 140, margin: '0 auto', display: 'block', borderRadius: 8, border: `1px solid ${H.border}`, padding: 6, background: '#fff' }}
               />
@@ -458,7 +459,7 @@ export default function InventoryPage() {
                 {items.map(item => {
                   const code = item.barcode || `INV-2026-${(item.id || '').slice(0, 5)}`
                   const token = item.public_token || item.id
-                  const qrUrl = typeof window !== 'undefined' ? `${window.location.origin}/item/${token}` : token
+                  const qrUrl = getItemPublicUrl(token)
                   return (
                     <div key={item.id} style={{ border: '2px dashed #06B6D4', borderRadius: 12, padding: 14, textAlign: 'center', background: '#fff' }}>
                       <h5 style={{ margin: '0 0 4px 0', fontSize: 13, fontWeight: 800, color: H.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</h5>

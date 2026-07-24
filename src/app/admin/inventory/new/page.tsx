@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, AlertCircle, Package, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { getItemPublicUrl } from '@/lib/siteUrl'
 
 import { H } from '@/lib/honey'
 
@@ -282,7 +283,7 @@ function InventoryFormContent() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, padding:'14px 16px', borderRadius:12, background:'rgba(6,182,212,0.06)', border:`1px solid rgba(6,182,212,0.2)` }}>
                 <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/item/${form.public_token}` : form.public_token)}`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(getItemPublicUrl(form.public_token))}`}
                     alt="Item QR Code"
                     style={{ width: 54, height: 54, borderRadius: 8, border: `1px solid ${H.border}`, background: '#fff', padding: 4 }}
                   />
@@ -291,7 +292,7 @@ function InventoryFormContent() {
                       Barcode: <span style={{ fontFamily:'DM Mono, monospace', color:H.mintGreen }}>{form.barcode || 'INV-2026-AUTO'}</span>
                     </div>
                     <div style={{ fontFamily:H.font, fontSize:11, color:H.muted, marginTop:2 }}>
-                      Encodes public URL: /item/{form.public_token?.slice(0, 8)}…
+                      Encodes: {getItemPublicUrl(form.public_token)}
                     </div>
                   </div>
                 </div>
@@ -301,7 +302,7 @@ function InventoryFormContent() {
                     onClick={() => {
                       const printWin = window.open('', '_blank');
                       if (printWin) {
-                        const targetUrl = `${window.location.origin}/item/${form.public_token}`;
+                        const targetUrl = getItemPublicUrl(form.public_token);
                         printWin.document.write(`
                           <html>
                             <head><title>Print QR Sticker - ${form.name}</title></head>
