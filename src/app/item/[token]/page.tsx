@@ -36,44 +36,85 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
   const [item, setItem] = useState<any | null>(null)
   const [assigneeRole, setAssigneeRole] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
+  const [errorState, setErrorState] = useState<'not_found' | 'inactive' | 'permission_error' | null>(null)
+  const [errorDetail, setErrorDetail] = useState<string>('')
   const supabase = createClient()
 
   useEffect(() => {
     const fetchPublicItem = async () => {
       setLoading(true)
+      setErrorState(null)
+      setErrorDetail('')
+      const cleanToken = (token || '').trim()
+
       try {
-        // Query by public_token first, fallback to id
-        let query = supabase
-          .from('inventory')
-          .select('id, name, description, category, condition, condition_notes, notes, quantity_total, quantity_available, location, assigned_to, assigned_at, public_token, barcode, is_active')
-          .eq('is_active', true)
+        const fields = 'id, name, description, category, condition, condition_notes, notes, quantity_total, quantity_available, location, assigned_to, assigned_at, public_token, barcode, is_active'
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanToken)
 
-        let { data, error } = await query.eq('public_token', token).maybeSingle()
+        let targetData: any = null
+        let lastError: any = null
 
-        if (!data) {
-          const fallback = await supabase
+        // 1. Try public_token lookup if UUID
+        if (isUuid) {
+          const { data, error } = await supabase
             .from('inventory')
-            .select('id, name, description, category, condition, condition_notes, notes, quantity_total, quantity_available, location, assigned_to, assigned_at, public_token, barcode, is_active')
-            .eq('is_active', true)
-            .eq('id', token)
+            .select(fields)
+            .eq('public_token', cleanToken)
             .maybeSingle()
-          data = fallback.data
+
+          if (data) targetData = data
+          if (error && error.code !== 'PGRST116') lastError = error
         }
 
-        if (!data) {
-          setNotFound(true)
+        // 2. Fallback to id lookup if UUID
+        if (!targetData && isUuid) {
+          const { data, error } = await supabase
+            .from('inventory')
+            .select(fields)
+            .eq('id', cleanToken)
+            .maybeSingle()
+
+          if (data) targetData = data
+          if (error && error.code !== 'PGRST116') lastError = error
+        }
+
+        // 3. Fallback to barcode lookup if not UUID or missing
+        if (!targetData) {
+          const { data, error } = await supabase
+            .from('inventory')
+            .select(fields)
+            .eq('barcode', cleanToken)
+            .maybeSingle()
+
+          if (data) targetData = data
+          if (error && error.code !== 'PGRST116') lastError = error
+        }
+
+        // Handle errors or missing record
+        if (!targetData) {
+          if (lastError) {
+            setErrorState('permission_error')
+            setErrorDetail(lastError.message || 'Database permissions or column configuration issue.')
+          } else {
+            setErrorState('not_found')
+          }
           return
         }
 
-        setItem(data)
+        // Check active status
+        if (targetData.is_active === false) {
+          setErrorState('inactive')
+          return
+        }
+
+        setItem(targetData)
 
         // Anonymized assignment role lookup (never expose personal names)
-        if (data.assigned_to) {
+        if (targetData.assigned_to) {
           const { data: profile } = await supabase
             .from('profiles')
             .select('role')
-            .eq('id', data.assigned_to)
+            .eq('id', targetData.assigned_to)
             .maybeSingle()
 
           if (profile?.role) {
@@ -85,8 +126,9 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
             setAssigneeRole('Assigned to Staff Member')
           }
         }
-      } catch (err) {
-        setNotFound(true)
+      } catch (err: any) {
+        setErrorState('permission_error')
+        setErrorDetail(err.message || 'Unexpected lookup error occurred.')
       } finally {
         setLoading(false)
       }
@@ -106,19 +148,44 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
     )
   }
 
-  if (notFound || !item) {
+  if (errorState) {
+    const errorConfigs = {
+      not_found: {
+        title: 'Token Not Found',
+        message: 'No inventory item matches the scanned QR code token or barcode.',
+        badge: 'Invalid Token'
+      },
+      inactive: {
+        title: 'Item Currently Inactive',
+        message: 'This inventory item exists in the system but is currently marked as retired or inactive.',
+        badge: 'Inactive Record'
+      },
+      permission_error: {
+        title: 'Database Access Error',
+        message: errorDetail || 'Unable to query item data. Check database permissions or RLS policies.',
+        badge: 'Permission Issue'
+      }
+    }
+
+    const cfg = errorConfigs[errorState]
+
     return (
       <div style={{ minHeight: '100vh', background: H.bg, fontFamily: H.font, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <div style={{ background: H.surface, border: `1px solid ${H.border}`, borderRadius: 20, padding: 32, maxWidth: 440, width: '100%', textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
           <ShieldAlert size={48} color="#EF4444" style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontSize: 20, fontWeight: 800, color: H.textPrimary, margin: '0 0 8px 0' }}>Item Not Found</h2>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#EF4444', background: '#FEE2E2', padding: '4px 10px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            {cfg.badge}
+          </span>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: H.textPrimary, margin: '14px 0 8px 0' }}>{cfg.title}</h2>
           <p style={{ fontSize: 14, color: H.textSec, margin: 0, lineHeight: 1.5 }}>
-            The scanned QR code token is invalid, expired, or the inventory record is no longer active.
+            {cfg.message}
           </p>
         </div>
       </div>
     )
   }
+
+  if (!item) return null
 
   const cond = CONDITION_CONFIG[item.condition?.toLowerCase()] || CONDITION_CONFIG.good
   const CondIcon = cond.icon

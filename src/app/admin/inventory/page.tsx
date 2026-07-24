@@ -220,6 +220,17 @@ export default function InventoryPage() {
 
       const { data } = await query
       let list = data || []
+
+      // Auto-backfill missing public_token for legacy items
+      const unbackfilled = list.filter(i => !i.public_token)
+      if (unbackfilled.length > 0) {
+        unbackfilled.forEach(async (itemToBackfill) => {
+          const newToken = crypto.randomUUID()
+          itemToBackfill.public_token = newToken
+          await supabase.from('inventory').update({ public_token: newToken }).eq('id', itemToBackfill.id)
+        })
+      }
+
       if (showLowStock) list = list.filter(i => i.quantity_available <= i.low_stock_threshold)
       setItems(list)
 
