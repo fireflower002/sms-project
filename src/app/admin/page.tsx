@@ -299,7 +299,7 @@ export default function AdminDashboard() {
         supabase.from('profiles').select('full_name').eq('id', session.user.id).single(),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
         supabase.from('classes').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('inventory').select('*', { count: 'exact', head: true }),
+        supabase.from('inventory').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('absences').select('id, reason, created_at, profiles(full_name)').eq('absence_date', today),
         supabase.from('swap_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('profile_change_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),

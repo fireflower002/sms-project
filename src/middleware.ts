@@ -1,8 +1,34 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+// In-memory sliding window rate limiter for /item/ scan route
+const rateLimitMap = new Map<string, { count: number; expiresAt: number }>()
+
+function isRateLimited(ip: string, limit = 60, windowMs = 60000): boolean {
+  const now = Date.now()
+  const record = rateLimitMap.get(ip)
+  if (!record || now > record.expiresAt) {
+    rateLimitMap.set(ip, { count: 1, expiresAt: now + windowMs })
+    return false
+  }
+  if (record.count >= limit) {
+    return true
+  }
+  record.count++
+  return false
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Handle public item QR scan route with rate limiting
+  if (pathname.startsWith('/item')) {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || request.headers.get('x-real-ip') || 'anonymous'
+    if (isRateLimited(clientIp)) {
+      return new NextResponse('Too Many Requests. Please try again later.', { status: 429 })
+    }
+    return NextResponse.next()
+  }
 
   // Public routes — no auth required
   const publicRoutes = [
