@@ -108,10 +108,16 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isInputFocused, setIsInputFocused] = useState(false)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
   }
 
   useEffect(() => {
@@ -225,7 +231,7 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
           {subtitle && <p style={{ margin: '2px 0 0', fontSize: '12px', color: colors.text_secondary }}>{subtitle}</p>}
         </div>
       )}
-      <div style={styles.messagesContainer}>
+      <div ref={messagesContainerRef} style={styles.messagesContainer}>
         {messages.length === 0 ? (
           <div style={styles.noMessages}>No messages yet. Be the first to start the conversation!</div>
         ) : (

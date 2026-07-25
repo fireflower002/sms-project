@@ -183,10 +183,19 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     }
   }, [user, fetchInitialMessages])
 
-  // 3. Scroll to bottom on initial load
+  const scrollToBottom = (smooth = false) => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      })
+    }
+  }
+
+  // 3. Scroll to bottom on initial load (strictly within container, never scrolling the page window)
   useEffect(() => {
     if (!loadingInitial && isFirstLoadRef.current && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+      scrollToBottom(false)
       isFirstLoadRef.current = false
     }
   }, [loadingInitial, messages])
@@ -286,7 +295,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
 
                 // Auto-scroll to bottom on new incoming message
                 setTimeout(() => {
-                  messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+                  scrollToBottom(true)
                 }, 50)
               })
 
@@ -352,7 +361,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
         setNewMessage(content)
       } else {
         setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+          scrollToBottom(true)
         }, 100)
       }
     } catch (err: any) {
@@ -797,7 +806,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
             onChange={(e) => setNewMessage(e.target.value)}
             onFocus={() => {
               setTimeout(() => {
-                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+                scrollToBottom(true)
               }, 200)
             }}
             placeholder="Type a message to staff..."
