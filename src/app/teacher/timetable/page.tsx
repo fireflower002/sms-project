@@ -47,20 +47,21 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 }
 
+import { CURATED_PALETTE } from '@/components/admin/SubjectModal'
+
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-const PALETTE = [H.skyLight, H.accentLight, H.successLight, H.softPinkLight]
-const subjectColor = (s: string) => {
-  if (!s) return { background: H.bg, color: H.textSec }
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h)
-  const color = PALETTE[Math.abs(h) % PALETTE.length]
-  return { background: color, color: H.textPrimary }
+
+function hex2rgba(hex: string, a: number) {
+  if (!hex || !hex.startsWith('#')) return `rgba(245, 158, 11, ${a})`
+  const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16)
+  return `rgba(${r},${g},${b},${a})`
 }
 
 export default function TeacherTimetablePage() {
   const [loading, setLoading] = useState(true)
   const [template, setTemplate] = useState<any>(null)
   const [schedule, setSchedule] = useState<any[]>([])
+  const [subjectColors, setSubjectColors] = useState<Record<string, string>>({})
   const supabase = createClient()
   const router = useRouter()
 
@@ -69,16 +70,29 @@ export default function TeacherTimetablePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.push('/teacher/login'); return }
 
-      const [{ data: tmpl }, { data: asgn }] = await Promise.all([
+      const [{ data: tmpl }, { data: asgn }, { data: prof }] = await Promise.all([
         supabase.from('timetable_templates').select('*').eq('is_active', true).maybeSingle(),
         supabase.from('schedule_assignments').select('*,class:classes(name,grade_level)').eq('teacher_id', session.user.id).order('day_of_week').order('period_number'),
+        supabase.from('profiles').select('subject_colors').eq('id', session.user.id).maybeSingle(),
       ])
       setTemplate(tmpl || null)
       setSchedule(asgn || [])
+      if (prof?.subject_colors) setSubjectColors(prof.subject_colors)
       setLoading(false)
     }
     load()
   }, [router, supabase])
+
+  const getSubjectStyle = (s: string, slotColor?: string) => {
+    if (!s) return { background: H.bg, color: H.textSec, border: `1px solid ${H.border}` }
+    const hex = slotColor || subjectColors[s] || CURATED_PALETTE[0]
+    return {
+      background: hex2rgba(hex, 0.12),
+      color: H.textPrimary,
+      border: `1px solid ${hex2rgba(hex, 0.35)}`,
+      borderLeft: `4px solid ${hex}`,
+    }
+  }
 
   const periods = template ? generatePeriods(template.start_time, template.end_time, template.period_duration, template.breaks || []) : []
   const today = todayDayOfWeek()
@@ -240,14 +254,15 @@ export default function TeacherTimetablePage() {
                 }
 
                 const slot = schedule.find((s: any) => s.day_of_week === selectedDay && s.period_number === p.period_number)
-                const cellStyle = slot ? subjectColor(slot.subject || '') : { background: H.surface, color: H.textSec }
+                const cellStyle = slot ? getSubjectStyle(slot.subject, slot.subject_color) : { background: H.surface, color: H.textSec, border: `1px solid ${H.border}` }
 
                 return (
                   <div key={`mob-p-${p.period_number}`} style={{
                     padding: '14px 16px',
                     borderRadius: '12px',
-                    backgroundColor: slot ? cellStyle.background : H.surface,
-                    border: `1px solid ${slot ? H.border : H.border}`,
+                    backgroundColor: cellStyle.background,
+                    border: cellStyle.border,
+                    borderLeft: (cellStyle as any).borderLeft || cellStyle.border,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -365,7 +380,7 @@ export default function TeacherTimetablePage() {
                       {DAYS.map((_, dayIndex) => {
                         const dayNum = dayIndex + 1
                         const slot = schedule.find((s: any) => s.day_of_week === dayNum && s.period_number === p.period_number)
-                        const cellStyle = slot ? subjectColor(slot.subject || '') : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec }
+                        const cellStyle = slot ? getSubjectStyle(slot.subject, slot.subject_color) : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec, border: `1px solid ${H.border}` }
                         return (
                           <td key={dayIndex} style={{ padding: '0', verticalAlign: 'top' }}>
                             <div style={{
@@ -377,7 +392,8 @@ export default function TeacherTimetablePage() {
                               flexDirection: 'column',
                               justifyContent: 'center',
                               background: cellStyle.background,
-                              border: `1px solid ${H.border}`,
+                              border: cellStyle.border,
+                              borderLeft: (cellStyle as any).borderLeft || cellStyle.border,
                               boxSizing: 'border-box',
                             }}>
                               {slot ? (

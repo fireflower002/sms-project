@@ -1,7 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, GraduationCap, ClipboardPaste, CheckCircle2, XCircle, Loader2, AlertCircle, Users, Download, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, Users, Download, Trash2, Upload, FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 import { H } from '@/lib/honey'
@@ -11,9 +11,6 @@ const hBtn  = (x?:any):React.CSSProperties => ({ background:H.skyBlue, color:'#F
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
 const grass = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 const inp   = (x?:any):React.CSSProperties => ({ width:'100%', padding:'10px 14px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
-
-
-const SUBJECTS = ['Maths','Science','English','Sinhala','Tamil','History','Geography','ICT','Art','Music','PE','Religion','Commerce','Biology','Chemistry','Physics','Economics','Other']
 
 interface ParsedRow {
   index: number
@@ -29,9 +26,8 @@ interface ParsedRow {
 }
 
 function parseRow(raw: string, idx: number): ParsedRow {
-  // Split by tab (Excel paste) or comma
-  const cols = raw.includes('\t') ? raw.split('\t') : raw.split(',')
-  const clean = (s?: string) => (s || '').trim()
+  const cols = raw.includes('\t') ? raw.split('\t') : raw.includes(';') ? raw.split(';') : raw.split(',')
+  const clean = (s?: string) => (s || '').trim().replace(/^["']|["']$/g, '')
 
   const full_name = clean(cols[0])
   const email     = clean(cols[1])
@@ -65,25 +61,43 @@ function parseRow(raw: string, idx: number): ParsedRow {
 export default function BulkTeacherImportPage() {
   const supabase = createClient()
 
-  const [pasteText, setPasteText]   = useState('')
   const [rows, setRows]             = useState<ParsedRow[]>([])
   const [parsed, setParsed]         = useState(false)
   const [importing, setImporting]   = useState(false)
   const [done, setDone]             = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
-  const handleParse = useCallback(() => {
-    const lines = pasteText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      // Skip header row if it looks like one
-      .filter(l => !/^(name|full.?name|teacher)/i.test(l.split(/[\t,]/)[0]))
+  const processFile = useCallback((file: File) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      if (!text) return
+      const lines = text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0)
+        .filter(l => !/^(name|full.?name|teacher|email)/i.test(l.split(/[\t,;]/)[0]))
 
-    if (lines.length === 0) return
-    setRows(lines.map((line, i) => parseRow(line, i)))
-    setParsed(true)
-    setDone(false)
-  }, [pasteText])
+      if (lines.length === 0) return
+      setRows(lines.map((line, i) => parseRow(line, i)))
+      setParsed(true)
+      setDone(false)
+    }
+    reader.readAsText(file)
+  }, [])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) processFile(file)
+  }
 
   const removeRow = (idx: number) => setRows(p => p.filter(r => r.index !== idx))
 
@@ -179,15 +193,15 @@ export default function BulkTeacherImportPage() {
 
   const downloadTemplate = () => {
     const csv = [
-      'Full Name\tEmail\tPhone\tSubjects (slash separated)',
-      'Kamal Perera\tkamal@school.lk\t0771234567\tMaths/Science',
-      'Nimal Silva\tnimal@school.lk\t0787654321\tEnglish',
-      'Amali Fernando\tamali@school.lk\t\tHistory/Geography',
+      'Full Name,Email,Phone,Subjects',
+      'Kamal Perera,kamal@school.lk,0771234567,Maths/Science',
+      'Nimal Silva,nimal@school.lk,0787654321,English',
+      'Amali Fernando,amali@school.lk,,History/Geography',
     ].join('\n')
-    const blob = new Blob([csv], { type: 'text/tab-separated-values' })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href = url; a.download = 'teacher_import_template.tsv'; a.click()
+    a.href = url; a.download = 'teacher_import_template.csv'; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -204,57 +218,70 @@ export default function BulkTeacherImportPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:H.bg, fontFamily:H.font, color:H.text }}>
-      <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
+      <header style={{ height:68, padding:'0 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <Link href="/admin/teachers" style={ghost({ padding:'6px 10px', fontSize:12 })}>←</Link>
-            <span style={{ fontSize:20 }}>👩‍🏫</span>
-            <div>
-              <div style={{ fontFamily:H.font, fontWeight:800, fontSize:17, color:H.text }}>Bulk Import Teachers</div>
-              <div style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>Paste from Excel to add multiple teachers at once</div>
-            </div>
+          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'rgba(16,185,129,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Users size={20} style={{ color: H.successGreen }} />
           </div>
-        </header>
-
-      <main style={{ maxWidth:960, margin:'0 auto', padding:'24px 28px', display:'flex', flexDirection:'column', gap:16 }}>
-
-        {/* Instructions */}
-        <div style={{ background:'rgba(238,189,43,0.06)', border:`2px solid rgba(238,189,43,0.2)`, borderRadius:14, padding:'16px 20px' }}>
-          <div style={{ fontFamily:H.font, fontWeight:800, fontSize:13, color:H.honey, marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
-            📋 How to use
+          <div>
+            <div style={{ fontFamily:H.font, fontWeight:800, fontSize:17, color:H.text }}>Bulk Import Teachers</div>
+            <div style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>Upload an Excel or CSV file to add multiple teachers at once</div>
           </div>
-          <div style={{ fontFamily:H.font, fontSize:12, color:H.muted, lineHeight:1.7 }}>
-            1. Download the Excel template below, fill it in, then select all cells and copy (Ctrl+C / Cmd+C).<br/>
-            2. Paste into the box below. Columns: <strong style={{ color:H.text }}>Full Name · Email · Phone (optional) · Subjects (optional, slash-separated)</strong><br/>
-            3. Review each row — fix any errors shown, then click Import.<br/>
-            4. Teachers will receive an email invitation to register using their email address.
-          </div>
-          <button onClick={downloadTemplate} style={{ ...ghost({ padding:'6px 12px', fontSize:12 }), marginTop:12 }}>
-            <Download size={13}/> Download Excel Template
-          </button>
         </div>
+      </header>
 
-        {/* Paste area */}
+      <main style={{ maxWidth:960, margin:'0 auto', padding:'24px 20px 100px 20px', display:'flex', flexDirection:'column', gap:20 }}>
+
         {!parsed && (
-          <div style={{ background:H.surface, borderRadius:18, border:`3px solid ${H.border}`, padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-            <label style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ClipboardPaste size={14}/> Paste data from Excel
-            </label>
-            <textarea
-              style={inp({ fontFamily:'monospace', fontSize:12, resize:'vertical', lineHeight:1.6, minHeight:160 })}
-              rows={10}
-              placeholder={`Kamal Perera\tkamal@school.lk\t0771234567\tMaths/Science\nNimal Silva\tnimal@school.lk\t0787654321\tEnglish\nAmali Fernando\tamali@school.lk\t\tHistory`}
-              value={pasteText}
-              onChange={e => setPasteText(e.target.value)}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '11px', color: H.muted }}>
-                {pasteText.split('\n').filter(l => l.trim()).length} rows detected
-              </span>
-              <button onClick={handleParse}
-                disabled={!pasteText.trim()}
-                style={hBtn()}>
-                <CheckCircle2 size={14}/> Validate Rows
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: H.font, fontWeight: 800, fontSize: 16, color: H.text, margin: 0 }}>Upload Teachers File</h2>
+                <p style={{ fontFamily: H.font, fontSize: 12, color: H.muted, margin: '2px 0 0' }}>Upload a .xlsx or .csv file containing teacher records</p>
+              </div>
+              <button onClick={downloadTemplate} style={ghost({ padding: '8px 14px', fontSize: 13, gap: 6 })}>
+                <Download size={14} /> Download Excel Template
               </button>
+            </div>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={(e) => { e.preventDefault(); setIsDragging(false) }}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('file-upload-input')?.click()}
+              style={{
+                background: isDragging ? 'rgba(16,185,129,0.06)' : H.surface,
+                border: `2px dashed ${isDragging ? H.grass : H.border}`,
+                borderRadius: 18,
+                padding: '48px 24px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <input
+                id="file-upload-input"
+                type="file"
+                accept=".xlsx,.csv,.tsv,.txt"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(16,185,129,0.12)', color: H.grass, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Upload size={26} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: H.text }}>
+                  Drop your Excel (.xlsx / .csv) file here, or <span style={{ color: H.grass, textDecoration: 'underline' }}>browse files</span>
+                </div>
+                <div style={{ fontSize: 12, color: H.muted, marginTop: 4 }}>
+                  Columns: Full Name, Email, Phone (optional), Subjects (optional, slash-separated)
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -278,7 +305,7 @@ export default function BulkTeacherImportPage() {
                 </div>
               ))}
               <button onClick={() => { setParsed(false); setDone(false); setRows([]) }}
-                style={{ marginLeft: 'auto' }}>
+                style={ghost({ marginLeft: 'auto' })}>
                 <Trash2 size={13}/> Start Over
               </button>
             </div>
@@ -354,7 +381,7 @@ export default function BulkTeacherImportPage() {
             {/* Import button */}
             {!done && validCount > 0 && (
               <button onClick={handleImport} disabled={importing || validCount === 0}
-                style={{ alignSelf: 'flex-end', padding: '12px 28px' }}>
+                style={{ ...grass({ padding: '12px 28px' }), alignSelf: 'flex-end' }}>
                 {importing
                   ? <><Loader2 size={15} style={{ animation:'spin 0.7s linear infinite' }}/> Importing…</>
                   : <><Upload size={15}/> Import {validCount} Teacher{validCount !== 1 ? 's' : ''}</>
@@ -388,7 +415,7 @@ export default function BulkTeacherImportPage() {
           </>
         )}
       </main>
-    
+
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}`}</style>
     </div>
   )

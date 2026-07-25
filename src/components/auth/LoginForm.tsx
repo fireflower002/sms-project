@@ -61,7 +61,7 @@ export default function LoginForm({
         if (userRole === 'teacher') {
           const mustChange = profile?.must_change_password
           if (mustChange) {
-            window.location.href = '/teacher/change-password'
+            window.location.href = '/teacher/profile?changePassword=true'
             return
           }
 
@@ -72,7 +72,7 @@ export default function LoginForm({
             .maybeSingle()
 
           if (allowed && allowed.is_registered === false) {
-            window.location.href = '/teacher/change-password'
+            window.location.href = '/teacher/profile?changePassword=true'
             return
           }
         }

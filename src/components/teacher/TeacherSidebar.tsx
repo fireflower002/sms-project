@@ -56,7 +56,6 @@ export const TEACHER_NAV_SECTIONS: TeacherNavSectionDef[] = [
     title: 'Account',
     items: [
       { href: '/teacher/profile', label: 'Profile', icon: User, color: H.successGreen },
-      { href: '/teacher/change-password', label: 'Password', icon: KeyRound, color: H.skyBlue },
     ],
   },
 ]

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, CheckCircle2, AlertCircle, Calendar, Sun, Moon, Sparkles, ClipboardList } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, Calendar, Sun, Moon, Sparkles, ClipboardList, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { todaySLT, generatePeriods } from '@/lib/utils'
 import { H } from '@/lib/honey'
@@ -37,11 +37,14 @@ const ABSENCE_TYPES = [
 
 export default function ReportAbsencePage() {
   const [submitting, setSubmitting] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelSuccess, setCancelSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
   const [template, setTemplate] = useState<any>(null)
   const [alreadyExists, setAlreadyExists] = useState(false)
+  const [existingAbsence, setExistingAbsence] = useState<any>(null)
   const [form, setForm] = useState({ absence_date: todaySLT(), absence_type: 'full_day', reason: '', custom_periods: [] as number[] })
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const supabase = createClient()
@@ -55,14 +58,66 @@ export default function ReportAbsencePage() {
 
       const [{ data: tmpl }, { data: existing }] = await Promise.all([
         supabase.from('timetable_templates').select('*').eq('is_active', true).maybeSingle(),
-        supabase.from('absences').select('id').eq('teacher_id', user.id).eq('absence_date', todaySLT()).maybeSingle(),
+        supabase.from('absences').select('*').eq('teacher_id', user.id).eq('absence_date', todaySLT()).maybeSingle(),
       ])
       setTemplate(tmpl || null)
+      setExistingAbsence(existing || null)
       setAlreadyExists(!!existing)
       setLoading(false)
     }
     load()
   }, [router, supabase])
+
+  const handleCancelAbsence = async () => {
+    if (!existingAbsence?.id) return
+    setCancelling(true)
+    setError('')
+
+    try {
+      // 1. Try direct client deletion with .select() verification
+      await supabase.from('substitutions').delete().eq('absence_id', existingAbsence.id)
+      const { data: delData, error: delErr } = await supabase
+        .from('absences')
+        .delete()
+        .eq('id', existingAbsence.id)
+        .select()
+
+      if (!delErr && delData && delData.length > 0) {
+        setAlreadyExists(false)
+        setExistingAbsence(null)
+        setCancelSuccess(true)
+        setTimeout(() => setCancelSuccess(false), 5000)
+        return
+      }
+
+      // 2. Fallback to API route if client deletion didn't confirm deleted rows
+      try {
+        const res = await fetch('/api/teacher/cancel-absence', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ absenceId: existingAbsence.id }),
+        })
+        if (res.ok) {
+          const json = await res.json()
+          if (json.success) {
+            setAlreadyExists(false)
+            setExistingAbsence(null)
+            setCancelSuccess(true)
+            setTimeout(() => setCancelSuccess(false), 5000)
+            return
+          }
+        }
+      } catch (apiErr) {
+        // Ignored fallback network error
+      }
+
+      throw new Error(delErr?.message || 'Failed to cancel absence: 0 records deleted from database.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to cancel absence.')
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   const periods = template ? generatePeriods(template.start_time, template.end_time, template.period_duration, template.breaks || []).filter((p: any) => !p.is_break) : []
   const togglePeriod = (n: number) => setForm(f => ({ ...f, custom_periods: f.custom_periods.includes(n) ? f.custom_periods.filter(x => x !== n) : [...f.custom_periods, n] }))
@@ -119,7 +174,60 @@ export default function ReportAbsencePage() {
           </div>
 
           <form onSubmit={handleSubmit}>
-            {alreadyExists && <div style={{ padding: '14px 24px', background: H.accentLight, color: H.accentDark, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', borderBottom: `1px solid ${H.accent}40` }}><AlertCircle size={16} />You already have an absence recorded for today.</div>}
+            {alreadyExists && (
+              <div style={{
+                padding: '16px 24px',
+                background: H.accentLight,
+                color: H.accentDark,
+                borderBottom: `1px solid ${H.accent}40`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 600 }}>
+                  <AlertCircle size={18} style={{ color: H.accentDark, flexShrink: 0 }} />
+                  <span>You already have an absence recorded for today.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelAbsence}
+                  disabled={cancelling}
+                  style={{
+                    backgroundColor: '#DC2626',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 16px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: cancelling ? 0.7 : 1,
+                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {cancelling ? (
+                    <>
+                      <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} /> Cancel Today's Absence
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            {cancelSuccess && (
+              <div style={{ padding: '14px 24px', background: H.successLight, color: '#065F46', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', borderBottom: `1px solid ${H.grass}40` }}>
+                <CheckCircle2 size={16} /> Today's absence record has been cancelled. You can now submit a new report.
+              </div>
+            )}
             {error && <div style={{ padding: '14px 24px', background: H.dangerLight, color: H.danger, fontWeight: 600, display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', borderBottom: `1px solid ${H.danger}40` }}><AlertCircle size={16} />{error}</div>}
 
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>

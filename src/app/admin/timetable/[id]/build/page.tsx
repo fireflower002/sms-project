@@ -2,11 +2,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp, Calendar } from 'lucide-react'
+import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp, Calendar, Palette } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 
 import { H } from '@/lib/honey'
+import SubjectModal, { CURATED_PALETTE } from '@/components/admin/SubjectModal'
 
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
 
@@ -47,6 +48,7 @@ export default function TimetableBuildPage() {
   const [fixResult, setFixResult]       = useState<FixResult|null>(null)
   const [showFixDetail, setShowFixDetail] = useState(false)
   const [subjectColors, setSubjectColors] = useState<Record<string,string>>({})
+  const [showSubjectModal, setShowSubjectModal] = useState(false)
 
   const getConflictIds = (asgns:any[]) => {
     const m:Record<string,any[]>={};
@@ -77,7 +79,20 @@ export default function TimetableBuildPage() {
     const merged=(tch||[]).map((t:any)=>({...t,subjects:Array.from(new Set([...(t.subjects||[]),...(allowedMap[t.email?.toLowerCase()]||[])])).filter(Boolean)}))
     setTeachers(merged); setAssignments(asgn||[])
     const map:Record<string,string>={}
-    merged.forEach((t:any)=>{ const tc=t.subject_colors||{}; (t.subjects||[]).forEach((s:string)=>{ if(!map[s])map[s]=tc[s]||PALETTE[Object.keys(map).length%PALETTE.length] }) })
+    const usedColors = new Set<string>()
+    merged.forEach((t:any)=>{
+      const tc=t.subject_colors||{}
+      Object.entries(tc).forEach(([s, c]: [string, any]) => { if (c) { map[s]=c; usedColors.add(c); } })
+    })
+    merged.forEach((t:any)=>{
+      (t.subjects||[]).forEach((s:string)=>{
+        if(!map[s]) {
+          const chosen = CURATED_PALETTE.find(c => !usedColors.has(c)) || CURATED_PALETTE[Object.keys(map).length % CURATED_PALETTE.length]
+          map[s] = chosen
+          usedColors.add(chosen)
+        }
+      })
+    })
     setSubjectColors(map)
     if (cls&&cls.length>0) setSelectedClass(c=>c||cls[0].id)
     setLoading(false)
@@ -159,19 +174,16 @@ export default function TimetableBuildPage() {
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}>
-      <Loader2 size={24} style={{ color:H.honey, animation:'spin 0.7s linear infinite' }}/>
+      <Loader2 size={24} style={{ color:H.purple, animation:'spin 0.7s linear infinite' }}/>
     </div>
   )
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', flexDirection:'column', background:H.bg, fontFamily:H.font, color:H.text }}>
 
-      {/* HEADER — ArrowLeft back button to return to template view */}
+      {/* HEADER — ArrowLeft back button removed to match app navigation pattern */}
       <header style={{ height:64, padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30, flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <Link href={`/admin/timetable/${templateId}`} style={ghost({ padding:'6px 12px' })} title="Back to Template Overview">
-            <ArrowLeft size={14} /> Back
-          </Link>
           <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Calendar size={18} style={{ color: H.purpleDark }} />
           </div>
@@ -183,6 +195,9 @@ export default function TimetableBuildPage() {
           </div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button onClick={() => setShowSubjectModal(true)} style={ghost({ padding: '6px 12px', fontSize: 13, background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40` })}>
+            <Palette size={14} /> Manage Subjects
+          </button>
           <button onClick={fetchData} style={ghost({ padding:'6px 10px' })} title="Refresh"><RefreshCw size={13}/></button>
           <button onClick={autoFixConflicts} disabled={autoFixing}
             style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:10, border:`1px solid ${H.border}`, cursor:autoFixing?'wait':'pointer', fontFamily:H.font, fontWeight:700, fontSize:13, background: conflictCount>0?H.accent:H.purple, color:'#fff', transition:'all 0.2s' }}>
@@ -282,7 +297,7 @@ export default function TimetableBuildPage() {
                   </div>
                   <div style={{ padding:'4px 10px', display:'flex', flexWrap:'wrap', gap:5 }}>
                     {subs.map((subject:string)=>{
-                      const color=subjectColors[subject]||H.honey
+                      const color=subjectColors[subject]||H.purple
                       const card:CardData={teacherId:teacher.id,teacherName:teacher.full_name,subject,color}
                       const isBeingDragged=draggingCard?.teacherId===teacher.id&&draggingCard?.subject===subject
                       return (
@@ -322,7 +337,7 @@ export default function TimetableBuildPage() {
             <div style={{ display:'flex', border:`1px solid ${H.border}`, borderRadius:8, overflow:'hidden', backgroundColor:H.surface }}>
               {DAYS.map((d,i)=>(
                 <button key={d} onClick={()=>setSelectedDay(i+1)}
-                  style={{ padding:'7px 14px', fontFamily:H.font, fontWeight:600, fontSize:12, cursor:'pointer', border:'none', borderRight:i<4?`1px solid ${H.border}`:'none', background:selectedDay===i+1?H.honey:H.surface, color:selectedDay===i+1?'#FFFFFF':H.textSec }}>
+                  style={{ padding:'7px 14px', fontFamily:H.font, fontWeight:600, fontSize:12, cursor:'pointer', borderTop:'none', borderBottom:'none', borderLeft:'none', borderRight:i<4?`1px solid ${H.border}`:'none', background:selectedDay===i+1?H.purple:H.surface, color:selectedDay===i+1?'#FFFFFF':H.textSec }}>
                   {DAY_SHORT[i]}
                 </button>
               ))}
@@ -337,7 +352,7 @@ export default function TimetableBuildPage() {
           </div>
 
           {/* Period slots — Full Container Width */}
-          <div style={{ flex:1, overflowY:'auto', padding:16 }}>
+          <div style={{ flex:1, overflowY:'auto', padding:'16px 16px 100px 16px' }}>
             <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', boxSizing:'border-box' }}>
               {periods.map((period:any)=>{
                 const asgn        = selectedClass?getAssignment(selectedClass,selectedDay,period.period_number):null
@@ -346,7 +361,7 @@ export default function TimetableBuildPage() {
                 const isSaving    = savingKey===slotKey
                 const isOver      = dragOverKey===slotKey
                 const isConflict  = asgn?conflictIds.has(asgn.id):false
-                const slotColor   = isConflict?'#f97316':(asgn?.subject_color||H.honey)
+                const slotColor   = isConflict?'#f97316':(asgn?.subject_color||H.purple)
 
                 return (
                   <div key={period.period_number}
@@ -354,8 +369,8 @@ export default function TimetableBuildPage() {
                     onDragLeave={e=>onDragLeave(slotKey,e)} onDrop={e=>onDrop(selectedClass,selectedDay,period.period_number,e)}
                     style={{
                       display:'flex', width:'100%', boxSizing:'border-box', borderRadius:12, border:`1px solid`, minHeight:68,
-                      borderColor:isConflict?'#f97316':isOver?H.honey:asgn?slotColor:H.border,
-                      background:isConflict?hex2rgba('#f97316',0.07):isOver?hex2rgba(H.honey,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
+                      borderColor:isConflict?'#f97316':isOver?H.purple:asgn?slotColor:H.border,
+                      background:isConflict?hex2rgba('#f97316',0.07):isOver?hex2rgba(H.purple,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
                       transition:'all 0.12s', transform:isOver?'scale(1.005)':'scale(1)', overflow:'hidden', position:'relative'
                     }}>
 
@@ -363,7 +378,7 @@ export default function TimetableBuildPage() {
 
                     {/* Period # + time */}
                     <div style={{ width:72, flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:8, borderRight:`1px solid ${asgn?hex2rgba(slotColor,0.3):H.border}`, background:asgn?hex2rgba(slotColor,0.1):'#F5F5F4' }}>
-                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:22, lineHeight:1, color:asgn?slotColor:isOver?H.honey:H.sub }}>P{period.period_number}</div>
+                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:22, lineHeight:1, color:asgn?slotColor:isOver?H.purple:H.sub }}>P{period.period_number}</div>
                       <div style={{ fontFamily:'monospace', fontSize:9, color:H.sub, textAlign:'center', marginTop:3, lineHeight:1.3 }}>{formatTime(period.start_time)}<br/>{formatTime(period.end_time)}</div>
                     </div>
 
@@ -395,7 +410,7 @@ export default function TimetableBuildPage() {
                           <div style={{ padding:'3px 10px', background:hex2rgba(draggingCard.color,0.15) }}><span style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>{draggingCard.teacherName}</span></div>
                         </div>
                       ) : (
-                        <span style={{ fontFamily:H.font, fontSize:13, color:isOver?H.honey:H.sub, fontWeight:isOver?600:400 }}>
+                        <span style={{ fontFamily:H.font, fontSize:13, color:isOver?H.purple:H.sub, fontWeight:isOver?600:400 }}>
                           {isOver?'Release to assign':'Drop a card here'}
                         </span>
                       )}
@@ -412,7 +427,7 @@ export default function TimetableBuildPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:5px;height:5px}
-        ::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}
+        ::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.3);border-radius:99px}
         
         @media (max-width: 767px) {
           .builder-body-container {
@@ -440,6 +455,11 @@ export default function TimetableBuildPage() {
           }
         }
       `}</style>
+      <SubjectModal
+        isOpen={showSubjectModal}
+        onClose={() => setShowSubjectModal(false)}
+        onSuccess={() => fetchData()}
+      />
     </div>
   )
 }

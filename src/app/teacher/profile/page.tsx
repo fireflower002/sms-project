@@ -2,11 +2,13 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, CheckCircle2, AlertCircle, KeyRound, AlertTriangle, User } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, KeyRound, AlertTriangle, User, Plus, X } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import { SkeletonBlock } from '@/components/ui/Skeleton'
+
+import ChangePasswordModal from '@/components/teacher/ChangePasswordModal'
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font },
@@ -28,7 +30,11 @@ const inputStyle = (isFocused: boolean): React.CSSProperties => ({
   transition: 'border-color 0.2s ease', minHeight: '44px',
 })
 
-const ALL_SUBJECTS = ['Maths','Science','English','Sinhala','Tamil','History','Geography','ICT','Art','Music','PE','Religion','Commerce','Biology','Chemistry','Physics','Economics','Combined Maths','Other']
+const PREDEFINED_SUBJECTS = [
+  'Maths','Science','English','Sinhala','Tamil','History',
+  'Geography','ICT','Art','Music','PE','Religion',
+  'Commerce','Biology','Chemistry','Physics','Economics','Combined Maths'
+]
 
 export default function TeacherProfilePage() {
   const [loading, setLoading] = useState(true)
@@ -39,13 +45,32 @@ export default function TeacherProfilePage() {
   const [pendingRequest, setPendingRequest] = useState<any>(null)
   const [form, setForm] = useState({ full_name: '', phone: '', subjects: [] as string[] })
   const [focusedField, setFocusedField] = useState<string | null>(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  
+  // Custom subject state (Issue #2 fix)
+  const [customInput, setCustomInput] = useState('')
+  const [showOtherInput, setShowOtherInput] = useState(false)
+
   const supabase = createClient()
   const router = useRouter()
 
+  const customSubjects = form.subjects.filter(s => !PREDEFINED_SUBJECTS.includes(s) && s !== 'Other')
+
+  const currentSubjectsSorted = Array.from(new Set([
+    ...form.subjects.filter(s => s !== 'Other'),
+    ...(customInput.trim() ? [customInput.trim()] : [])
+  ])).sort()
+
+  const baselineSubjects = pendingRequest?.new_subjects ? pendingRequest.new_subjects : (profile?.subjects || [])
+  const baselineName = pendingRequest?.new_full_name ? pendingRequest.new_full_name : (profile?.full_name || '')
+  const baselinePhone = pendingRequest?.new_phone ? pendingRequest.new_phone : (profile?.phone || '')
+
+  const profileSubjectsSorted = [...baselineSubjects].filter((s: string) => s !== 'Other').sort()
+
   const hasChanges = profile && (
-    form.full_name.trim() !== (profile.full_name || '') ||
-    form.phone.trim() !== (profile.phone || '') ||
-    JSON.stringify([...form.subjects].sort()) !== JSON.stringify([...(profile.subjects || [])].sort())
+    form.full_name.trim() !== baselineName ||
+    form.phone.trim() !== baselinePhone ||
+    JSON.stringify(currentSubjectsSorted) !== JSON.stringify(profileSubjectsSorted)
   )
 
   useEffect(() => {
@@ -75,7 +100,20 @@ export default function TeacherProfilePage() {
       if (!profileData) { router.push('/teacher/login'); return }
       setProfile(profileData)
       setPendingRequest(pending || null)
-      setForm({ full_name: profileData.full_name || '', phone: profileData.phone || '', subjects: profileData.subjects || [] })
+
+      const initialSubs: string[] = pending?.new_subjects ? pending.new_subjects : (profileData.subjects || [])
+      const initialName: string = pending?.new_full_name ? pending.new_full_name : (profileData.full_name || '')
+      const initialPhone: string = pending?.new_phone ? pending.new_phone : (profileData.phone || '')
+
+      setForm({ full_name: initialName, phone: initialPhone, subjects: initialSubs })
+      
+      const hasCustom = initialSubs.some(s => !PREDEFINED_SUBJECTS.includes(s))
+      if (hasCustom) setShowOtherInput(true)
+
+      if (profileData.must_change_password || (typeof window !== 'undefined' && window.location.search.includes('changePassword=true'))) {
+        setShowPasswordModal(true)
+      }
+
       setLoading(false)
     }
     load()
@@ -88,17 +126,45 @@ export default function TeacherProfilePage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) { setError('Not authenticated'); setSubmitting(false); return }
 
+    let finalSubjects = [...form.subjects]
+    if (customInput.trim() && !finalSubjects.includes(customInput.trim())) {
+      finalSubjects.push(customInput.trim())
+    }
+    finalSubjects = Array.from(new Set(finalSubjects.filter(s => s !== 'Other')))
+
     const payload: any = {}
     if (form.full_name.trim() !== profile.full_name) payload.new_full_name = form.full_name.trim()
     if (form.phone.trim() !== profile.phone) payload.new_phone = form.phone.trim()
-    if (JSON.stringify([...form.subjects].sort()) !== JSON.stringify([...(profile.subjects || [])].sort())) payload.new_subjects = form.subjects
+    if (JSON.stringify([...finalSubjects].sort()) !== JSON.stringify([...(profile.subjects || [])].sort())) {
+      payload.new_subjects = finalSubjects
+    }
 
     const { error: err } = await supabase.from('profile_change_requests').insert({ teacher_id: session.user.id, status: 'pending', ...payload })
-    if (err) { setError(err.message) } else { setSuccess(true); setTimeout(() => setSuccess(false), 4000) }
+    if (err) {
+      setError(err.message)
+    } else {
+      setSuccess(true)
+      setForm(f => ({ ...f, subjects: finalSubjects }))
+      setCustomInput('')
+      setTimeout(() => setSuccess(false), 4000)
+    }
     setSubmitting(false)
   }
 
   const toggleSubject = (s: string) => setForm(f => ({ ...f, subjects: f.subjects.includes(s) ? f.subjects.filter(x => x !== s) : [...f.subjects, s] }))
+
+  const handleAddCustomSubject = () => {
+    const trimmed = customInput.trim()
+    if (!trimmed) return
+    if (!form.subjects.includes(trimmed)) {
+      setForm(f => ({ ...f, subjects: [...f.subjects, trimmed] }))
+    }
+    setCustomInput('')
+  }
+
+  const removeCustomSubject = (subj: string) => {
+    setForm(f => ({ ...f, subjects: f.subjects.filter(x => x !== subj) }))
+  }
 
   if (loading) {
     return (
@@ -135,9 +201,13 @@ export default function TeacherProfilePage() {
                 <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0' }}>{profile?.email}</p>
               </div>
             </div>
-            <Link href="/teacher/change-password" style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}>
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(true)}
+              style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}
+            >
               <KeyRound size={14} /> Change Password
-            </Link>
+            </button>
           </div>
 
           {/* Notifications */}
@@ -176,10 +246,65 @@ export default function TeacherProfilePage() {
               <div>
                 <label style={styles.label}>Subjects I Teach</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {ALL_SUBJECTS.map(s => (
-                    <button key={s} type="button" onClick={() => toggleSubject(s)} style={{ ...styles.button, minHeight: '36px', padding: '6px 14px', background: form.subjects.includes(s) ? H.successLight : H.bg, color: form.subjects.includes(s) ? '#065F46' : H.textSec, border: `1px solid ${form.subjects.includes(s) ? H.grass : H.border}` }}>{s}</button>
+                  {PREDEFINED_SUBJECTS.map(s => (
+                    <button key={s} type="button" onClick={() => toggleSubject(s)} style={{ ...styles.button, minHeight: '36px', padding: '6px 14px', background: form.subjects.includes(s) ? H.successLight : H.bg, color: form.subjects.includes(s) ? '#065F46' : H.textSec, border: `1px solid ${form.subjects.includes(s) ? H.grass : H.border}` }}>
+                      {s}
+                    </button>
                   ))}
+
+                  {/* Added custom subjects */}
+                  {customSubjects.map(cs => (
+                    <button key={cs} type="button" onClick={() => removeCustomSubject(cs)} style={{ ...styles.button, minHeight: '36px', padding: '6px 12px', background: H.successLight, color: '#065F46', border: `1px solid ${H.grass}` }} title="Click to remove custom subject">
+                      {cs} <X size={13} style={{ marginLeft: 4 }} />
+                    </button>
+                  ))}
+
+                  {/* "Other" Pill */}
+                  <button
+                    type="button"
+                    onClick={() => setShowOtherInput(v => !v)}
+                    style={{
+                      ...styles.button,
+                      minHeight: '36px',
+                      padding: '6px 14px',
+                      background: showOtherInput ? '#F5F3FF' : H.bg,
+                      color: showOtherInput ? '#6D28D9' : H.textSec,
+                      border: `1px dashed ${showOtherInput ? '#8B5CF6' : H.border}`,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {showOtherInput ? 'Hide Other' : '+ Other Subject'}
+                  </button>
                 </div>
+
+                {/* Custom Subject Input Field (Issue #2 Fix) */}
+                {showOtherInput && (
+                  <div style={{ marginTop: '14px', padding: '14px 16px', backgroundColor: '#FAF5FF', borderRadius: '12px', border: '1px solid #E9D5FF' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#6D28D9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                      Add Custom Subject
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <input
+                        type="text"
+                        value={customInput}
+                        onChange={e => setCustomInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSubject(); } }}
+                        onFocus={() => setFocusedField('custom_subject')}
+                        onBlur={() => setFocusedField(null)}
+                        placeholder="Type custom subject name (e.g., Robotics)..."
+                        style={{ ...inputStyle(focusedField === 'custom_subject'), flex: 1, minWidth: '220px', minHeight: '40px', padding: '8px 14px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomSubject}
+                        disabled={!customInput.trim()}
+                        style={{ ...styles.button, ...styles.buttonPrimary, minHeight: '40px', opacity: customInput.trim() ? 1 : 0.5 }}
+                      >
+                        <Plus size={14} /> Add Subject
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <div style={{ padding: '16px 24px', borderTop: `1px solid ${H.border}`, display: 'flex', justifyContent: 'flex-end', gap: '12px', background: H.bg }}>
@@ -191,6 +316,12 @@ export default function TeacherProfilePage() {
           </form>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        isForced={profile?.must_change_password}
+      />
     </div>
   )
 }

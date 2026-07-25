@@ -11,7 +11,8 @@ import {
   XCircle,
   ArrowRightLeft,
   ClipboardList,
-  Plus
+  Plus,
+  RotateCcw
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT, todaySLT } from '@/lib/utils'
@@ -213,6 +214,33 @@ function DisruptionsContent() {
     })
   }
 
+  // ── Handle Absence Rollback / Undo (Issue #3 Fix) ──
+  const handleUndoAbsence = async (absence: any) => {
+    try {
+      await supabase.from('substitutions').delete().eq('absence_id', absence.id)
+      const { error: delErr } = await supabase.from('absences').delete().eq('id', absence.id)
+      if (delErr) throw delErr
+      fetchAbsences()
+    } catch (err: any) {
+      console.error('[handleUndoAbsence] Error deleting absence:', err)
+    }
+  }
+
+  const triggerUndoAbsence = (absence: any) => {
+    const teacherName = absence.teacher?.full_name || 'the teacher'
+    const dateStr = formatSLT(absence.absence_date, 'dd MMM yyyy')
+    setModal({
+      title: 'Undo & Cancel Absence?',
+      message: `Are you sure you want to cancel the recorded absence for ${teacherName} on ${dateStr}? This will remove the absence record and reassign any cover teacher back to their normal schedule.`,
+      variant: 'danger',
+      confirmLabel: 'Undo Absence',
+      onConfirm: async () => {
+        setModal(null)
+        await handleUndoAbsence(absence)
+      }
+    })
+  }
+
   // Absences calculations
   const filteredAbsences = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
   const todayAbsences = absences.filter(a => a.absence_date === today)
@@ -383,7 +411,7 @@ function DisruptionsContent() {
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      {['Teacher', 'Date', 'Type', 'Reason', 'Cover Status'].map(h => (
+                      {['Teacher', 'Date', 'Type', 'Reason', 'Cover Status', 'Actions'].map(h => (
                         <th key={h} style={styles.th}>{h}</th>
                       ))}
                     </tr>
@@ -403,7 +431,7 @@ function DisruptionsContent() {
                               {typeConfig.label}
                             </Badge>
                           </td>
-                          <td style={{ ...styles.td, fontStyle: 'italic', maxWidth: '250px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={{ ...styles.td, fontStyle: 'italic', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {a.reason || '-'}
                           </td>
                           <td style={styles.td}>
@@ -412,11 +440,31 @@ function DisruptionsContent() {
                               style={{
                                 ...styles.button,
                                 textDecoration: 'none',
+                                minHeight: '32px',
+                                padding: '4px 12px',
+                                fontSize: '12px',
                                 ...(unassigned ? { background: H.skyLight, color: H.skyDark } : { background: H.successLight, color: '#065F46' })
                               }}
                             >
                               {unassigned ? 'Assign Cover' : 'View Cover'}
                             </Link>
+                          </td>
+                          <td style={styles.td}>
+                            <button
+                              onClick={() => triggerUndoAbsence(a)}
+                              style={{
+                                ...styles.button,
+                                ...styles.buttonDanger,
+                                minHeight: '32px',
+                                padding: '4px 10px',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                              }}
+                              title="Undo & cancel this absence record"
+                            >
+                              <RotateCcw size={13} />
+                              <span>Undo</span>
+                            </button>
                           </td>
                         </tr>
                       )

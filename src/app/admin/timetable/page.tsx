@@ -162,17 +162,6 @@ export default function TimetablePage() {
           </div>
         </div>
 
-        {/* Info Banner — integrated, borderless */}
-        <div style={{ padding: '16px 24px', borderBottom: `1px solid ${H.border}`, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-          <Info size={20} style={{ color: H.purpleDark, flexShrink: 0, marginTop: '1px' }} />
-          <div>
-            <p style={{ fontWeight: 700, fontSize: '14px', color: H.purpleDark, margin: '0 0 4px' }}>How Timetable Templates Work</p>
-            <p style={{ fontSize: '13px', color: H.textSec, lineHeight: 1.6, margin: 0 }}>
-              Create a template by setting school hours, period duration, and breaks. The system automatically calculates all periods. Only one template can be <strong>active</strong> at a time — this becomes the Master Schedule for generating daily timetables.
-            </p>
-          </div>
-        </div>
-
         {/* Body */}
         <div style={{ padding: '24px' }}>
           {loading ? (

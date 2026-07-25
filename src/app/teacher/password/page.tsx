@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { H } from '@/lib/honey'
 
-export default function RedirectChangePasswordPage() {
+export default function RedirectPasswordPage() {
   const router = useRouter()
 
   useEffect(() => {

@@ -79,24 +79,43 @@ function parseRow(raw: string, idx: number): ParsedRow {
 export default function BulkInventoryImportPage() {
   const supabase = createClient()
 
-  const [pasteText, setPasteText]   = useState('')
   const [rows, setRows]             = useState<ParsedRow[]>([])
   const [parsed, setParsed]         = useState(false)
   const [importing, setImporting]   = useState(false)
   const [done, setDone]             = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
 
-  const handleParse = useCallback(() => {
-    const lines = pasteText
-      .split('\n')
-      .map(l => l.trim())
-      .filter(l => l.length > 0)
-      .filter(l => !/^(name|item.?name)/i.test(l.split(/[\t,]/)[0]))
+  const processFile = useCallback((file: File) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      if (!text) return
+      const lines = text
+        .split(/\r?\n/)
+        .map(l => l.trim())
+        .filter(l => l.length > 0)
+        .filter(l => !/^(name|item.?name|category)/i.test(l.split(/[\t,;]/)[0]))
 
-    if (lines.length === 0) return
-    setRows(lines.map((line, i) => parseRow(line, i)))
-    setParsed(true)
-    setDone(false)
-  }, [pasteText])
+      if (lines.length === 0) return
+      setRows(lines.map((line, i) => parseRow(line, i)))
+      setParsed(true)
+      setDone(false)
+    }
+    reader.readAsText(file)
+  }, [])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processFile(file)
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) processFile(file)
+  }
 
   const removeRow = (idx: number) => setRows(p => p.filter(r => r.index !== idx))
 
@@ -110,14 +129,15 @@ export default function BulkInventoryImportPage() {
     for (const row of validRows) {
       const { error } = await supabase.from('inventory').insert({
         name:               row.name,
-        category:           row.category,
-        quantity_total:     row.quantity,
-        quantity_available: row.quantity,
-        condition:          row.condition,
+        category:           row.category || 'Other',
+        quantity_total:     row.quantity || 1,
+        quantity_available: row.quantity || 1,
+        condition:          row.condition || 'good',
         location:           row.location || null,
         serial_number:      row.serial_number || null,
         purchase_price:     row.purchase_price ? parseFloat(row.purchase_price) : null,
         notes:              row.notes || null,
+        public_token:       crypto.randomUUID(),
         low_stock_threshold: 1,
         is_active:          true,
         created_by:         user?.id,
@@ -141,16 +161,16 @@ export default function BulkInventoryImportPage() {
 
   const downloadTemplate = () => {
     const csv = [
-      'Item Name\tCategory\tQuantity\tCondition\tLocation\tSerial Number\tPurchase Price (LKR)\tNotes',
-      'Dell Laptop\tElectronics\t5\tnew\tIT Room\tDL001\t120000\tFor student lab',
-      'Whiteboard\tFurniture\t10\tgood\tStoreroom\t\t\t',
-      'Chemistry Kit\tLab Equipment\t8\tgood\tLab 2\t\t45000\t',
-      'Football\tSports Equipment\t6\tfair\tSports Room\t\t\t',
+      'Item Name,Category,Quantity,Condition,Location,Serial Number,Purchase Price (LKR),Notes',
+      'Dell Laptop,Electronics,5,new,IT Room,DL001,120000,For student lab',
+      'Whiteboard,Furniture,10,good,Storeroom,,,',
+      'Chemistry Kit,Lab Equipment,8,good,Lab 2,,45000,',
+      'Football,Sports Equipment,6,fair,Sports Room,,,',
     ].join('\n')
-    const blob = new Blob([csv], { type: 'text/tab-separated-values' })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
     const a    = document.createElement('a')
-    a.href = url; a.download = 'inventory_import_template.tsv'; a.click()
+    a.href = url; a.download = 'inventory_import_template.csv'; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -158,55 +178,70 @@ export default function BulkInventoryImportPage() {
 
   return (
     <div style={{ minHeight:'100vh', background:H.bg, fontFamily:H.font, color:H.text }}>
-      <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
+      <header style={{ height:68, padding:'0 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <Link href="/admin/inventory" style={ghost({ padding:'6px 10px', fontSize:12 })}>←</Link>
-            <span style={{ fontSize:20 }}>📦</span>
-            <div>
-              <div style={{ fontFamily:H.font, fontWeight:800, fontSize:17, color:H.text }}>Bulk Import Inventory</div>
-              <div style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>Paste from Excel to add multiple items at once</div>
-            </div>
+          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'rgba(6,182,212,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Package size={20} style={{ color: H.mintGreen }} />
           </div>
-        </header>
-
-      <main style={{ maxWidth:960, margin:'0 auto', padding:'24px 28px', display:'flex', flexDirection:'column', gap:16 }}>
-
-        {/* Instructions */}
-        <div style={{ background:'rgba(238,189,43,0.06)', border:`2px solid rgba(238,189,43,0.2)`, borderRadius:14, padding:'16px 20px' }}>
-          <div style={{ fontFamily:H.font, fontWeight:800, fontSize:13, color:H.honey, marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
-            📋 How to use
+          <div>
+            <div style={{ fontFamily:H.font, fontWeight:800, fontSize:17, color:H.text }}>Bulk Import Inventory</div>
+            <div style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>Upload an Excel or CSV file to add multiple items at once</div>
           </div>
-          <div style={{ fontSize: '12px', color: H.sub, lineHeight: 1.7 }}>
-            1. Download the Excel template, fill in your inventory, copy all data cells (Ctrl+C).<br/>
-            2. Paste below. Columns: <strong>Item Name · Category · Quantity · Condition · Location · Serial Number · Price · Notes</strong><br/>
-            3. Only Name is required. Category defaults to "Other", Condition defaults to "good", Quantity defaults to 1.<br/>
-            4. Valid categories: {CATEGORIES.join(', ')}.
-          </div>
-          <button onClick={downloadTemplate} style={ghost({ padding:'6px 12px', fontSize:12 })}>
-            <Download size={13}/> Download Excel Template
-          </button>
         </div>
+      </header>
 
-        {/* Paste area */}
+      <main style={{ maxWidth:960, margin:'0 auto', padding:'24px 20px 100px 20px', display:'flex', flexDirection:'column', gap:20 }}>
+
         {!parsed && (
-          <div style={{ background:H.surface, borderRadius:18, border:`3px solid ${H.border}`, padding:'16px 20px', display:'flex', flexDirection:'column', gap:12 }}>
-            <label style={{ fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ClipboardPaste size={14}/> Paste data from Excel
-            </label>
-            <textarea
-              style={inp({ fontFamily:'monospace', fontSize:12, resize:'vertical', lineHeight:1.6, minHeight:160 })}
-              rows={10}
-              placeholder={`Dell Laptop\tElectronics\t5\tnew\tIT Room\tDL001\t120000\tFor student lab\nWhiteboard\tFurniture\t10\tgood\tStoreroom`}
-              value={pasteText}
-              onChange={e => setPasteText(e.target.value)}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '11px', color: H.muted }}>
-                {pasteText.split('\n').filter(l => l.trim()).length} rows detected
-              </span>
-              <button onClick={handleParse} disabled={!pasteText.trim()} style={hBtn()}>
-                <CheckCircle2 size={14}/> Validate Rows
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <h2 style={{ fontFamily: H.font, fontWeight: 800, fontSize: 16, color: H.text, margin: 0 }}>Upload Inventory File</h2>
+                <p style={{ fontFamily: H.font, fontSize: 12, color: H.muted, margin: '2px 0 0' }}>Upload a .xlsx or .csv file containing inventory item records</p>
+              </div>
+              <button onClick={downloadTemplate} style={ghost({ padding: '8px 14px', fontSize: 13, gap: 6 })}>
+                <Download size={14} /> Download Excel Template
               </button>
+            </div>
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
+              onDragLeave={(e) => { e.preventDefault(); setIsDragging(false) }}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById('inventory-file-upload-input')?.click()}
+              style={{
+                background: isDragging ? 'rgba(6,182,212,0.06)' : H.surface,
+                border: `2px dashed ${isDragging ? H.mintGreen : H.border}`,
+                borderRadius: 18,
+                padding: '48px 24px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 12,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <input
+                id="inventory-file-upload-input"
+                type="file"
+                accept=".xlsx,.csv,.tsv,.txt"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(6,182,212,0.12)', color: H.mintGreen, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Upload size={26} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: H.text }}>
+                  Drop your Excel (.xlsx / .csv) file here, or <span style={{ color: H.mintGreen, textDecoration: 'underline' }}>browse files</span>
+                </div>
+                <div style={{ fontSize: 12, color: H.muted, marginTop: 4 }}>
+                  Columns: Item Name, Category, Quantity, Condition, Location, Serial Number, Price, Notes
+                </div>
+              </div>
             </div>
           </div>
         )}

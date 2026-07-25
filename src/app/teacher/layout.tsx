@@ -9,8 +9,6 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
-  const isForcedChange = pathname === '/teacher/change-password'
-
   useEffect(() => {
     const checkPasswordStatus = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -21,21 +19,13 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
           .eq('email', session.user.email.toLowerCase())
           .maybeSingle()
 
-        if (allowed && allowed.is_registered === false && pathname !== '/teacher/change-password') {
-          router.push('/teacher/change-password')
+        if (allowed && allowed.is_registered === false && pathname !== '/teacher/profile') {
+          router.push('/teacher/profile?changePassword=true')
         }
       }
     }
     checkPasswordStatus()
   }, [pathname, router, supabase])
-
-  if (isForcedChange) {
-    return (
-      <div style={{ minHeight: '100vh', background: H.bg }}>
-        {children}
-      </div>
-    )
-  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: H.lightBg }}>

@@ -66,17 +66,18 @@ export default function NewAnnouncementPage() {
     router.push('/admin/announcements')
   }
 
-  const focus = (e:React.FocusEvent<any>) => e.target.style.borderColor = H.honey
+  const focus = (e:React.FocusEvent<any>) => e.target.style.borderColor = H.skyBlue
   const blur  = (e:React.FocusEvent<any>) => e.target.style.borderColor = H.border
 
   return (
     <div style={{ minHeight:'100vh', background:H.bg, fontFamily:H.font, color:H.text }}>
 
       {/* Header */}
-      <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
+      <header style={{ height:68, padding:'0 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <Link href="/admin/announcements" style={ghost()}>←</Link>
-          <span style={{ fontSize:20 }}>📢</span>
+          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'rgba(59,130,246,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Megaphone size={20} style={{ color: H.skyBlue }} />
+          </div>
           <div>
             <h1 style={{ fontFamily:H.font, fontSize:17, fontWeight:800, color:H.text, margin:0 }}>New Announcement</h1>
             <p style={{ fontFamily:H.font, fontSize:11, color:H.muted, margin:0 }}>Post a notice to staff</p>
@@ -84,7 +85,7 @@ export default function NewAnnouncementPage() {
         </div>
       </header>
 
-      <main style={{ maxWidth:800, margin:'0 auto', padding:'24px 28px' }}>
+      <main style={{ maxWidth:800, margin:'0 auto', padding:'24px 20px 100px 20px' }}>
         <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
           {error && (
@@ -95,8 +96,8 @@ export default function NewAnnouncementPage() {
 
           {/* Content card */}
           <div style={card({ display:'flex', flexDirection:'column', gap:16 })}>
-            <h2 style={{ fontFamily:H.font, fontSize:15, fontWeight:900, color:H.honey, margin:0, display:'flex', alignItems:'center', gap:8 }}>
-              <Megaphone size={16} color="#fb923c"/> Announcement Details
+            <h2 style={{ fontFamily:H.font, fontSize:15, fontWeight:900, color:H.skyBlue, margin:0, display:'flex', alignItems:'center', gap:8 }}>
+              <Megaphone size={16} color={H.skyBlue}/> Announcement Details
             </h2>
 
             <div>
@@ -117,7 +118,7 @@ export default function NewAnnouncementPage() {
           </div>
 
           {/* Category + Priority + Audience row */}
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:14 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:14 }}>
 
             {/* Category */}
             <div style={card({ display:'flex', flexDirection:'column', gap:8 })}>
@@ -160,9 +161,9 @@ export default function NewAnnouncementPage() {
                     const sel = form.target_audience === v
                     return (
                       <button key={v} type="button" onClick={()=>set('target_audience',v)}
-                        style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:9, border:`2px solid ${sel?H.honey:H.border}`, background:sel?'rgba(238,189,43,0.12)':'#F5F5F4', cursor:'pointer', width:'100%' }}>
-                        <div style={{ width:8, height:8, borderRadius:'50%', background:sel?H.honey:H.sub, flexShrink:0 }}/>
-                        <span style={{ fontFamily:H.font, fontSize:12, fontWeight:sel?800:500, color:sel?H.honey:H.text }}>{l}</span>
+                        style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 10px', borderRadius:9, border:`2px solid ${sel?H.skyBlue:H.border}`, background:sel?'rgba(59,130,246,0.12)':'#F5F5F4', cursor:'pointer', width:'100%' }}>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:sel?H.skyBlue:H.sub, flexShrink:0 }}/>
+                        <span style={{ fontFamily:H.font, fontSize:12, fontWeight:sel?800:500, color:sel?H.skyBlue:H.text }}>{l}</span>
                       </button>
                     )
                   })}
@@ -171,36 +172,120 @@ export default function NewAnnouncementPage() {
             </div>
 
             {/* Options */}
-            <div style={card({ display:'flex', flexDirection:'column', gap:10 })}>
+            <div style={card({ display:'flex', flexDirection:'column', gap:12 })}>
               <Label>Options</Label>
 
               {/* Pin toggle */}
               <button type="button" onClick={()=>set('is_pinned',!form.is_pinned)}
-                style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`2px solid ${form.is_pinned?H.honey:H.border}`, background:form.is_pinned?'rgba(238,189,43,0.08)':'#F5F5F4', cursor:'pointer', width:'100%', textAlign:'left' as const }}>
-                <div style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:form.is_pinned?'rgba(238,189,43,0.15)':'#F5F5F4' }}>
-                  <Pin size={16} color={form.is_pinned?H.honey:H.muted}/>
+                style={{
+                  display:'flex',
+                  alignItems:'center',
+                  gap:12,
+                  padding:'12px 14px',
+                  borderRadius:12,
+                  border:`2px solid ${form.is_pinned ? H.skyBlue : H.border}`,
+                  background: form.is_pinned ? 'rgba(59,130,246,0.08)' : '#F5F5F4',
+                  cursor:'pointer',
+                  width:'100%',
+                  textAlign:'left' as const,
+                  boxSizing:'border-box',
+                  minHeight: 58,
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                }}>
+                <div style={{
+                  width:38,
+                  height:38,
+                  borderRadius:10,
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  flexShrink:0,
+                  background: form.is_pinned ? 'rgba(59,130,246,0.15)' : '#E7E5E4'
+                }}>
+                  <Pin size={18} color={form.is_pinned ? H.skyBlue : H.muted}/>
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:H.font, fontSize:13, fontWeight:700, color:form.is_pinned?H.honey:H.text }}>Pin announcement</div>
-                  <div style={{ fontFamily:H.font, fontSize:11, color:H.sub }}>Shows at the top of the notice board</div>
+                <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', minWidth:0 }}>
+                  <div style={{ fontFamily:H.font, fontSize:13, fontWeight:700, color: form.is_pinned ? H.skyBlue : H.text, lineHeight: 1.3 }}>Pin announcement</div>
+                  <div style={{ fontFamily:H.font, fontSize:11, color:H.sub, lineHeight: 1.3, marginTop: 2 }}>Shows at the top of the notice board</div>
                 </div>
-                <div style={{ width:40, height:22, borderRadius:11, background:form.is_pinned?H.honey:H.border, position:'relative', flexShrink:0 }}>
-                  <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', position:'absolute', top:2, left:form.is_pinned?20:2, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }}/>
+                <div style={{
+                  width:42,
+                  height:24,
+                  borderRadius:12,
+                  background: form.is_pinned ? H.skyBlue : '#D6D3D1',
+                  position:'relative',
+                  flexShrink:0,
+                  transition: 'background-color 0.2s ease'
+                }}>
+                  <div style={{
+                    width:20,
+                    height:20,
+                    borderRadius:'50%',
+                    background:'#ffffff',
+                    position:'absolute',
+                    top:2,
+                    left: form.is_pinned ? 20 : 2,
+                    transition:'left 0.2s ease',
+                    boxShadow:'0 1px 3px rgba(0,0,0,0.25)'
+                  }}/>
                 </div>
               </button>
 
               {/* Telegram toggle */}
               <button type="button" onClick={()=>set('send_telegram',!form.send_telegram)}
-                style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 14px', borderRadius:12, border:`2px solid ${form.send_telegram?'#60a5fa':H.border}`, background:form.send_telegram?'rgba(96,165,250,0.08)':'#F5F5F4', cursor:'pointer', width:'100%', textAlign:'left' as const }}>
-                <div style={{ width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:form.send_telegram?'rgba(96,165,250,0.15)':'#F5F5F4' }}>
-                  <Send size={16} color={form.send_telegram?'#60a5fa':H.muted}/>
+                style={{
+                  display:'flex',
+                  alignItems:'center',
+                  gap:12,
+                  padding:'12px 14px',
+                  borderRadius:12,
+                  border:`2px solid ${form.send_telegram ? '#60a5fa' : H.border}`,
+                  background: form.send_telegram ? 'rgba(96,165,250,0.08)' : '#F5F5F4',
+                  cursor:'pointer',
+                  width:'100%',
+                  textAlign:'left' as const,
+                  boxSizing:'border-box',
+                  minHeight: 58,
+                  outline: 'none',
+                  transition: 'all 0.2s ease',
+                }}>
+                <div style={{
+                  width:38,
+                  height:38,
+                  borderRadius:10,
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  flexShrink:0,
+                  background: form.send_telegram ? 'rgba(96,165,250,0.15)' : '#E7E5E4'
+                }}>
+                  <Send size={18} color={form.send_telegram ? '#60a5fa' : H.muted}/>
                 </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:H.font, fontSize:13, fontWeight:700, color:form.send_telegram?'#60a5fa':H.text }}>Send Telegram</div>
-                  <div style={{ fontFamily:H.font, fontSize:11, color:H.sub }}>Push to school Telegram group</div>
+                <div style={{ flex:1, display:'flex', flexDirection:'column', justifyContent:'center', minWidth:0 }}>
+                  <div style={{ fontFamily:H.font, fontSize:13, fontWeight:700, color: form.send_telegram ? '#60a5fa' : H.text, lineHeight: 1.3 }}>Send Telegram</div>
+                  <div style={{ fontFamily:H.font, fontSize:11, color:H.sub, lineHeight: 1.3, marginTop: 2 }}>Push to school Telegram group</div>
                 </div>
-                <div style={{ width:40, height:22, borderRadius:11, background:form.send_telegram?'#60a5fa':H.border, position:'relative', flexShrink:0 }}>
-                  <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff', position:'absolute', top:2, left:form.send_telegram?20:2, transition:'left 0.2s', boxShadow:'0 1px 3px rgba(0,0,0,0.3)' }}/>
+                <div style={{
+                  width:42,
+                  height:24,
+                  borderRadius:12,
+                  background: form.send_telegram ? '#60a5fa' : '#D6D3D1',
+                  position:'relative',
+                  flexShrink:0,
+                  transition: 'background-color 0.2s ease'
+                }}>
+                  <div style={{
+                    width:20,
+                    height:20,
+                    borderRadius:'50%',
+                    background:'#ffffff',
+                    position:'absolute',
+                    top:2,
+                    left: form.send_telegram ? 20 : 2,
+                    transition:'left 0.2s ease',
+                    boxShadow:'0 1px 3px rgba(0,0,0,0.25)'
+                  }}/>
                 </div>
               </button>
             </div>
@@ -208,16 +293,16 @@ export default function NewAnnouncementPage() {
 
           {/* Submit */}
           <button type="submit" disabled={loading||!form.title.trim()||!form.body.trim()}
-            style={{ background:H.grass, color:'#fff', border:`3px solid ${H.border}`, borderRadius:14, fontFamily:H.font, fontWeight:900, fontSize:15, padding:'14px', cursor:loading||!form.title.trim()||!form.body.trim()?'not-allowed':'pointer', boxShadow:`4px 4px 0 ${H.border}`, display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:loading||!form.title.trim()||!form.body.trim()?0.5:1 }}>
+            style={{ background:H.skyBlue, color:'#fff', border:`2px solid ${H.border}`, borderRadius:14, fontFamily:H.font, fontWeight:900, fontSize:15, padding:'14px 24px', cursor:loading||!form.title.trim()||!form.body.trim()?'not-allowed':'pointer', boxShadow:`0 4px 12px rgba(59, 130, 246, 0.25)`, display:'flex', alignItems:'center', justifyContent:'center', gap:8, opacity:loading||!form.title.trim()||!form.body.trim()?0.5:1, minHeight:48, width:'100%', boxSizing:'border-box' as const }}>
             {loading
-              ? <><Loader2 size={16} style={{ animation:'spin 0.7s linear infinite' }}/> Posting…</>
-              : <><Megaphone size={16}/> Post Announcement{form.send_telegram?' + Notify Telegram':''}</>
+              ? <><Loader2 size={18} style={{ animation:'spin 0.7s linear infinite' }}/> Posting…</>
+              : <><Megaphone size={18}/> Post Announcement{form.send_telegram?' + Notify Telegram':''}</>
             }
           </button>
         </form>
       </main>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(59,130,246,0.3);border-radius:99px}`}</style>
     </div>
   )
 }

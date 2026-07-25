@@ -2,20 +2,20 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserX, Loader2, Search, CheckCircle2, AlertTriangle, Star, Bell, Send } from 'lucide-react'
+import { ArrowLeft, UserX, UserCheck, Loader2, Search, CheckCircle2, AlertTriangle, Star, Bell, Send, RotateCcw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { todaySLT, generatePeriods } from '@/lib/utils'
 
 import { H } from '@/lib/honey'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', padding:'20px 22px', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.honey, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'10px 16px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, width:'100%', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:12, fontFamily:H.font, fontWeight:700, fontSize:14, padding:'12px 20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', minHeight:48, boxShadow:'0 4px 12px rgba(139,92,246,0.25)', boxSizing:'border-box' as const, ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
-const gBtn  = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'10px 16px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6, width:'100%', ...x })
+const gBtn  = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:12, fontFamily:H.font, fontWeight:700, fontSize:14, padding:'12px 20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', minHeight:48, boxSizing:'border-box' as const, ...x })
 const inp   = (x?:any):React.CSSProperties => ({ width:'100%', padding:'10px 14px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, transition:'border-color 0.15s', ...x })
 
 const StepBadge = ({ n, done }: { n: number; done?: boolean }) => (
-  <div style={{ width:26, height:26, borderRadius:'50%', background:done?H.grass:H.honey, color:done?'#fff':H.chocolate, fontSize:12, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:H.font, border:`2px solid ${H.border}` }}>
+  <div style={{ width:26, height:26, borderRadius:'50%', background:done?H.grass:H.purple, color:'#fff', fontSize:12, fontWeight:900, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontFamily:H.font, border:`2px solid ${H.border}` }}>
     {done ? '✓' : n}
   </div>
 )
@@ -159,10 +159,36 @@ function NewAbsenceContent() {
     setNotifying(p=>({...p,[pNum]:false})); setNotified(p=>({...p,[pNum]:true}))
   }
 
+  const [canceling, setCanceling] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+
+  const handleCancelAbsence = async () => {
+    if (!absenceId) return
+    setCanceling(true)
+    try {
+      await supabase.from('substitutions').delete().eq('absence_id', absenceId)
+      const { error: delErr } = await supabase.from('absences').delete().eq('id', absenceId)
+      if (delErr) throw delErr
+      setAbsenceId(null)
+      setSelectedTeacher(null)
+      setAssignedSubs({})
+      setForm(f => ({ ...f, teacher_id: '', reason: '' }))
+      setSearch('')
+      setConfirmCancel(false)
+      if (preloadAbsenceId) {
+        router.push('/admin/disruptions?tab=absences')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Failed to cancel absence')
+    } finally {
+      setCanceling(false)
+    }
+  }
+
   const notifyAll = async () => { for (const pNum of Object.keys(assignedSubs).map(Number)) { if (!notified[pNum]) await notifySubstitute(pNum) } }
   const filteredTeachers = teachers.filter(t=>!search||t.full_name.toLowerCase().includes(search.toLowerCase())||t.email?.toLowerCase().includes(search.toLowerCase()))
 
-  if (fetching) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}><Loader2 size={22} style={{ color:H.honey, animation:'spin 0.7s linear infinite' }}/></div>
+  if (fetching) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}><Loader2 size={22} style={{ color:H.purple, animation:'spin 0.7s linear infinite' }}/></div>
 
   if (success) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}>
@@ -178,30 +204,31 @@ function NewAbsenceContent() {
     <div style={{ minHeight:'100vh', background:H.bg, fontFamily:H.font, color:H.text }}>
 
       {/* Header */}
-      <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', gap:12, borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
-        <Link href="/admin/disruptions?tab=absences" style={ghost({ padding:'6px 10px' })}>←</Link>
-        <span style={{ fontSize:20 }}>🤒</span>
+      <header style={{ height:68, padding:'0 24px', display:'flex', alignItems:'center', gap:12, borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
+        <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'rgba(139,92,246,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <UserX size={20} style={{ color: H.purple }} />
+        </div>
         <div>
           <h1 style={{ fontFamily:H.font, fontSize:17, fontWeight:800, color:H.text, margin:0 }}>{preloadAbsenceId?'Assign Cover':'Mark Absence'}</h1>
           <p style={{ fontFamily:H.font, fontSize:11, color:H.muted, margin:0 }}>{preloadAbsenceId?'Select substitutes & notify':'Record absence & assign cover'}</p>
         </div>
       </header>
 
-      <main style={{ maxWidth:720, margin:'0 auto', padding:'24px 28px', display:'flex', flexDirection:'column', gap:16 }}>
+      <main style={{ maxWidth:720, margin:'0 auto', padding:'24px 20px 100px 20px', display:'flex', flexDirection:'column', gap:16 }}>
 
         {/* ── STEP 1: Select Teacher ── */}
         {!preloadAbsenceId && (
           <div style={card()}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
               <StepBadge n={1} done={!!selectedTeacher}/>
-              <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.honey }}>Select Teacher</span>
+              <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.purple }}>Select Teacher</span>
             </div>
 
             <div style={{ position:'relative', marginBottom:10 }}>
               <Search size={13} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:H.sub, pointerEvents:'none' }}/>
               <input value={search} onChange={e=>{ setSearch(e.target.value); if(selectedTeacher&&e.target.value!==selectedTeacher.full_name) setSelectedTeacher(null) }}
                 placeholder="Search teacher name…" style={inp({ paddingLeft:34 })}
-                onFocus={e=>e.target.style.borderColor=H.honey} onBlur={e=>e.target.style.borderColor=H.border}/>
+                onFocus={e=>e.target.style.borderColor=H.purple} onBlur={e=>e.target.style.borderColor=H.border}/>
             </div>
 
             {search && !selectedTeacher && (
@@ -240,14 +267,14 @@ function NewAbsenceContent() {
           <div style={card()}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:16 }}>
               <StepBadge n={2} done={!!absenceId}/>
-              <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.honey }}>Absence Details</span>
+              <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.purple }}>Absence Details</span>
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:14 }}>
               <div>
                 <Label>Date</Label>
                 <input type="date" value={form.absence_date} onChange={e=>setForm(f=>({...f,absence_date:e.target.value}))} style={inp()}
-                  onFocus={e=>e.target.style.borderColor=H.honey} onBlur={e=>e.target.style.borderColor=H.border}/>
+                  onFocus={e=>e.target.style.borderColor=H.purple} onBlur={e=>e.target.style.borderColor=H.border}/>
               </div>
               <div>
                 <Label>Type</Label>
@@ -277,7 +304,7 @@ function NewAbsenceContent() {
             <div style={{ marginBottom:14 }}>
               <Label>Reason <span style={{ fontWeight:400, textTransform:'none' as const, letterSpacing:0 }}>(optional)</span></Label>
               <input value={form.reason} onChange={e=>setForm(f=>({...f,reason:e.target.value}))} placeholder="e.g. Sick leave, Family emergency…" style={inp()}
-                onFocus={e=>e.target.style.borderColor=H.honey} onBlur={e=>e.target.style.borderColor=H.border}/>
+                onFocus={e=>e.target.style.borderColor=H.purple} onBlur={e=>e.target.style.borderColor=H.border}/>
             </div>
 
             {error && (
@@ -286,7 +313,7 @@ function NewAbsenceContent() {
 
             {!absenceId && (
               <button onClick={handleSubmit} disabled={loading||!form.teacher_id} style={hBtn({ opacity:loading||!form.teacher_id?0.5:1, cursor:loading||!form.teacher_id?'not-allowed':'pointer' })}>
-                {loading ? <><Loader2 size={15} style={{ animation:'spin 0.7s linear infinite' }}/> Recording…</> : <><UserX size={15}/> Record Absence &amp; Find Cover</>}
+                {loading ? <><Loader2 size={18} style={{ animation:'spin 0.7s linear infinite' }}/> Recording…</> : <><UserCheck size={18}/> Record Absence &amp; Find Cover</>}
               </button>
             )}
           </div>
@@ -295,14 +322,43 @@ function NewAbsenceContent() {
         {/* ── STEP 3: Assign Cover ── */}
         {absenceId && (
           <div style={card()}>
-            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-              <StepBadge n={3}/>
-              <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.honey }}>Assign Cover &amp; Notify</span>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:12 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                <StepBadge n={3}/>
+                <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.purple }}>Assign Cover &amp; Notify</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(v => !v)}
+                style={{ background: H.dangerLight, color: H.danger, border: `1px solid ${H.danger}40`, borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+              >
+                <RotateCcw size={12} /> Undo / Cancel Absence
+              </button>
             </div>
+
+            {confirmCancel && (
+              <div style={{ padding: '14px 16px', borderRadius: 12, background: H.dangerLight, border: `1px solid ${H.danger}40`, marginBottom: 16 }}>
+                <div style={{ fontFamily: H.font, fontWeight: 700, fontSize: 13, color: H.danger, marginBottom: 4 }}>
+                  Cancel &amp; Rollback this Absence?
+                </div>
+                <div style={{ fontFamily: H.font, fontSize: 12, color: H.textSec, marginBottom: 10 }}>
+                  This will remove the recorded absence entry and reassign any cover teacher back to their normal timetable schedule.
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={handleCancelAbsence} disabled={canceling} style={{ background: H.danger, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    {canceling ? <Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> : <RotateCcw size={12} />} Yes, Undo Absence
+                  </button>
+                  <button onClick={() => setConfirmCancel(false)} style={ghost({ padding: '6px 12px', fontSize: 12 })}>
+                    Keep Absence
+                  </button>
+                </div>
+              </div>
+            )}
+
             <p style={{ fontFamily:H.font, fontSize:13, color:H.sub, marginBottom:16 }}>Click a teacher to assign them, then notify directly.</p>
 
             {loadingSugs ? (
-              <div style={{ textAlign:'center', padding:32 }}><Loader2 size={20} style={{ color:H.honey, animation:'spin 0.7s linear infinite', margin:'0 auto' }}/></div>
+              <div style={{ textAlign:'center', padding:32 }}><Loader2 size={20} style={{ color:H.purple, animation:'spin 0.7s linear infinite', margin:'0 auto' }}/></div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 {absentPeriods.map(pNum=>{
@@ -345,14 +401,14 @@ function NewAbsenceContent() {
                                 const sel = subId===t.id
                                 return (
                                   <button key={t.id} onClick={()=>{ setAssignedSubs(p=>({...p,[pNum]:sel?undefined!:t.id})); if(sel)setNotified(p=>({...p,[pNum]:false})) }}
-                                    style={{ padding:'7px 13px', borderRadius:20, border:`2px solid ${sel?H.grass:t.sameSubject?H.honey:H.border}`, cursor:'pointer', fontFamily:H.font, fontSize:12, fontWeight:sel?800:500, display:'flex', alignItems:'center', gap:5, transition:'all 0.15s', background:sel?`${H.grass}20`:t.sameSubject?`${H.honey}12`:'#F5F5F4', color:sel?H.grass:t.sameSubject?H.honey:H.text }}>
-                                    {sel ? <CheckCircle2 size={11}/> : t.sameSubject && <Star size={10} style={{ color:H.honey, fill:H.honey }}/>}
+                                    style={{ padding:'7px 13px', borderRadius:20, border:`2px solid ${sel?H.grass:t.sameSubject?H.purple:H.border}`, cursor:'pointer', fontFamily:H.font, fontSize:12, fontWeight:sel?800:500, display:'flex', alignItems:'center', gap:5, transition:'all 0.15s', background:sel?`${H.grass}20`:t.sameSubject?'rgba(139,92,246,0.12)':'#F5F5F4', color:sel?H.grass:t.sameSubject?H.purple:H.text }}>
+                                    {sel ? <CheckCircle2 size={11}/> : t.sameSubject && <Star size={10} style={{ color:H.purple, fill:H.purple }}/>}
                                     {t.full_name.split(' ')[0]} {t.full_name.split(' ').slice(-1)[0]}
                                   </button>
                                 )
                               })}
                             </div>
-                            {sugs.some(t=>t.sameSubject) && <div style={{ marginTop:6, fontFamily:H.font, fontSize:11, color:H.sub, display:'flex', alignItems:'center', gap:4 }}><Star size={9} style={{ color:H.honey, fill:H.honey }}/> teaches this subject</div>}
+                            {sugs.some(t=>t.sameSubject) && <div style={{ marginTop:6, fontFamily:H.font, fontSize:11, color:H.sub, display:'flex', alignItems:'center', gap:4 }}><Star size={9} style={{ color:H.purple, fill:H.purple }}/> teaches this subject</div>}
                           </>
                         )}
                       </div>
@@ -382,14 +438,14 @@ function NewAbsenceContent() {
         )}
       </main>
 
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}select option{background:#ffffff;color:#eebd2b}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.3);border-radius:99px}select option{background:#ffffff;color:#8b5cf6}`}</style>
     </div>
   )
 }
 
 export default function NewAbsencePage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: H.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={32} style={{ color: H.honey, animation: 'spin 0.7s linear infinite' }} /></div>}>
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: H.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Loader2 size={32} style={{ color: H.purple, animation: 'spin 0.7s linear infinite' }} /></div>}>
       <NewAbsenceContent />
     </Suspense>
   )

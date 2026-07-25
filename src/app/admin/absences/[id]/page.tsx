@@ -62,7 +62,7 @@ export default function AbsenceDetailPage() {
         .select('*, teacher:profiles!teacher_id(id,full_name,email,subjects)')
         .eq('id', id).maybeSingle(),
       supabase.from('substitutions')
-        .select('*, substitute:profiles!substitute_teacher_id(id,full_name), class:classes!class_id(name), original:profiles!original_teacher_id(full_name)')
+        .select('*, substitute:profiles!substitute_teacher_id(id,full_name), class:classes!class_id(name)')
         .eq('absence_id', id)
         .order('period_number'),
       supabase.from('profiles').select('id,full_name,subjects').eq('role','teacher').eq('is_active',true).order('full_name'),
@@ -206,17 +206,17 @@ export default function AbsenceDetailPage() {
         {/* Delete confirm */}
         {confirmDelete && (
           <div style={{ padding:'16px 20px', borderRadius:'12px', background:'#fee2e2', border:'2px solid #fca5a5' }}>
-            <div style={{ fontWeight:700, fontSize:'14px', color:'#b91c1c', marginBottom:'8px' }}>
-              Delete this absence record?
+            <div style={{ fontWeight:700, fontSize:'14px', color:'#b91c1c', marginBottom:'6px' }}>
+              Undo &amp; Cancel this absence record?
             </div>
-            <div style={{ fontSize:'12px', color:'#dc2626', marginBottom:'14px' }}>
-              This will also delete all {subs.length} substitution assignment{subs.length !== 1 ? 's' : ''} linked to it. This cannot be undone.
+            <div style={{ fontSize:'12px', color:'#dc2626', marginBottom:'14px', lineHeight: 1.5 }}>
+              This will delete the recorded absence entry and all {subs.length} substitution assignment{subs.length !== 1 ? 's' : ''} linked to it, reassigning any cover teacher back to their normal schedule.
             </div>
             <div style={{ display:'flex', gap:'8px' }}>
-              <button onClick={handleDelete} disabled={deleting} style={{ background:"rgba(239,68,68,0.12)", color:"#f87171", border:"2px solid rgba(239,68,68,0.3)", borderRadius:10, fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:12, padding:"6px 12px", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5 }}>
-                {deleting ? <Loader2 size={13} style={{ animation:'spin 0.7s linear infinite' }}/> : <><Trash2 size={13}/> Yes, Delete</>}
+              <button onClick={handleDelete} disabled={deleting} style={{ background:"#dc2626", color:"#ffffff", border:"none", borderRadius:10, fontFamily:"'Plus Jakarta Sans',sans-serif", fontWeight:700, fontSize:12, padding:"8px 16px", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5 }}>
+                {deleting ? <Loader2 size={13} style={{ animation:'spin 0.7s linear infinite' }}/> : <><Trash2 size={13}/> Yes, Cancel &amp; Delete Absence</>}
               </button>
-              <button onClick={() => setConfirmDelete(false)} style={ghost({ padding:'6px 12px', fontSize:12 })}>
+              <button onClick={() => setConfirmDelete(false)} style={ghost({ padding:'8px 14px', fontSize:12 })}>
                 Cancel
               </button>
             </div>

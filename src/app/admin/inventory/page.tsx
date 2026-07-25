@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X } from 'lucide-react'
+import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X, Upload } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getItemPublicUrl } from '@/lib/siteUrl'
 import { H } from '@/lib/honey'
@@ -307,6 +307,9 @@ export default function InventoryPage() {
             >
               <QrCode size={14} /> Batch QR Sheet
             </button>
+            <Link href="/admin/inventory/bulk" style={{ ...styles.button, ...styles.buttonSecondary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
+              <Upload size={14} /> Bulk Import
+            </Link>
             <Link href="/admin/inventory/new" style={{ ...styles.button, ...styles.buttonPrimary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
               <Plus size={14} /> Add Item
             </Link>

@@ -87,8 +87,8 @@ export async function middleware(request: NextRequest) {
   const mustChangePassword = profile?.must_change_password ?? false
 
   // Force password change redirect for teachers
-  if (role === 'teacher' && mustChangePassword && pathname !== '/teacher/change-password') {
-    return NextResponse.redirect(new URL('/teacher/change-password', request.url))
+  if (role === 'teacher' && mustChangePassword && pathname !== '/teacher/profile') {
+    return NextResponse.redirect(new URL('/teacher/profile?changePassword=true', request.url))
   }
 
   // Admin trying to access teacher routes → redirect to admin

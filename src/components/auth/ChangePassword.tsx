@@ -22,7 +22,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
   const [isConfirmFocused, setIsConfirmFocused] = useState(false)
 
   const strength = newPass.length < 8 ? 0 : newPass.length < 10 ? 1 : newPass.length < 12 ? 2 : 3
-  const strengthColor = [H.danger, H.warning, H.honey, H.grass][strength]
+  const strengthColor = [H.danger, H.warning, '#059669', H.grass][strength]
   const strengthLabel = ['Too short', 'Weak', 'Good', 'Strong'][strength]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,7 +52,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
     doneIcon: { fontSize: 48, marginBottom: 12 },
     doneTitle: { fontFamily: H.font, fontSize: 20, fontWeight: 800, color: H.grass, margin: '0 0 8px' },
     doneText: { fontFamily: H.font, fontSize: 13, color: H.muted, margin: '0 0 24px' },
-    doneLink: { background: H.honey, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 13, padding: '10px 22px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' },
+    doneLink: { background: H.grass, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 13, padding: '10px 22px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' },
     form: { background: H.surface, borderRadius: 16, border: `1px solid ${H.border}`, padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 18, boxShadow: '0 4px 12px rgba(0,0,0,0.06)' },
     error: { padding: '10px 14px', borderRadius: 10, background: H.dangerLight, border: `1px solid ${H.danger}`, fontFamily: H.font, fontSize: 13, color: H.danger },
     label: { display: 'block', fontFamily: H.font, fontSize: 11, fontWeight: 700, color: H.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 },
@@ -65,7 +65,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
     strengthLabel: { fontFamily: H.font, fontSize: 11, fontWeight: 700 },
     confirmInput: { width: '100%', padding: '10px 14px', background: H.bg, border: `1px solid ${H.border}`, borderRadius: 10, color: H.text, fontFamily: H.font, fontWeight: 600, fontSize: 14, outline: 'none', transition: 'border-color 0.2s ease' },
     confirmErrorText: { fontFamily: H.font, fontSize: 11, color: H.danger, marginTop: 4, display: 'block' },
-    submitButton: { background: H.honey, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 14, padding: '12px 22px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 },
+    submitButton: { background: H.grass, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 14, padding: '12px 22px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 },
   });
 
   return (
@@ -94,7 +94,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
               <label style={styles.label}>Current Password</label>
               <div style={styles.inputContainer}>
                 <input type={showCur ? 'text' : 'password'} value={current} onChange={e => setCurrent(e.target.value)} required placeholder="••••••••"
-                  style={{...styles.input, borderColor: isCurrentFocused ? H.honey : H.border}}
+                  style={{...styles.input, borderColor: isCurrentFocused ? H.grass : H.border}}
                   onFocus={() => setIsCurrentFocused(true)} onBlur={() => setIsCurrentFocused(false)} />
                 <button type="button" onClick={() => setShowCur(x => !x)} style={styles.eyeButton}>
                   {showCur ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -105,7 +105,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
               <label style={styles.label}>New Password</label>
               <div style={styles.inputContainer}>
                 <input type={showNew ? 'text' : 'password'} value={newPass} onChange={e => setNewPass(e.target.value)} required placeholder="Min. 8 characters" minLength={8}
-                  style={{...styles.input, borderColor: isNewFocused ? H.honey : H.border}}
+                  style={{...styles.input, borderColor: isNewFocused ? H.grass : H.border}}
                   onFocus={() => setIsNewFocused(true)} onBlur={() => setIsNewFocused(false)} />
                 <button type="button" onClick={() => setShowNew(x => !x)} style={styles.eyeButton}>
                   {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -123,7 +123,7 @@ export default function ChangePassword({ backHref, backLabel }: { backHref: stri
             <div>
               <label style={styles.label}>Confirm New Password</label>
               <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required placeholder="••••••••"
-                style={{...styles.confirmInput, borderColor: isConfirmFocused ? H.honey : (confirm && confirm !== newPass ? H.danger : H.border)}}
+                style={{...styles.confirmInput, borderColor: isConfirmFocused ? H.grass : (confirm && confirm !== newPass ? H.danger : H.border)}}
                 onFocus={() => setIsConfirmFocused(true)} onBlur={() => setIsConfirmFocused(false)} />
               {confirm && confirm !== newPass && <span style={styles.confirmErrorText}>Passwords don't match</span>}
             </div>

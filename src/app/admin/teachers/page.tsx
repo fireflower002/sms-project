@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users } from 'lucide-react'
+import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users, Mail, Calendar } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import AddTeacherModal from '@/components/admin/AddTeacherModal'
 import TeacherActions from '@/components/admin/TeacherActions'
@@ -92,21 +92,89 @@ const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter }: { 
   );
 };
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isMobile
+}
+
 const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDone: () => void }) => {
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const isMobile = useIsMobile();
+
   if (teachers.length === 0) return <p style={{ textAlign: 'center', padding: '48px', color: H.textMuted }}>No teachers match the current filters.</p>;
   
+  if (isMobile) {
+    return (
+      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {teachers.map((t: any) => (
+          <div key={t.id} style={{
+            backgroundColor: H.surface,
+            border: `1px solid ${H.border}`,
+            borderRadius: '14px',
+            padding: '16px',
+            boxShadow: H.cardShadow,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>{t.full_name}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: H.textSec, marginTop: '4px' }}>
+                  <Mail size={13} style={{ color: H.textMuted, flexShrink: 0 }} />
+                  <span style={{ wordBreak: 'break-all' }}>{t.email}</span>
+                </div>
+              </div>
+              <div style={{ flexShrink: 0 }}>
+                {t.must_change_password ? (
+                  <Badge variant="pending">Reset Req.</Badge>
+                ) : t.is_active ? (
+                  <Badge variant="active">Active</Badge>
+                ) : (
+                  <Badge variant="inactive">Inactive</Badge>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: H.textMuted }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Calendar size={13} /> Joined {new Date(t.created_at).toLocaleDateString('en-GB')}
+              </span>
+            </div>
+
+            <div style={{ borderTop: `1px solid ${H.border}`, paddingTop: '12px', display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+              <TeacherActions teacherId={t.id} isActive={t.is_active} teacherName={t.full_name} onDone={onActionDone} />
+              <Link href={`/admin/teachers/${t.id}`} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 14px', fontSize: '13px', minHeight: '36px' }}>
+                View Profile <ChevronRight size={15}/>
+              </Link>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div style={styles.tableWrapper}>
-      <table style={styles.table}>
+    <div style={{ width: '100%', overflowX: 'hidden' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
         <thead><tr>
-          {['Teacher', 'Email', 'Status', 'Joined', 'Actions'].map(h => <th key={h} style={styles.th}>{h}</th>)}
+          <th style={styles.th}>Teacher</th>
+          <th style={styles.th}>Email</th>
+          <th style={styles.th}>Status</th>
+          <th style={styles.th}>Joined</th>
+          <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
         </tr></thead>
         <tbody>
           {teachers.map((t: any) => (
             <tr key={t.id} onMouseEnter={() => setHoveredRow(t.id)} onMouseLeave={() => setHoveredRow(null)} style={hoveredRow === t.id ? styles.trHover : {}}>
               <td style={{ ...styles.td, color: H.textPrimary, fontWeight: 600 }}>{t.full_name}</td>
-              <td style={styles.td}>{t.email}</td>
+              <td style={{ ...styles.td, color: H.textSec, maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.email}>{t.email}</td>
               <td style={styles.td}>
                 {t.must_change_password ? (
                   <Badge variant="pending">Password Reset Required</Badge>
@@ -116,11 +184,11 @@ const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDo
                   <Badge variant="inactive">Inactive</Badge>
                 )}
               </td>
-              <td style={styles.td}>{new Date(t.created_at).toLocaleDateString('en-GB')}</td>
-              <td style={styles.td}>
-                <div style={{ display: 'flex', gap: '8px' }}>
+              <td style={{ ...styles.td, fontVariantNumeric: 'tabular-nums' }}>{new Date(t.created_at).toLocaleDateString('en-GB')}</td>
+              <td style={{ ...styles.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <div style={{ display: 'inline-flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end' }}>
                   <TeacherActions teacherId={t.id} isActive={t.is_active} teacherName={t.full_name} onDone={onActionDone} />
-                  <Link href={`/admin/teachers/${t.id}`} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px' }}><ChevronRight size={16}/></Link>
+                  <Link href={`/admin/teachers/${t.id}`} title="View Details" style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px', minHeight: '36px' }}><ChevronRight size={16}/></Link>
                 </div>
               </td>
             </tr>
@@ -131,40 +199,72 @@ const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDo
   );
 };
 
-const PendingTable = ({ pending, deletePending, deletingId }: { pending: any[]; deletePending: (id: string, name: string) => Promise<void> | void; deletingId: string | null }) => (
-  <div>
-    {/* Section header strip */}
-    <div style={{ padding: '12px 24px', borderTop: `1px solid ${H.border}`, backgroundColor: '#FAF9F6', display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <AlertTriangle size={15} style={{ color: '#B45309' }} />
-      <span style={{ fontSize: '13px', fontWeight: 700, color: H.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Sign-ups</span>
-      <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: '4px' }}>({pending.length})</span>
-    </div>
-    <div style={styles.tableWrapper}>
-      <table style={styles.table}>
-        <thead><tr>
-          {['Name', 'Email', 'Added On', ''].map(h => <th key={h} style={styles.th}>{h}</th>)}
-        </tr></thead>
-        <tbody>
+const PendingTable = ({ pending, deletePending, deletingId }: { pending: any[]; deletePending: (id: string, name: string) => Promise<void> | void; deletingId: string | null }) => {
+  const isMobile = useIsMobile();
+
+  return (
+    <div>
+      {/* Section header strip */}
+      <div style={{ padding: '12px 24px', borderTop: `1px solid ${H.border}`, backgroundColor: '#FAF9F6', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <AlertTriangle size={15} style={{ color: '#B45309' }} />
+        <span style={{ fontSize: '13px', fontWeight: 700, color: H.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pending Sign-ups</span>
+        <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: '4px' }}>({pending.length})</span>
+      </div>
+
+      {isMobile ? (
+        <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {pending.map((u: any) => (
-            <tr key={u.id}>
-              <td style={{ ...styles.td, fontWeight: 600, color: H.textPrimary }}>{u.full_name}</td>
-              <td style={styles.td}>{u.email}</td>
-              <td style={{ ...styles.td, fontVariantNumeric: 'tabular-nums' }}>{new Date(u.created_at).toLocaleDateString('en-GB')}</td>
-              <td style={{ ...styles.td, textAlign: 'right' }}>
-                <button onClick={() => deletePending(u.id, u.full_name)} disabled={deletingId === u.id} style={{
-                  background: 'none', border: 'none', cursor: 'pointer', color: H.danger, padding: '6px 8px',
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  {deletingId === u.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={16} />}
-                </button>
-              </td>
-            </tr>
+            <div key={u.id} style={{
+              backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '12px', padding: '14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px'
+            }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: '14px', color: H.textPrimary, margin: 0 }}>{u.full_name}</p>
+                <p style={{ fontSize: '12px', color: H.textSec, margin: '2px 0 0', wordBreak: 'break-all' }}>{u.email}</p>
+                <p style={{ fontSize: '11px', color: H.textMuted, margin: '4px 0 0' }}>Added {new Date(u.created_at).toLocaleDateString('en-GB')}</p>
+              </div>
+              <button onClick={() => deletePending(u.id, u.full_name)} disabled={deletingId === u.id} style={{
+                background: H.dangerLight, border: `1px solid ${H.danger}30`, borderRadius: '8px', color: H.danger,
+                padding: '8px 12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700
+              }}>
+                {deletingId === u.id ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={14} />}
+                Delete
+              </button>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      ) : (
+        <div style={{ width: '100%', overflowX: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'auto' }}>
+            <thead><tr>
+              <th style={styles.th}>Name</th>
+              <th style={styles.th}>Email</th>
+              <th style={styles.th}>Added On</th>
+              <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+            </tr></thead>
+            <tbody>
+              {pending.map((u: any) => (
+                <tr key={u.id}>
+                  <td style={{ ...styles.td, fontWeight: 600, color: H.textPrimary }}>{u.full_name}</td>
+                  <td style={styles.td}>{u.email}</td>
+                  <td style={{ ...styles.td, fontVariantNumeric: 'tabular-nums' }}>{new Date(u.created_at).toLocaleDateString('en-GB')}</td>
+                  <td style={{ ...styles.td, textAlign: 'right' }}>
+                    <button onClick={() => deletePending(u.id, u.full_name)} disabled={deletingId === u.id} style={{
+                      background: 'none', border: 'none', cursor: 'pointer', color: H.danger, padding: '6px 8px',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      {deletingId === u.id ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={16} />}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 const Pagination = ({ page, totalPages, setPage, totalCount }: { page: number; totalPages: number; setPage: (fn: (p: number) => number) => void; totalCount: number }) => {
     if (totalPages <= 1) return null;

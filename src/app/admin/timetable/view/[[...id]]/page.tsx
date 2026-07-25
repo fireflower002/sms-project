@@ -2,11 +2,12 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Printer, Coffee, ChevronDown, AlertTriangle, CheckCircle2, Users, Calendar, BarChart2, TrendingUp, Star, Pencil, Filter } from 'lucide-react'
+import { Loader2, Printer, Coffee, ChevronDown, AlertTriangle, CheckCircle2, Users, Calendar, BarChart2, TrendingUp, Star, Pencil, Filter, Palette } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import { TimetableSkeleton } from '@/components/ui/Skeleton'
+import SubjectModal, { CURATED_PALETTE } from '@/components/admin/SubjectModal'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
@@ -14,9 +15,7 @@ const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FF
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri']
-const PALETTE = ['#f59e0b','#8b5cf6','#ec4899','#ef4444','#f97316','#22c55e','#10b981','#06b6d4','#3b82f6','#a855f7','#d97706','#84cc16']
 
-function subjectColor(s: string) { let h=0; for(let i=0;i<s.length;i++) h=s.charCodeAt(i)+((h<<5)-h); return PALETTE[Math.abs(h)%PALETTE.length] }
 function hex2rgba(hex: string, a: number) { const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16); return `rgba(${r},${g},${b},${a})` }
 
 export default function AdminTimetableViewPage() {
@@ -39,15 +38,26 @@ export default function AdminTimetableViewPage() {
   const [allGrades, setAllGrades]     = useState<string[]>([])
   const [tab, setTab]                 = useState<'timetable'|'gaps'>('timetable')
   const [showGradeDropdown, setShowGradeDropdown] = useState(false)
+  const [showSubjectModal, setShowSubjectModal] = useState(false)
+  const [subjectColors, setSubjectColors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      const [{ data: tmpls }, { data: cls }, { data: tchs }] = await Promise.all([
-        supabase.from('timetable_templates').select('*').order('created_at', { ascending: false }),
-        supabase.from('classes').select('*').eq('is_active', true).order('grade_level').order('name'),
-        supabase.from('profiles').select('id,full_name,subjects').eq('role', 'teacher').eq('is_active', true).order('full_name'),
-      ])
+  const subjectColor = (s: string, slotColor?: string) => {
+    return slotColor || subjectColors[s] || CURATED_PALETTE[0]
+  }
+
+  const load = async () => {
+    setLoading(true)
+    const [{ data: tmpls }, { data: cls }, { data: tchs }] = await Promise.all([
+      supabase.from('timetable_templates').select('*').order('created_at', { ascending: false }),
+      supabase.from('classes').select('*').eq('is_active', true).order('grade_level').order('name'),
+      supabase.from('profiles').select('id,full_name,subjects,subject_colors').eq('role', 'teacher').eq('is_active', true).order('full_name'),
+    ])
+
+    const colorMap: Record<string, string> = {}
+    ;(tchs || []).forEach((t: any) => {
+      if (t.subject_colors) Object.assign(colorMap, t.subject_colors)
+    })
+    setSubjectColors(colorMap)
 
       const templateList = tmpls || []
       setTemplates(templateList)
@@ -80,6 +90,8 @@ export default function AdminTimetableViewPage() {
       setSelectedGrades(gs) // Default to ALL grades
       setLoading(false)
     }
+
+  useEffect(() => {
     load()
   }, [targetId])
 
@@ -146,7 +158,7 @@ export default function AdminTimetableViewPage() {
   if (loading) return <TimetableSkeleton />
 
   return (
-    <div style={{ minHeight: '100vh', background: H.bg, fontFamily: H.font, color: H.text, padding: 'clamp(16px, 3vw, 28px)', boxSizing: 'border-box' }}>
+    <div style={{ minHeight: '100vh', background: H.bg, fontFamily: H.font, color: H.text, padding: 'clamp(16px, 3vw, 28px)', paddingBottom: '100px', boxSizing: 'border-box' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: 16, boxShadow: H.cardShadow, overflow: 'hidden' }}>
 
         {/* Contiguous Header — Back arrow removed (navigation in sidebar) */}
@@ -161,8 +173,8 @@ export default function AdminTimetableViewPage() {
                   Full School Timetable
                 </h1>
                 {template?.is_active && (
-                  <span style={{ background: 'rgba(238,189,43,0.15)', color: H.honey, border: `1px solid ${H.honey}`, borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Star size={10} fill={H.honey} /> Active
+                  <span style={{ background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40`, borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Star size={10} fill={H.purple} /> Active
                   </span>
                 )}
               </div>
@@ -188,6 +200,9 @@ export default function AdminTimetableViewPage() {
                 <ChevronDown size={12} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: H.sub }} />
               </div>
             )}
+            <button onClick={() => setShowSubjectModal(true)} style={ghost({ background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40` })}>
+              <Palette size={13} /> Manage Subjects
+            </button>
             {template && (
               <Link href={`/admin/timetable/${template.id}/build`} style={hBtn()}>
                 <Pencil size={14} /> Edit Schedule
@@ -204,8 +219,9 @@ export default function AdminTimetableViewPage() {
           {([['timetable', 'Weekly Timetable Matrix'], ['gaps', 'Gaps & Conflict Analysis']] as const).map(([key, label]) => (
             <button key={key} onClick={() => setTab(key)} style={{
               padding: '12px 18px', fontFamily: H.font, fontSize: 14, fontWeight: 600,
-              borderBottom: tab === key ? `3px solid ${H.honey}` : '3px solid transparent',
-              color: tab === key ? H.honey : H.sub, background: 'none', border: 'none',
+              borderTop: 'none', borderLeft: 'none', borderRight: 'none',
+              borderBottom: tab === key ? `3px solid ${H.purple}` : '3px solid transparent',
+              color: tab === key ? H.purple : H.sub, background: 'none',
               cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 8,
             }}>
               {label}
@@ -216,7 +232,7 @@ export default function AdminTimetableViewPage() {
           ))}
         </div>
 
-        <main style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <main style={{ padding: '24px 24px 100px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* ── TIMETABLE TAB ── */}
           {tab === 'timetable' && <>
@@ -227,7 +243,7 @@ export default function AdminTimetableViewPage() {
               <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: 8, overflow: 'hidden', backgroundColor: H.surface }}>
                 {DAYS.map((d, i) => (
                   <button key={d} onClick={() => setSelectedDay(i + 1)}
-                    style={{ padding: '7px 14px', fontFamily: H.font, fontWeight: 600, fontSize: 12, cursor: 'pointer', border: 'none', borderRight: i < 4 ? `1px solid ${H.border}` : 'none', background: selectedDay === i + 1 ? H.honey : H.surface, color: selectedDay === i + 1 ? '#FFFFFF' : H.textSec }}>
+                    style={{ padding: '7px 14px', fontFamily: H.font, fontWeight: 600, fontSize: 12, cursor: 'pointer', borderTop: 'none', borderBottom: 'none', borderLeft: 'none', borderRight: i < 4 ? `1px solid ${H.border}` : 'none', background: selectedDay === i + 1 ? H.purple : H.surface, color: selectedDay === i + 1 ? '#FFFFFF' : H.textSec }}>
                     {DAY_SHORT[i]}
                   </button>
                 ))}
@@ -258,16 +274,16 @@ export default function AdminTimetableViewPage() {
                       style={{
                         padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
                         display: 'inline-flex', alignItems: 'center', gap: 5,
-                        border: `1px solid ${isChecked ? H.honey : H.border}`,
-                        background: isChecked ? 'rgba(238,189,43,0.15)' : H.surface,
-                        color: isChecked ? H.honey : H.textSec,
+                        border: `1px solid ${isChecked ? H.purple : H.border}`,
+                        background: isChecked ? H.purpleLight : H.surface,
+                        color: isChecked ? H.purpleDark : H.textSec,
                       }}
                     >
                       <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={() => {}}
-                        style={{ cursor: 'pointer', accentColor: H.honey }}
+                        style={{ cursor: 'pointer', accentColor: H.purple }}
                       />
                       Grade {g}
                     </button>
@@ -288,100 +304,72 @@ export default function AdminTimetableViewPage() {
               </div>
             ) : (
               <div ref={printRef}>
-                {DAYS.map((dayName, di) => {
-                  const dayNum = di + 1; if (dayNum !== selectedDay) return null
+                {DAYS.map((di, idx) => {
+                  const dayName = DAYS[idx]
+                  const dayNum = idx + 1; if (dayNum !== selectedDay) return null
                   return (
                     <div key={dayNum} style={card()}>
                       <div style={{ padding: '12px 18px', background: '#F5F5F4', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `3px solid ${H.border}` }}>
-                        <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 16, color: H.honey }}>{dayName}</span>
+                        <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 16, color: H.purpleDark }}>{dayName}</span>
                         <span style={{ fontFamily: H.font, fontSize: 11, color: H.sub, marginLeft: 'auto' }}>{filteredClasses.length} classes displayed</span>
                       </div>
 
                       {/* Period x Class Matrix Table with Sticky Period Column */}
-                      <div style={{ overflowX: 'auto', position: 'relative' }}>
-                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 12, minWidth: `${120 + filteredClasses.length * 100}px` }}>
+                      <div style={{ overflowX: 'auto', padding: 0 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 640 }}>
                           <thead>
-                            <tr style={{ background: '#F5F5F4' }}>
-                              {/* STICKY LEFT-0 PERIOD COLUMN HEADER */}
-                              <th style={{
-                                position: 'sticky', left: 0, zIndex: 20,
-                                background: '#F5F5F4', padding: '10px 14px', textAlign: 'left',
-                                fontFamily: H.font, fontSize: 10, fontWeight: 900, color: H.sub,
-                                textTransform: 'uppercase', letterSpacing: '0.05em', width: 90,
-                                borderRight: `2px solid ${H.border}`, borderBottom: `1px solid ${H.border}`
-                              }}>
-                                Period
+                            <tr style={{ background: '#FAF9F6', borderBottom: `1px solid ${H.border}` }}>
+                              <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 700, color: H.sub, fontSize: 11, width: 140, position: 'sticky', left: 0, background: '#FAF9F6', zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)' }}>
+                                Period / Time
                               </th>
-                              {filteredClasses.map((cls: any) => (
-                                <th key={cls.id} style={{
-                                  padding: '10px 8px', textAlign: 'center', fontFamily: H.font,
-                                  fontSize: 11, fontWeight: 800, color: H.muted, minWidth: 100,
-                                  borderBottom: `1px solid ${H.border}`
-                                }}>
-                                  {cls.name}
+                              {filteredClasses.map(cls => (
+                                <th key={cls.id} style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700, color: H.text, fontSize: 12, borderLeft: `1px solid ${H.border}` }}>
+                                  <div style={{ fontWeight: 800 }}>{cls.name}</div>
+                                  <div style={{ fontSize: 10, color: H.sub, fontWeight: 500 }}>Grade {cls.grade_level}</div>
                                 </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
-                            {periods.map((p: any, pi: number) => (
-                              <tr key={pi}>
-                                {p.is_break ? (
-                                  <>
-                                    {/* STICKY BREAK LABEL FOR PERIOD COLUMN */}
-                                    <td style={{
-                                      position: 'sticky', left: 0, zIndex: 10,
-                                      background: '#FFFBEB', padding: '8px 14px',
-                                      fontFamily: H.font, fontWeight: 800, fontSize: 11, color: H.honey,
-                                      borderRight: `2px solid ${H.border}`, borderTop: `1px solid ${H.border}`
-                                    }}>
-                                      <Coffee size={11} style={{ display: 'inline', marginRight: 4 }} /> Break
-                                    </td>
-                                    <td colSpan={filteredClasses.length} style={{ padding: '8px 14px', fontFamily: H.font, fontSize: 11, color: H.honey, background: 'rgba(238,189,43,0.06)', textAlign: 'center', fontStyle: 'italic', borderTop: `1px solid ${H.border}` }}>
-                                      {p.break_label} · {formatTime(p.start_time)} – {formatTime(p.end_time)}
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    {/* STICKY LEFT-0 PERIOD COLUMN CELL */}
-                                    <td style={{
-                                      position: 'sticky', left: 0, zIndex: 10,
-                                      background: '#F5F5F4', padding: '8px 14px',
-                                      fontFamily: H.font, fontWeight: 800, fontSize: 11, color: H.muted,
-                                      whiteSpace: 'nowrap', borderRight: `2px solid ${H.border}`, borderTop: `1px solid ${H.border}`
-                                    }}>
-                                      P{p.period_number}<br />
-                                      <span style={{ fontSize: 9, fontFamily: 'monospace', fontWeight: 400, color: H.sub }}>{formatTime(p.start_time)}</span>
-                                    </td>
+                            {teachingPeriods.map((period: any) => (
+                              <tr key={period.period_number} style={{ borderBottom: `1px solid ${H.border}` }}>
+                                {/* Sticky Period label cell */}
+                                <td style={{ padding: '10px 14px', position: 'sticky', left: 0, background: H.surface, zIndex: 10, boxShadow: '2px 0 4px rgba(0,0,0,0.04)', borderRight: `1px solid ${H.border}` }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ fontWeight: 900, fontSize: 13, color: H.purpleDark, fontVariantNumeric: 'tabular-nums' }}>P{period.period_number}</span>
+                                    <span style={{ fontSize: 10, color: H.muted, fontFamily: 'monospace' }}>{formatTime(period.start_time)}</span>
+                                  </div>
+                                </td>
 
-                                    {filteredClasses.map((cls: any) => {
-                                      const slot = getSlot(cls.id, dayNum, p.period_number)
-                                      const color = slot ? (slot.subject_color || subjectColor(slot.subject || '')) : null
-                                      return (
-                                        <td key={cls.id} style={{ padding: 4, verticalAlign: 'middle', borderTop: `1px solid ${H.border}` }}>
-                                          {slot ? (
-                                            /* FILLED PERIOD CELL */
-                                            <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${color}` }}>
-                                              <div style={{ background: color!, padding: '4px 6px' }}>
-                                                <div style={{ fontFamily: H.font, fontSize: 10, fontWeight: 800, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{slot.subject}</div>
-                                              </div>
-                                              <div style={{ padding: '3px 6px', background: hex2rgba(color!, 0.12) }}>
-                                                <div style={{ fontFamily: H.font, fontSize: 9, color: H.muted, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                  {slot.teacher?.full_name?.split(' ').slice(-1)[0] || 'Teacher'}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            /* VISUALLY DE-EMPHASIZED EMPTY CELL */
-                                            <div style={{ height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, background: '#FAF9F6', border: `1px dashed ${H.border}` }}>
-                                              <span style={{ fontFamily: H.font, fontSize: 10, color: H.sub, fontStyle: 'italic' }}>—</span>
-                                            </div>
-                                          )}
-                                        </td>
-                                      )
-                                    })}
-                                  </>
-                                )}
+                                {filteredClasses.map(cls => {
+                                  const slot = getSlot(cls.id, selectedDay, period.period_number)
+                                  if (!slot) {
+                                    return (
+                                      <td key={cls.id} style={{ padding: '8px 10px', textAlign: 'center', borderLeft: `1px solid ${H.border}`, background: 'rgba(0,0,0,0.01)' }}>
+                                        <span style={{ fontSize: 11, color: H.muted, fontStyle: 'italic' }}>—</span>
+                                      </td>
+                                    )
+                                  }
+                                  const color = slot.subject_color || subjectColor(slot.subject)
+                                  return (
+                                    <td key={cls.id} style={{ padding: '6px 8px', borderLeft: `1px solid ${H.border}`, verticalAlign: 'top' }}>
+                                      <div style={{
+                                        background: hex2rgba(color, 0.12),
+                                        border: `1px solid ${hex2rgba(color, 0.35)}`,
+                                        borderRadius: 8,
+                                        padding: '6px 8px',
+                                        boxShadow: `0 1px 3px ${hex2rgba(color, 0.1)}`
+                                      }}>
+                                        <div style={{ fontWeight: 800, fontSize: 12, color: color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {slot.subject}
+                                        </div>
+                                        <div style={{ fontSize: 10, color: H.textSec, fontWeight: 600, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {slot.teacher?.full_name || 'Assigned Teacher'}
+                                        </div>
+                                      </div>
+                                    </td>
+                                  )
+                                })}
                               </tr>
                             ))}
                           </tbody>
@@ -394,49 +382,55 @@ export default function AdminTimetableViewPage() {
             )}
           </>}
 
-          {/* ── GAPS TAB ── */}
+          {/* ── GAPS & CONFLICT ANALYSIS TAB ── */}
           {tab === 'gaps' && <>
             {!template ? (
-              <div style={card({ padding: 48, textAlign: 'center' })}><p style={{ fontFamily: H.font, fontSize: 14, color: H.sub }}>No timetable template found.</p></div>
+              <div style={{ padding: 48, textAlign: 'center' }}>
+                <Calendar size={32} style={{ color: H.muted, marginBottom: 10 }} />
+                <p style={{ fontFamily: H.font, fontSize: 14, color: H.sub }}>No timetable template found.</p>
+              </div>
             ) : <>
+              {/* Summary Metrics */}
               {summary && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
                   {[
-                    { label: 'Total Slots', value: summary.totalSlots, icon: <BarChart2 size={20} color="#a78bfa" />, color: '#a78bfa' },
-                    { label: 'Filled', value: summary.filledSlots, icon: <CheckCircle2 size={20} color={H.grass} />, color: H.grass },
-                    { label: 'Unassigned', value: summary.unassigned, icon: summary.unassigned > 0 ? <AlertTriangle size={20} color="#f87171" /> : <CheckCircle2 size={20} color={H.grass} />, color: summary.unassigned > 0 ? '#f87171' : H.grass },
-                    { label: 'Coverage', value: `${summary.pct}%`, icon: <TrendingUp size={20} color={summary.pct === 100 ? H.grass : summary.pct > 80 ? H.honey : '#f87171'} />, color: summary.pct === 100 ? H.grass : summary.pct > 80 ? H.honey : '#f87171' },
+                    { label: 'Total Slots', value: summary.totalSlots, color: H.purple },
+                    { label: 'Filled', value: summary.filledSlots, color: H.grass },
+                    { label: 'Unassigned', value: summary.unassigned, color: summary.unassigned > 0 ? '#ef4444' : H.grass },
+                    { label: 'Coverage', value: `${summary.pct}%`, color: summary.pct === 100 ? H.grass : H.purple },
                   ].map(s => (
                     <div key={s.label} style={card({ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 })}>
-                      <div style={{ width: 42, height: 42, borderRadius: 12, background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+                      <div style={{ width: 42, height: 42, borderRadius: 12, background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <BarChart2 size={20} color={s.color} />
+                      </div>
                       <div>
-                        <div style={{ fontFamily: H.font, fontSize: 26, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                        <div style={{ fontFamily: H.font, fontSize: 10, fontWeight: 700, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 2 }}>{s.label}</div>
+                        <div style={{ fontFamily: H.font, fontSize: 24, fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                        <div style={{ fontFamily: H.font, fontSize: 10, fontWeight: 700, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 3 }}>{s.label}</div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Unassigned */}
+              {/* Unassigned Slots Breakdown */}
               <div style={card()}>
-                <div style={{ padding: '12px 18px', borderBottom: `2px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <AlertTriangle size={16} color={H.honey} />
-                  <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 15, color: H.honey }}>Unassigned Periods</span>
-                  {summary && <span style={{ fontFamily: H.font, fontSize: 12, color: H.sub }}>{summary.unassigned} slots need a teacher</span>}
+                <div style={{ padding: '14px 18px', borderBottom: `2px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <AlertTriangle size={16} color="#ef4444" />
+                  <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 15, color: '#ef4444' }}>Unassigned Periods by Day</span>
                 </div>
                 {unassigned.length === 0 ? (
                   <div style={{ padding: 32, textAlign: 'center' }}>
                     <CheckCircle2 size={28} color={H.grass} style={{ marginBottom: 8 }} />
-                    <p style={{ fontFamily: H.font, fontSize: 13, fontWeight: 700, color: H.grass }}>All periods are covered!</p>
+                    <p style={{ fontFamily: H.font, fontSize: 13, fontWeight: 700, color: H.grass }}>All periods across all classes have assigned teachers!</p>
                   </div>
-                ) : DAYS.map((dayName, di) => {
-                  const dayNum = di + 1, slots = unassignedByDay[dayNum]
-                  if (!slots || slots.length === 0) return null
+                ) : [1, 2, 3, 4, 5].map(day => {
+                  const slots = unassignedByDay[day] || []
+                  if (slots.length === 0) return null
+                  const dayName = DAYS[day - 1]
                   return (
-                    <div key={dayNum} style={{ borderBottom: `1px solid #F5F5F4` }}>
+                    <div key={day} style={{ borderBottom: `1px solid #F5F5F4` }}>
                       <div style={{ padding: '8px 18px', background: '#F5F5F4', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: H.font, fontWeight: 800, fontSize: 13, color: H.honey }}>{dayName}</span>
+                        <span style={{ fontFamily: H.font, fontWeight: 800, fontSize: 13, color: H.purpleDark }}>{dayName}</span>
                         <span style={{ background: '#ef4444', color: '#fff', borderRadius: 10, padding: '0 7px', fontSize: 10, fontWeight: 900 }}>{slots.length}</span>
                       </div>
                       <div style={{ padding: '10px 18px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -455,8 +449,8 @@ export default function AdminTimetableViewPage() {
               {/* Idle teachers */}
               <div style={card()}>
                 <div style={{ padding: '12px 18px', borderBottom: `2px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Users size={16} color={H.honey} />
-                  <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 15, color: H.honey }}>Teachers with No Classes</span>
+                  <Users size={16} color={H.purpleDark} />
+                  <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 15, color: H.purpleDark }}>Teachers with No Classes</span>
                 </div>
                 {idleTeachers.length === 0 ? (
                   <div style={{ padding: 32, textAlign: 'center' }}>
@@ -466,7 +460,7 @@ export default function AdminTimetableViewPage() {
                 ) : idleTeachers.map(({ day, teachers: idle }: any) => (
                   <div key={day} style={{ borderBottom: `1px solid #F5F5F4` }}>
                     <div style={{ padding: '8px 18px', background: '#F5F5F4', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontFamily: H.font, fontWeight: 800, fontSize: 13, color: H.honey }}>{DAYS[day - 1]}</span>
+                      <span style={{ fontFamily: H.font, fontWeight: 800, fontSize: 13, color: H.purpleDark }}>{DAYS[day - 1]}</span>
                       <span style={{ background: '#fb923c', color: '#fff', borderRadius: 10, padding: '0 7px', fontSize: 10, fontWeight: 900 }}>{idle.length}</span>
                     </div>
                     <div style={{ padding: '10px 18px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -485,7 +479,12 @@ export default function AdminTimetableViewPage() {
           </>}
         </main>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(238,189,43,0.3);border-radius:99px}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}*{box-sizing:border-box}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.3);border-radius:99px}`}</style>
+      <SubjectModal
+        isOpen={showSubjectModal}
+        onClose={() => setShowSubjectModal(false)}
+        onSuccess={() => load()}
+      />
     </div>
   )
 }
