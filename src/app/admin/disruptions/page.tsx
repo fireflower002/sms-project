@@ -217,12 +217,19 @@ function DisruptionsContent() {
   // ── Handle Absence Rollback / Undo (Issue #3 Fix) ──
   const handleUndoAbsence = async (absence: any) => {
     try {
-      await supabase.from('substitutions').delete().eq('absence_id', absence.id)
-      const { error: delErr } = await supabase.from('absences').delete().eq('id', absence.id)
-      if (delErr) throw delErr
+      const res = await fetch('/api/teacher/cancel-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ absenceId: absence.id }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to undo absence')
+      }
       fetchAbsences()
     } catch (err: any) {
       console.error('[handleUndoAbsence] Error deleting absence:', err)
+      alert(err.message || 'Failed to undo absence record.')
     }
   }
 

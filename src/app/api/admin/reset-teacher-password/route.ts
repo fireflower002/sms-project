@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
+import { randomInt } from 'crypto'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$'
   let pass = ''
-  for (let i = 0; i < 8; i++) {
-    pass += chars.charAt(Math.floor(Math.random() * chars.length))
+  for (let i = 0; i < 10; i++) {
+    pass += chars.charAt(randomInt(0, chars.length))
   }
   return pass
 }

@@ -74,46 +74,27 @@ export default function ReportAbsencePage() {
     setError('')
 
     try {
-      // 1. Try direct client deletion with .select() verification
-      await supabase.from('substitutions').delete().eq('absence_id', existingAbsence.id)
-      const { data: delData, error: delErr } = await supabase
-        .from('absences')
-        .delete()
-        .eq('id', existingAbsence.id)
-        .select()
+      // Call dedicated API endpoint that uses service role client to remove substitutions & absence
+      const res = await fetch('/api/teacher/cancel-absence', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ absenceId: existingAbsence.id }),
+      })
 
-      if (!delErr && delData && delData.length > 0) {
-        setAlreadyExists(false)
-        setExistingAbsence(null)
-        setCancelSuccess(true)
-        setTimeout(() => setCancelSuccess(false), 5000)
-        return
+      const json = await res.json()
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to cancel absence record.')
       }
 
-      // 2. Fallback to API route if client deletion didn't confirm deleted rows
-      try {
-        const res = await fetch('/api/teacher/cancel-absence', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ absenceId: existingAbsence.id }),
-        })
-        if (res.ok) {
-          const json = await res.json()
-          if (json.success) {
-            setAlreadyExists(false)
-            setExistingAbsence(null)
-            setCancelSuccess(true)
-            setTimeout(() => setCancelSuccess(false), 5000)
-            return
-          }
-        }
-      } catch (apiErr) {
-        // Ignored fallback network error
-      }
-
-      throw new Error(delErr?.message || 'Failed to cancel absence: 0 records deleted from database.')
+      // Update state only after confirmed server deletion
+      setAlreadyExists(false)
+      setExistingAbsence(null)
+      setCancelSuccess(true)
+      setTimeout(() => setCancelSuccess(false), 5000)
     } catch (err: any) {
-      setError(err.message || 'Failed to cancel absence.')
+      console.error('[handleCancelAbsence] Error:', err)
+      setError(err.message || 'Failed to cancel absence. Please try again.')
     } finally {
       setCancelling(false)
     }

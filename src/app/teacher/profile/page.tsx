@@ -127,25 +127,42 @@ export default function TeacherProfilePage() {
     if (!session?.user) { setError('Not authenticated'); setSubmitting(false); return }
 
     let finalSubjects = [...form.subjects]
-    if (customInput.trim() && !finalSubjects.includes(customInput.trim())) {
-      finalSubjects.push(customInput.trim())
+    const trimmedCustom = customInput.trim()
+    if (trimmedCustom && !finalSubjects.includes(trimmedCustom)) {
+      finalSubjects.push(trimmedCustom)
     }
-    finalSubjects = Array.from(new Set(finalSubjects.filter(s => s !== 'Other')))
+    finalSubjects = Array.from(new Set(finalSubjects.filter(s => s && s !== 'Other')))
 
     const payload: any = {}
-    if (form.full_name.trim() !== profile.full_name) payload.new_full_name = form.full_name.trim()
-    if (form.phone.trim() !== profile.phone) payload.new_phone = form.phone.trim()
-    if (JSON.stringify([...finalSubjects].sort()) !== JSON.stringify([...(profile.subjects || [])].sort())) {
+    if (form.full_name.trim() !== (profile?.full_name || '')) payload.new_full_name = form.full_name.trim()
+    if (form.phone.trim() !== (profile?.phone || '')) payload.new_phone = form.phone.trim()
+    
+    const profileSubsSorted = [...(profile?.subjects || [])].filter((s: string) => s !== 'Other').sort()
+    const finalSubsSorted = [...finalSubjects].sort()
+
+    if (JSON.stringify(finalSubsSorted) !== JSON.stringify(profileSubsSorted)) {
       payload.new_subjects = finalSubjects
     }
 
-    const { error: err } = await supabase.from('profile_change_requests').insert({ teacher_id: session.user.id, status: 'pending', ...payload })
+    if (Object.keys(payload).length === 0) {
+      setError('No profile changes detected to submit.')
+      setSubmitting(false)
+      return
+    }
+
+    const { data: insertedReq, error: err } = await supabase
+      .from('profile_change_requests')
+      .insert({ teacher_id: session.user.id, status: 'pending', ...payload })
+      .select()
+      .maybeSingle()
+
     if (err) {
       setError(err.message)
     } else {
       setSuccess(true)
       setForm(f => ({ ...f, subjects: finalSubjects }))
       setCustomInput('')
+      if (insertedReq) setPendingRequest(insertedReq)
       setTimeout(() => setSuccess(false), 4000)
     }
     setSubmitting(false)
