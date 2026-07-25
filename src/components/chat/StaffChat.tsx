@@ -805,9 +805,11 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onFocus={() => {
+              if (typeof window !== 'undefined') window.scrollTo(0, 0)
               setTimeout(() => {
+                if (typeof window !== 'undefined') window.scrollTo(0, 0)
                 scrollToBottom(true)
-              }, 200)
+              }, 150)
             }}
             placeholder="Type a message to staff..."
             disabled={sending}

@@ -19,7 +19,11 @@ export default function AdminStaffChatPage() {
       if (window.visualViewport) {
         const vh = window.visualViewport.height
         setViewportHeight(vh)
-        setIsKeyboardOpen(mobile && vh < window.innerHeight - 120)
+        const keyboardOpen = mobile && vh < window.innerHeight - 120
+        setIsKeyboardOpen(keyboardOpen)
+        if (keyboardOpen) {
+          window.scrollTo(0, 0)
+        }
       } else {
         setIsKeyboardOpen(false)
       }
@@ -27,16 +31,21 @@ export default function AdminStaffChatPage() {
 
     update()
 
+    const handleVisualScroll = () => {
+      window.scrollTo(0, 0)
+      update()
+    }
+
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', update)
-      window.visualViewport.addEventListener('scroll', update)
+      window.visualViewport.addEventListener('scroll', handleVisualScroll)
     }
     window.addEventListener('resize', update)
 
     return () => {
       if (window.visualViewport) {
         window.visualViewport.removeEventListener('resize', update)
-        window.visualViewport.removeEventListener('scroll', update)
+        window.visualViewport.removeEventListener('scroll', handleVisualScroll)
       }
       window.removeEventListener('resize', update)
     }
@@ -55,7 +64,7 @@ export default function AdminStaffChatPage() {
         display: 'flex',
         flexDirection: 'column',
         flex: 1,
-        transition: H.motion.transitionFast,
+        transition: isMobile ? 'none' : H.motion.transitionFast,
       }}
     >
       <StaffChat height="100%" />
