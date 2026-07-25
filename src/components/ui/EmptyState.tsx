@@ -50,28 +50,29 @@ export default function EmptyState({
     <div
       style={{
         textAlign: 'center',
-        padding: '64px 32px',
+        padding: '56px 24px',
         color: H.textMuted,
+        animation: 'slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
         ...style,
       }}
     >
       {icon && (
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ marginBottom: H.spacing.lg, display: 'flex', justifyContent: 'center' }}>
           {icon}
         </div>
       )}
       <h3
         style={{
-          fontSize: '16px',
-          fontWeight: 700,
+          fontSize: H.fontSize.lg,
+          fontWeight: H.fontWeight.bold,
           color: H.textPrimary,
-          margin: '0 0 8px',
+          margin: `0 0 ${H.spacing.sm}`,
         }}
       >
         {title}
       </h3>
       {description && (
-        <p style={{ margin: '0 0 24px', fontSize: '14px', color: H.textMuted }}>
+        <p style={{ margin: `0 0 ${H.spacing['2xl']}`, fontSize: H.fontSize.base, color: H.textMuted, lineHeight: 1.5 }}>
           {description}
         </p>
       )}

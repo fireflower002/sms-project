@@ -86,31 +86,31 @@ export default function StatCard(props: StatCardProps) {
         href={href}
         style={{
           ...cardBase,
-          padding: '20px 24px',
+          padding: `${H.spacing.xl} ${H.spacing['2xl']}`,
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
+          gap: H.spacing.md,
           textDecoration: 'none',
           color: 'inherit',
           borderLeft: `4px solid ${color}`,
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          transform: isHovered ? 'translateY(-4px)' : 'none',
+          transform: isHovered ? 'translateY(-3px)' : 'none',
+          boxShadow: isHovered ? H.shadows.lg : H.shadows.card,
         }}
         onMouseEnter={onHover}
         onMouseLeave={onHover}
       >
         {/* Header row with perfect center alignment */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 600, color: H.textSec, lineHeight: 1.2 }}>{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: H.spacing.sm }}>
+          <span style={{ fontSize: H.fontSize.md, fontWeight: H.fontWeight.semibold, color: H.textSec, lineHeight: 1.2 }}>{label}</span>
           <Icon size={20} style={{ color, flexShrink: 0 }} />
         </div>
         {/* Value + footer */}
         <div>
-          <div style={{ fontSize: '36px', fontWeight: 800, color: H.textPrimary, lineHeight: 1.1 }}>
+          <div style={{ fontSize: '34px', fontWeight: H.fontWeight.extrabold, color: H.textPrimary, lineHeight: 1.1 }}>
             {value}
           </div>
           {footer && (
-            <div style={{ fontSize: '12px', color: H.textMuted, marginTop: '4px' }}>{footer}</div>
+            <div style={{ fontSize: H.fontSize.sm, color: H.textMuted, marginTop: '4px' }}>{footer}</div>
           )}
         </div>
       </Link>
@@ -123,19 +123,19 @@ export default function StatCard(props: StatCardProps) {
     <div
       style={{
         ...cardBase,
-        padding: '20px',
+        padding: H.spacing.xl,
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
+        gap: H.spacing.lg,
         minWidth: 0,
         ...style,
       }}
     >
       <div
         style={{
-          width: '44px',
-          height: '44px',
-          borderRadius: '12px',
+          width: H.targetSizes.touchTarget,
+          height: H.targetSizes.touchTarget,
+          borderRadius: H.radius.xl,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -147,10 +147,10 @@ export default function StatCard(props: StatCardProps) {
         <Icon size={24} />
       </div>
       <div>
-        <div style={{ fontSize: '28px', fontWeight: 800, color: H.textPrimary, lineHeight: 1 }}>
+        <div style={{ fontSize: '28px', fontWeight: H.fontWeight.extrabold, color: H.textPrimary, lineHeight: 1 }}>
           {value}
         </div>
-        <div style={{ fontSize: '13px', fontWeight: 600, color: H.textSec, marginTop: '2px' }}>
+        <div style={{ fontSize: H.fontSize.md, fontWeight: H.fontWeight.semibold, color: H.textSec, marginTop: '2px' }}>
           {label}
         </div>
       </div>

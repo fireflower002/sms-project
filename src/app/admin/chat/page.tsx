@@ -47,14 +47,15 @@ export default function AdminStaffChatPage() {
   return (
     <div
       style={{
-        height: viewportHeight ? `${viewportHeight}px` : '100vh',
-        maxHeight: viewportHeight ? `${viewportHeight}px` : '100vh',
-        padding: isMobile ? `8px 8px ${paddingBottom}px 8px` : '16px 24px',
+        height: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
+        maxHeight: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
+        padding: isMobile ? `${H.spacing.sm} ${H.spacing.sm} ${paddingBottom}px ${H.spacing.sm}` : `${H.spacing.lg} ${H.spacing['2xl']}`,
         boxSizing: 'border-box',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'padding-bottom 0.15s ease',
+        flex: 1,
+        transition: H.motion.transitionFast,
       }}
     >
       <StaffChat height="100%" />

@@ -254,8 +254,8 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
       </button>
 
       {open && (
-        <div style={styles.modalOverlay}>
-          <div style={styles.modalContent}>
+        <div style={{ ...styles.modalOverlay, animation: 'fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <div style={{ ...styles.modalContent, animation: 'modalScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
             <div style={styles.header}>
               <div>
                 <h2 style={styles.headerTitle}>{createdPassword ? 'Teacher Account Created' : 'Register New Teacher'}</h2>

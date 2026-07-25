@@ -115,14 +115,14 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
       <div
         style={{
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '460px',
           backgroundColor: H.surface,
-          borderRadius: '20px',
+          borderRadius: H.radius['3xl'],
           border: `1px solid ${H.border}`,
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+          boxShadow: H.shadows.modal,
           overflow: 'hidden',
           fontFamily: H.font,
-          animation: 'fadeIn 0.2s ease-out',
+          animation: 'modalScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {/* Header */}

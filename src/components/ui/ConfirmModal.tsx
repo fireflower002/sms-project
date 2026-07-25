@@ -153,6 +153,7 @@ export default function ConfirmModal({
           inset: 0,
           backgroundColor: 'rgba(28,25,23,0.6)',
           backdropFilter: 'blur(4px)',
+          animation: 'fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       />
 
@@ -164,9 +165,11 @@ export default function ConfirmModal({
           maxWidth: '460px',
           backgroundColor: H.surface,
           border: `1px solid ${H.border}`,
-          borderRadius: '20px',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.15)',
+          borderRadius: H.radius['3xl'],
+          boxShadow: H.shadows.modal,
           overflow: 'hidden',
+          animation: 'modalScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: H.motion.transitionFast,
         }}
         // Stop backdrop click from bleeding through
         onClick={e => e.stopPropagation()}

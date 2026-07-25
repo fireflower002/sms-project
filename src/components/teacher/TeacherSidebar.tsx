@@ -97,14 +97,14 @@ export default function TeacherSidebar() {
   const baseNavItemStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
+    gap: H.spacing.md,
     padding: '9px 14px',
-    borderRadius: '12px',
+    borderRadius: H.radius.xl,
     textDecoration: 'none',
-    fontSize: '14px',
-    fontWeight: '600',
-    minHeight: '40px',
-    transition: 'background-color 0.2s ease, color 0.2s ease',
+    fontSize: H.fontSize.base,
+    fontWeight: H.fontWeight.semibold,
+    minHeight: H.targetSizes.buttonMd,
+    transition: H.motion.transitionFast,
   }
 
   const NavItem = ({ href, label, icon: Icon, color }: TeacherNavItemDef) => {
@@ -115,6 +115,7 @@ export default function TeacherSidebar() {
       ...baseNavItemStyle,
       backgroundColor: active ? H.accentLight : isHovered ? H.bg : 'transparent',
       color: active ? H.accentDark : H.textSec,
+      transform: isHovered && !active ? H.motion.hoverLift : 'none',
     }
 
     return (
@@ -213,7 +214,9 @@ export default function TeacherSidebar() {
 
   return (
     <aside style={{
-      width: '240px', minHeight: '100vh',
+      width: '240px',
+      flexShrink: 0,
+      minHeight: '100vh',
       backgroundColor: H.surface,
       borderRight: `1px solid ${H.border}`,
       display: 'flex', flexDirection: 'column',

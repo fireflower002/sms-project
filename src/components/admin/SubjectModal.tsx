@@ -192,15 +192,17 @@ export default function SubjectModal({ isOpen, onClose, onSuccess }: SubjectModa
       <div style={{
         backgroundColor: H.surface,
         border: `1px solid ${H.border}`,
-        borderRadius: '16px',
-        boxShadow: H.cardShadow,
+        borderRadius: H.radius['2xl'],
+        boxShadow: H.shadows.modal,
         maxWidth: '600px',
         width: '100%',
         maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        fontFamily: H.font
+        fontFamily: H.font,
+        animation: 'modalScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+        transition: H.motion.transitionFast,
       }}>
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: H.surface }}>
