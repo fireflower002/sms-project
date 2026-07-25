@@ -298,7 +298,7 @@ export default function TeacherDashboard() {
       const [schedule, template, announcements, substitutions] = await Promise.all([
         supabase.from('schedule_assignments').select('*,class:classes(name,grade_level)').eq('teacher_id', session.user.id).eq('day_of_week', todayDay).order('period_number'),
         supabase.from('timetable_templates').select('*').eq('is_active', true).maybeSingle(),
-        supabase.from('announcements').select('id,title,body,created_at,priority').eq('is_published', true).eq('is_active', true).in('target_audience', ['all', 'teachers']).order('created_at', { ascending: false }).limit(3),
+        supabase.from('announcements').select('id,title,body,created_at,priority').eq('is_published', true).eq('is_active', true).order('created_at', { ascending: false }).limit(3),
         supabase.from('substitutions').select('*,class:classes(name),absence:absences!absence_id!inner(absence_date,teacher:profiles!teacher_id(full_name))').eq('substitute_teacher_id', session.user.id).eq('absence.absence_date', today),
       ])
 

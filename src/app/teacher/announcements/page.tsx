@@ -40,7 +40,7 @@ export default function TeacherAnnouncementsPage() {
       if (!session?.user) { router.push('/teacher/login'); return }
 
       const [{ data: anns }, { data: reads }] = await Promise.all([
-        supabase.from('announcements').select('*').eq('is_published', true).eq('is_active', true).in('target_audience', ['all', 'teachers']).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
+        supabase.from('announcements').select('*').eq('is_published', true).eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('announcement_reads').select('announcement_id').eq('user_id', session.user.id),
       ])
 

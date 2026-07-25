@@ -60,8 +60,7 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
           </div>
       </div>
 
-      <div style={{ borderTop: `1px solid ${H.border}`, padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: '12px', color: H.textMuted }}>Audience: <strong>{item.target_audience === 'all' ? 'Everyone' : 'Teachers only'}</strong></span>
+      <div style={{ borderTop: `1px solid ${H.border}`, padding: '12px 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button onClick={() => onTogglePin(item.id, item.is_pinned)} title={item.is_pinned ? 'Unpin' : 'Pin'} style={{...styles.button, ...styles.buttonSecondary, padding: '8px', background: item.is_pinned ? H.accentLight : '#F5F5F4', color: item.is_pinned ? H.accentDark : H.textSec }}>
             <Pin size={16} />
