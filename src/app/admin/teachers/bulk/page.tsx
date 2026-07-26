@@ -38,10 +38,8 @@ function parseRow(raw: string, idx: number): ParsedRow {
     : []
 
   const errors: string[] = []
-  const nameParts = full_name.split(/\s+/).filter(Boolean)
   if (!full_name)                    errors.push('Name is required')
-  else if (nameParts.length < 2)    errors.push('Must be first + last name')
-  else if (full_name.length < 4)    errors.push('Name too short')
+  else if (full_name.length < 2)    errors.push('Name too short')
 
   if (!email)                        errors.push('Email is required')
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Invalid email format')

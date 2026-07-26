@@ -192,6 +192,19 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
           setTimeout(scrollToBottom, 100)
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'hive_messages' },
+        (payload) => {
+          const deletedId = (payload.old as any)?.id
+          if (deletedId) {
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId))
+          } else {
+            // Bulk clear event — re-fetch message list
+            fetchMessages()
+          }
+        }
+      )
       .subscribe();
       
     return () => { supabase.removeChannel(channel) }

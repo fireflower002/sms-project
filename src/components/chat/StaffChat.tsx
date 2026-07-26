@@ -834,7 +834,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       </form>
 
       <style>{`
-        @media (max-width: 640px) {
+        @media (max-width: 767px) {
           .staff-chat-header {
             padding: 10px 12px !important;
             gap: 8px !important;
@@ -842,6 +842,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
           .staff-chat-input-form {
             padding: 10px 12px !important;
             gap: 8px !important;
+            margin-bottom: 56px !important;
           }
         }
       `}</style>

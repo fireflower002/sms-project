@@ -12,7 +12,8 @@ import {
   ArrowRightLeft,
   ClipboardList,
   Plus,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT, todaySLT } from '@/lib/utils'
@@ -24,6 +25,8 @@ import EmptyState from '@/components/ui/EmptyState'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { SkeletonBlock, TableSkeleton } from '@/components/ui/Skeleton'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+import { exportToCSV } from '@/lib/csvExport'
+import { useToast } from '@/components/ui/Toast'
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' },
@@ -78,6 +81,7 @@ function DisruptionsContent() {
   
   const supabase = createClient()
   const today = todaySLT()
+  const { showToast } = useToast()
 
   // Absences state
   const [absences, setAbsences] = useState<any[]>([])
@@ -96,6 +100,32 @@ function DisruptionsContent() {
   // Modal state
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
 
+  const handleExportAbsences = () => {
+    const filteredAbsences = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
+    const ok = exportToCSV(
+      'absence_records',
+      [
+        { label: 'Teacher Name', key: 'teacher_name' },
+        { label: 'Date', key: 'absence_date' },
+        { label: 'Type', key: 'absence_type' },
+        { label: 'Reason', key: 'reason' },
+        { label: 'Coverage', key: 'cover_status' },
+      ],
+      filteredAbsences.map(a => ({
+        teacher_name: a.teacher?.full_name || 'N/A',
+        absence_date: a.absence_date,
+        absence_type: ABSENCE_TYPE_VARIANTS[a.absence_type]?.label || a.absence_type,
+        reason: a.reason || 'None provided',
+        cover_status: a.substitutions?.length > 0 ? 'Covered' : 'Uncovered',
+      }))
+    )
+    if (ok) {
+      showToast(`Exported ${filteredAbsences.length} absence records to CSV`, 'success')
+    } else {
+      showToast('No absence records available to export', 'warning')
+    }
+  }
+
   // ── Fetch Absences ──
   const fetchAbsences = useCallback(async () => {
     setAbsencesLoading(true)
@@ -109,63 +139,43 @@ function DisruptionsContent() {
       const d = new Date()
       d.setDate(d.getDate() - 7)
       query = query.gte('absence_date', d.toISOString().split('T')[0])
-    } else {
-      query = query.limit(200)
     }
 
     const { data } = await query
     setAbsences(data || [])
     setAbsencesLoading(false)
-  }, [dateFilter, today, supabase])
+  }, [supabase, dateFilter, today])
 
   // ── Fetch Swaps ──
   const fetchSwaps = useCallback(async () => {
     setSwapsLoading(true)
-    let query = supabase.from('swap_requests')
-      .select('*, requester:profiles!requester_id(id,full_name), target:profiles!target_teacher_id(id,full_name), requester_class:classes!requester_class_id(name), target_class:classes!target_class_id(name)')
+    const { data } = await supabase.from('shift_swaps')
+      .select('*, requester:profiles!requester_id(full_name), target:profiles!target_teacher_id(full_name)')
       .order('created_at', { ascending: false })
 
-    if (swapFilter === 'peer_accepted') query = query.eq('status', 'peer_accepted')
+    const list = data || []
+    setSwaps(list)
 
-    const { data } = await query
-    setSwaps(data || [])
-
-    const [{ count: p }, { count: a }, { count: r }] = await Promise.all([
-      supabase.from('swap_requests').select('id', { count: 'exact', head: true }).eq('status', 'peer_accepted'),
-      supabase.from('swap_requests').select('id', { count: 'exact', head: true }).eq('status', 'accepted'),
-      supabase.from('swap_requests').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
-    ])
-    setSwapStats({ pending: p || 0, approved: a || 0, rejected: r || 0 })
+    const pending = list.filter(s => s.status === 'peer_accepted').length
+    const approved = list.filter(s => s.status === 'accepted').length
+    const rejected = list.filter(s => s.status === 'rejected').length
+    setSwapStats({ pending, approved, rejected })
     setSwapsLoading(false)
-  }, [swapFilter, supabase])
+  }, [supabase])
 
   useEffect(() => {
     fetchAbsences()
-  }, [fetchAbsences])
-
-  useEffect(() => {
     fetchSwaps()
-  }, [fetchSwaps])
+  }, [fetchAbsences, fetchSwaps])
 
-  // ── Handle Swap Approval / Rejection with Notification Fix ──
+  // Handle Swap Decision (Approve/Reject)
   const handleSwapDecision = async (swap: any, approve: boolean) => {
-    const actionId = approve ? swap.id : `${swap.id}_r`
-    setSwapProcessing(actionId)
-
-    const { data: { session } } = await supabase.auth.getSession()
-    const adminId = session?.user?.id
-
+    setSwapProcessing(swap.id)
     try {
-      if (approve) {
-        await supabase.rpc('execute_schedule_swap', { p_swap_id: swap.id })
-      } else {
-        await supabase.from('swap_requests')
-          .update({ status: 'rejected', responded_at: new Date().toISOString() })
-          .eq('id', swap.id)
-      }
-
-      // 🔔 SEND PRIVATE NOTIFICATION TO TEACHERS (Decision #2 Fix)
-      const notifBody = `Your swap request for ${swap.swap_date ? formatSLT(swap.swap_date, 'dd MMM yyyy') : 'the requested date'} (Period ${swap.requester_period} with ${swap.target?.full_name || 'teacher'}) has been ${approve ? 'approved' : 'rejected'} by the administration.`
+      const newStatus = approve ? 'accepted' : 'rejected'
+      await supabase.from('shift_swaps').update({ status: newStatus }).eq('id', swap.id)
+      
+      const notifBody = `Your swap request for ${swap.swap_date ? formatSLT(swap.swap_date, 'dd MMM yyyy') : 'the requested date'} has been ${approve ? 'approved' : 'rejected'} by the administration.`
       
       const notifRows = []
       if (swap.requester_id) {
@@ -178,21 +188,12 @@ function DisruptionsContent() {
           is_read: false
         })
       }
-      if (swap.target_teacher_id) {
-        notifRows.push({
-          user_id: swap.target_teacher_id,
-          type: 'swap_decision',
-          title: `Class Swap ${approve ? 'Approved' : 'Rejected'}`,
-          body: notifBody,
-          link: '/teacher',
-          is_read: false
-        })
-      }
       if (notifRows.length > 0) {
         await supabase.from('notifications').insert(notifRows)
       }
+      showToast(`Class swap ${approve ? 'approved' : 'rejected'} successfully`, approve ? 'success' : 'info')
     } catch (err: any) {
-      console.error('[handleSwapDecision] Error processing swap decision:', err)
+      showToast(err.message || 'Failed to update swap decision', 'error')
     } finally {
       setSwapProcessing(null)
       fetchSwaps()
@@ -226,10 +227,10 @@ function DisruptionsContent() {
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Failed to undo absence')
       }
+      showToast('Absence record cancelled and cover unassigned', 'info')
       fetchAbsences()
     } catch (err: any) {
-      console.error('[handleUndoAbsence] Error deleting absence:', err)
-      alert(err.message || 'Failed to undo absence record.')
+      showToast(err.message || 'Failed to undo absence record.', 'error')
     }
   }
 
@@ -373,26 +374,42 @@ function DisruptionsContent() {
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden' }}>
-                {(['today', 'week', 'all'] as const).map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setDateFilter(f)}
-                    style={{
-                      padding: '7px 14px',
-                      fontWeight: 600,
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      border: 'none',
-                      borderLeft: f !== 'today' ? `1px solid ${H.border}` : 'none',
-                      background: dateFilter === f ? H.surface : H.bg,
-                      color: dateFilter === f ? H.textPrimary : H.textSec,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {f}
-                  </button>
-                ))}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+                  {(['today', 'week', 'all'] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setDateFilter(f)}
+                      style={{
+                        padding: '7px 14px',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        border: 'none',
+                        borderLeft: f !== 'today' ? `1px solid ${H.border}` : 'none',
+                        background: dateFilter === f ? H.surface : H.bg,
+                        color: dateFilter === f ? H.textPrimary : H.textSec,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleExportAbsences}
+                  style={{
+                    ...styles.button,
+                    ...styles.buttonSecondary,
+                    minHeight: '36px',
+                    fontSize: '12px',
+                    padding: '6px 12px',
+                    gap: '6px',
+                  }}
+                  title="Export CSV"
+                >
+                  <Download size={14} /> Export CSV
+                </button>
               </div>
             </div>
 

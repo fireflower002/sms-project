@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+const createTeacherSchema = z.object({
+  full_name: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100, 'Full name cannot exceed 100 characters'),
+  email: z.string().trim().toLowerCase().email('Invalid email address format'),
+  tempPassword: z.string().min(6, 'Temporary password must be at least 6 characters'),
+  subjects: z.array(z.string().trim()).optional().default([]),
+})
 
 export async function POST(request: Request) {
   try {
@@ -65,16 +73,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin privileges required to create teachers.' }, { status: 403 })
     }
 
-    // 3. Parse payload
-    const body = await request.json()
-    const { full_name, email, tempPassword, subjects } = body
-
-    if (!full_name || !email || !tempPassword) {
-      return NextResponse.json({ error: 'Missing required fields (full_name, email, tempPassword)' }, { status: 400 })
+    // 3. Parse & validate payload with Zod schema
+    const body = await request.json().catch(() => ({}))
+    const parseResult = createTeacherSchema.safeParse(body)
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid teacher creation payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
     }
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const normalizedName  = full_name.trim()
+    const { full_name: normalizedName, email: normalizedEmail, tempPassword, subjects } = parseResult.data
 
     // 4. Create Supabase Auth user server-side with email pre-confirmed
     const { data: authData, error: createAuthError } = await adminSupabase.auth.admin.createUser({

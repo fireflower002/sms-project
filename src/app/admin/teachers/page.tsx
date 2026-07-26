@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users, Mail, Calendar } from 'lucide-react'
+import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users, Mail, Calendar, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import AddTeacherModal from '@/components/admin/AddTeacherModal'
 import TeacherActions from '@/components/admin/TeacherActions'
@@ -10,6 +10,8 @@ import Badge from '@/components/ui/Badge'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+import { exportToCSV } from '@/lib/csvExport'
+import { useToast } from '@/components/ui/Toast'
 
 const PAGE_SIZE = 10;
 
@@ -69,25 +71,47 @@ const PageHeader = ({ stats, onRefresh, onAddSuccess }: { stats: any; onRefresh:
   </div>
 );
 
-const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter }: { search: string; setSearch: (s: string) => void; statusFilter: string; setStatusFilter: (s: any) => void }) => {
+const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter, onExport }: { search: string; setSearch: (s: string) => void; statusFilter: string; setStatusFilter: (s: any) => void; onExport: () => void }) => {
   const [isFocused, setIsFocused] = useState(false);
   return (
-    <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
-      <div style={{ position: 'relative', flex: '1 1 240px', display: 'flex', alignItems: 'center' }}>
-        <Search size={15} style={{ position: 'absolute', left: 12, color: H.textMuted, pointerEvents: 'none' }} />
-        <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by teacher name..." style={{ width: '100%', minHeight: '38px', padding: '8px 14px 8px 36px', borderRadius: '8px', border: `1px solid ${isFocused ? H.successGreen : H.border}`, background: H.surface, color: H.textPrimary, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} />
+    <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 300px' }}>
+        <div style={{ position: 'relative', flex: '1 1 200px', display: 'flex', alignItems: 'center' }}>
+          <Search size={15} style={{ position: 'absolute', left: 12, color: H.textMuted, pointerEvents: 'none' }} />
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by teacher name..." style={{ width: '100%', minHeight: '38px', padding: '8px 14px 8px 36px', borderRadius: '8px', border: `1px solid ${isFocused ? H.successGreen : H.border}`, background: H.surface, color: H.textPrimary, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} />
+        </div>
+        <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden', minHeight: '38px' }}>
+          {(['all', 'active', 'inactive'] as const).map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} style={{
+              padding: '7px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+              border: 'none', borderLeft: s !== 'all' ? `1px solid ${H.border}` : 'none',
+              background: statusFilter === s ? H.surface : H.bg,
+              color: statusFilter === s ? H.textPrimary : H.textSec, textTransform: 'capitalize',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+            }}>{s}</button>
+          ))}
+        </div>
       </div>
-      <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden', minHeight: '38px' }}>
-        {(['all', 'active', 'inactive'] as const).map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)} style={{
-            padding: '7px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-            border: 'none', borderLeft: s !== 'all' ? `1px solid ${H.border}` : 'none',
-            background: statusFilter === s ? H.surface : H.bg,
-            color: statusFilter === s ? H.textPrimary : H.textSec, textTransform: 'capitalize',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
-          }}>{s}</button>
-        ))}
-      </div>
+      <button
+        onClick={onExport}
+        style={{
+          padding: '8px 14px',
+          fontWeight: 600,
+          fontSize: '13px',
+          cursor: 'pointer',
+          borderRadius: '8px',
+          border: `1px solid ${H.border}`,
+          backgroundColor: H.surface,
+          color: H.textPrimary,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          minHeight: '38px',
+        }}
+        title="Export CSV"
+      >
+        <Download size={14} /> Export CSV
+      </button>
     </div>
   );
 };
@@ -294,6 +318,7 @@ export default function TeachersPage() {
   const [deletingPending, setDeletingPending] = useState<string | null>(null)
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const fetchTeachers = useCallback(async () => {
     setLoading(true)
@@ -331,10 +356,29 @@ export default function TeachersPage() {
 
   const handleAddSuccess = () => {
     setAddSuccess(true);
+    showToast('Teacher account created successfully!', 'success');
     fetchTeachers();
     setTimeout(() => setAddSuccess(false), 5000);
   };
   
+  const handleExportCSV = () => {
+    const ok = exportToCSV(
+      'teachers_list',
+      [
+        { label: 'Full Name', key: 'full_name' },
+        { label: 'Email', key: 'email' },
+        { label: 'Status', key: 'is_active' },
+        { label: 'Joined Date', key: 'created_at' },
+      ],
+      teachers
+    )
+    if (ok) {
+      showToast(`Exported ${teachers.length} teacher records to CSV`, 'success')
+    } else {
+      showToast('No teacher records available to export', 'warning')
+    }
+  }
+
   const deletePending = (id: string, name: string) => {
     setModal({
       title: 'Delete Pre-Registration?',
@@ -346,6 +390,7 @@ export default function TeachersPage() {
         setDeletingPending(id);
         await supabase.from('allowed_users').delete().eq('id', id);
         setDeletingPending(null);
+        showToast(`Deleted pre-registration for ${name}`, 'info');
         fetchTeachers();
       }
     });
@@ -364,7 +409,7 @@ export default function TeachersPage() {
           </div>
         )}
 
-        <FilterControls search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} />
+        <FilterControls search={search} setSearch={setSearch} statusFilter={statusFilter} setStatusFilter={setStatusFilter} onExport={handleExportCSV} />
 
         <div>
           {loading ? (

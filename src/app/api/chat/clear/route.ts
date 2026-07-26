@@ -1,11 +1,31 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+const clearChatSchema = z.object({
+  mode: z.enum(['my_messages', 'all_messages', 'single'], {
+    message: 'Invalid clear mode. Must be my_messages, all_messages, or single',
+  }),
+  messageId: z.string().uuid('Invalid message ID format').optional(),
+}).refine(data => {
+  if (data.mode === 'single') return !!data.messageId
+  return true
+}, {
+  message: 'messageId is required for single message deletion',
+})
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json()
-    const { mode, messageId } = body // mode: 'my_messages' | 'all_messages' | 'single'
+    const body = await request.json().catch(() => ({}))
+    const parseResult = clearChatSchema.safeParse(body)
+
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid chat clear payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
+    }
+
+    const { mode, messageId } = parseResult.data
 
     // 1. Verify caller session
     const serverSupabase = await createServerClient()

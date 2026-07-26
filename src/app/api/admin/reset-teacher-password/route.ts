@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server'
 import { randomInt } from 'crypto'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+const resetPasswordSchema = z.object({
+  teacherId: z.string().uuid('Invalid teacher ID format').optional(),
+  email: z.string().trim().toLowerCase().email('Invalid email address format').optional(),
+}).refine(data => !!data.teacherId || !!data.email, {
+  message: 'Either teacherId or email must be provided to reset password',
+})
 
 function generateTempPassword(): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$'
@@ -64,13 +72,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin privileges required to reset teacher passwords.' }, { status: 403 })
     }
 
-    // 2. Parse request payload
-    const body = await request.json()
-    const { teacherId, email } = body
-
-    if (!teacherId && !email) {
-      return NextResponse.json({ error: 'Missing teacherId or email.' }, { status: 400 })
+    // 2. Parse & validate request payload with Zod
+    const body = await request.json().catch(() => ({}))
+    const parseResult = resetPasswordSchema.safeParse(body)
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid password reset payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
     }
+
+    const { teacherId, email } = parseResult.data
 
     // 3. Resolve target user ID & email
     let targetUserId = teacherId

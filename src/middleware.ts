@@ -104,14 +104,27 @@ export async function middleware(request: NextRequest) {
   }
 
   // Logged in — check role & password change requirement for protected sections
-  const { data: profile } = await supabase
+  let role: string | undefined = undefined
+  let mustChangePassword = false
+
+  const { data: profile, error: profErr } = await supabase
     .from('profiles')
     .select('role, must_change_password')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
-  const role = profile?.role
-  const mustChangePassword = profile?.must_change_password ?? false
+  if (profErr) {
+    const { data: fallbackProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    role = fallbackProfile?.role
+  } else {
+    role = profile?.role
+    mustChangePassword = profile?.must_change_password ?? false
+  }
 
   // Force password change redirect for teachers
   if (role === 'teacher' && mustChangePassword && pathname !== '/teacher/profile') {
@@ -133,6 +146,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2|ttf|map|ico)$).*)',
   ],
 }

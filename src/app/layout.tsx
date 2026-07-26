@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Plus_Jakarta_Sans } from 'next/font/google'
 import { H } from '@/lib/honey'
+import { ToastProvider } from '@/components/ui/Toast'
 
 const font = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="alternate icon" href="/icon.svg" />
       </head>
       <body className={font.className} style={{ margin: 0, background: H.bg, color: H.text }}>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )

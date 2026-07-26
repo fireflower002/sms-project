@@ -47,7 +47,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 }
 
-import { CURATED_PALETTE } from '@/components/admin/SubjectModal'
+import { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
@@ -85,7 +85,12 @@ export default function TeacherTimetablePage() {
 
   const getSubjectStyle = (s: string, slotColor?: string) => {
     if (!s) return { background: H.bg, color: H.textSec, border: `1px solid ${H.border}` }
-    const hex = slotColor || subjectColors[s] || CURATED_PALETTE[0]
+    let hex = slotColor
+    if (s === 'Music' && (!hex || hex === '#14B8A6' || hex === '#06B6D4')) {
+      hex = '#EAB308'
+    } else if (!hex || hex === '#14B8A6') {
+      hex = subjectColors[s] || DEFAULT_SUBJECT_COLORS[s] || CURATED_PALETTE[0]
+    }
     return {
       background: hex2rgba(hex, 0.12),
       color: H.textPrimary,

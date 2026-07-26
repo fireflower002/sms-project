@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+const deleteAnnouncementSchema = z.object({
+  id: z.string().uuid('Invalid announcement ID format'),
+})
+
 async function handleDelete(request: Request) {
   try {
-    const { id } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    const parseResult = deleteAnnouncementSchema.safeParse(body)
 
-    if (!id) {
-      return NextResponse.json({ error: 'Announcement ID is required' }, { status: 400 })
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid announcement deletion payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
     }
+
+    const { id } = parseResult.data
 
     // 1. Verify caller is an authenticated Admin
     const serverSupabase = await createServerClient()

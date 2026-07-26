@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, GraduationCap, Plus, Trash2, Loader2, Pencil, Check, X } from 'lucide-react'
+import { ArrowLeft, GraduationCap, Plus, Trash2, Loader2, Pencil, Check, X, Search, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H, STYLE } from '@/lib/honey'
 import { createStyles } from '@/lib/styles'
@@ -9,6 +9,8 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+import { exportToCSV } from '@/lib/csvExport'
+import { useToast } from '@/components/ui/Toast'
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const ALL_GRADES = Array.from({ length: 13 }, (_, i) => i + 1)
@@ -24,6 +26,8 @@ export default function ClassesPage() {
   const [showAddGrade, setShowAddGrade] = useState(false)
   const [newGradeLevel, setNewGradeLevel] = useState(6)
   const [newGradeCount, setNewGradeCount] = useState(3)
+  const [search, setSearch] = useState('')
+  const { showToast } = useToast()
 
   // Inline rename state
   const [renamingId, setRenamingId] = useState<string | null>(null)
@@ -33,10 +37,27 @@ export default function ClassesPage() {
   const [hoveredAddClassBtn, setHoveredAddClassBtn] = useState<number | null>(null)
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
 
-
   const flash = (msg: string, ok = true) => {
     setToast({ msg, ok })
+    showToast(msg, ok ? 'success' : 'error')
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const handleExportCSV = () => {
+    const ok = exportToCSV(
+      'classes_list',
+      [
+        { label: 'Class Name', key: 'name' },
+        { label: 'Grade Level', key: 'grade_level' },
+        { label: 'Slug', key: 'slug' },
+      ],
+      filteredClasses
+    )
+    if (ok) {
+      showToast(`Exported ${filteredClasses.length} class records to CSV`, 'success')
+    } else {
+      showToast('No class records available to export', 'warning')
+    }
   }
 
   const fetchClasses = async () => {
@@ -53,9 +74,16 @@ export default function ClassesPage() {
 
   useEffect(() => { fetchClasses() }, [])
 
+  // Filter classes by search term
+  const filteredClasses = classes.filter(c => {
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    return c.name.toLowerCase().includes(q) || `grade ${c.grade_level}`.includes(q)
+  })
+
   // Group by grade
   const byGrade: Record<number, ClassRow[]> = {}
-  classes.forEach(c => {
+  filteredClasses.forEach(c => {
     if (!byGrade[c.grade_level]) byGrade[c.grade_level] = []
     byGrade[c.grade_level].push(c)
   })
@@ -325,6 +353,49 @@ export default function ClassesPage() {
             )}
           </div>
         </header>
+
+        {/* Search & Export Toolbar */}
+        <div style={{ padding: '14px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+          <div style={{ position: 'relative', minWidth: '220px', flex: '1 1 240px' }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: H.textMuted }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search classes or grade level..."
+              style={{
+                width: '100%',
+                padding: '8px 14px 8px 36px',
+                borderRadius: '8px',
+                border: `1px solid ${H.border}`,
+                background: H.surface,
+                color: H.textPrimary,
+                fontSize: '13px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <button
+            onClick={handleExportCSV}
+            style={{
+              padding: '8px 14px',
+              fontWeight: 600,
+              fontSize: '13px',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              border: `1px solid ${H.border}`,
+              backgroundColor: H.surface,
+              color: H.textPrimary,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              minHeight: '38px',
+            }}
+            title="Export CSV"
+          >
+            <Download size={14} /> Export CSV
+          </button>
+        </div>
 
         {/* Toast */}
         {toast && (

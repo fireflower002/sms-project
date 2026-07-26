@@ -49,17 +49,29 @@ export default function LoginForm({
       const user = authData.user
       if (user) {
         // Fetch user profile role to auto-route to correct dashboard
-        const { data: profile } = await supabase
+        let userRole = 'teacher'
+        let mustChange = false
+
+        const { data: profile, error: profErr } = await supabase
           .from('profiles')
           .select('role, must_change_password')
           .eq('id', user.id)
           .maybeSingle()
 
-        const userRole = profile?.role || 'teacher'
+        if (profErr) {
+          const { data: fallbackProfile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+          userRole = fallbackProfile?.role || 'teacher'
+        } else {
+          userRole = profile?.role || 'teacher'
+          mustChange = profile?.must_change_password ?? false
+        }
 
         // Verify forced password change for teachers
         if (userRole === 'teacher') {
-          const mustChange = profile?.must_change_password
           if (mustChange) {
             window.location.href = '/teacher/profile?changePassword=true'
             return

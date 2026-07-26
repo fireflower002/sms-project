@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 
+const cancelAbsenceSchema = z.object({
+  absenceId: z.string().uuid('Invalid absence ID format'),
+})
+
 export async function POST(request: Request) {
   try {
-    const { absenceId } = await request.json()
-    if (!absenceId) {
-      return NextResponse.json({ error: 'Absence ID is required' }, { status: 400 })
+    const body = await request.json().catch(() => ({}))
+    const parseResult = cancelAbsenceSchema.safeParse(body)
+
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid cancel absence payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
     }
+
+    const { absenceId } = parseResult.data
 
     // 1. Authenticate user
     const serverSupabase = await createServerClient()

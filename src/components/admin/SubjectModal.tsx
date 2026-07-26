@@ -5,31 +5,51 @@ import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 
 export const CURATED_PALETTE = [
-  '#F59E0B', // Amber
-  '#8B5CF6', // Purple
-  '#EC4899', // Pink
-  '#EF4444', // Red
-  '#F97316', // Orange
-  '#10B981', // Emerald
-  '#06B6D4', // Cyan
-  '#3B82F6', // Blue
-  '#A855F7', // Violet
-  '#84CC16', // Lime
-  '#F43F5E', // Rose
-  '#14B8A6', // Teal
-  '#6366F1', // Indigo
-  '#0EA5E9', // Sky
-  '#D946EF', // Fuchsia
-  '#EAB308', // Yellow
-  '#059669', // Mint
-  '#E11D48', // Crimson
-  '#1D4ED8', // Deep Blue
-  '#15803D', // Forest
-  '#7C3AED', // Deep Purple
-  '#B45309', // Bronze
-  '#0284C7', // Ocean
-  '#4338CA', // Iris
+  '#F59E0B', // Warm Amber (38°)
+  '#8B5CF6', // Purple (258°)
+  '#EAB308', // Golden Yellow (48°)
+  '#EF4444', // Red (0°)
+  '#06B6D4', // Cyan (189°)
+  '#EC4899', // Pink (330°)
+  '#10B981', // Emerald Green (160°)
+  '#F97316', // Orange (24°)
+  '#3B82F6', // Blue (217°)
+  '#84CC16', // Lime Green (84°)
+  '#D946EF', // Fuchsia (292°)
+  '#059669', // Mint Green (160°)
+  '#7C3AED', // Deep Purple (263°)
+  '#F43F5E', // Rose (349°)
+  '#14B8A6', // Teal (173°)
+  '#6366F1', // Indigo (239°)
+  '#B45309', // Bronze (28°)
+  '#0EA5E9', // Sky Blue (199°)
+  '#E11D48', // Crimson (348°)
+  '#1D4ED8', // Deep Blue (224°)
+  '#15803D', // Forest Green (142°)
+  '#0284C7', // Ocean Blue (201°)
+  '#4338CA', // Iris (244°)
 ]
+
+export const DEFAULT_SUBJECT_COLORS: Record<string, string> = {
+  English: '#06B6D4', // Cyan
+  Music: '#EAB308',   // Golden Yellow (Visually distinct from Cyan)
+  Maths: '#F43F5E',   // Rose Red
+  Science: '#10B981', // Emerald Green
+  Sinhala: '#F97316', // Orange
+  Tamil: '#8B5CF6',   // Purple
+  History: '#B45309', // Bronze
+  Geography: '#3B82F6', // Blue
+  ICT: '#84CC16',     // Lime Green
+  Art: '#EC4899',     // Pink
+  PE: '#059669',      // Mint Green
+  Religion: '#7C3AED',// Deep Violet
+  Commerce: '#D946EF',// Fuchsia
+  Biology: '#14B8A6', // Teal
+  Chemistry: '#6366F1',// Indigo
+  Physics: '#0284C7', // Ocean Blue
+  Economics: '#F59E0B',// Warm Amber
+  'Combined Maths': '#E11D48',// Crimson
+}
 
 export const PREDEFINED_SUBJECTS = [
   'Maths','Science','English','Sinhala','Tamil','History',
@@ -88,8 +108,8 @@ export default function SubjectModal({ isOpen, onClose, onSuccess }: SubjectModa
       const usedColors = new Set(Object.values(colorMap))
 
       list.forEach((subj, idx) => {
-        if (!colorMap[subj]) {
-          let chosen = CURATED_PALETTE.find(c => !usedColors.has(c)) || CURATED_PALETTE[idx % CURATED_PALETTE.length]
+        if (!colorMap[subj] || (subj === 'Music' && (colorMap[subj] === '#14B8A6' || colorMap[subj] === '#06B6D4'))) {
+          let chosen = DEFAULT_SUBJECT_COLORS[subj] || CURATED_PALETTE.find(c => !usedColors.has(c)) || CURATED_PALETTE[idx % CURATED_PALETTE.length]
           usedColors.add(chosen)
           colorMap[subj] = chosen
         }

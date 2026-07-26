@@ -137,7 +137,7 @@ export default function BulkInventoryImportPage() {
         serial_number:      row.serial_number || null,
         purchase_price:     row.purchase_price ? parseFloat(row.purchase_price) : null,
         notes:              row.notes || null,
-        public_token:       crypto.randomUUID(),
+        public_token:       (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') ? crypto.randomUUID() : undefined,
         low_stock_threshold: 1,
         is_active:          true,
         created_by:         user?.id,

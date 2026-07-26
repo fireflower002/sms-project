@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server'
+import { randomInt } from 'crypto'
+import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+const teacherItemSchema = z.object({
+  full_name: z.string().trim().min(2, 'Teacher full name must be at least 2 characters'),
+  email: z.string().trim().toLowerCase().email('Invalid teacher email address'),
+  phone: z.string().trim().optional().nullable(),
+  subjects: z.array(z.string().trim()).optional().default([]),
+})
+
+const bulkCreateTeachersSchema = z.object({
+  teachers: z.array(teacherItemSchema).min(1, 'At least one teacher record is required'),
+})
 
 export async function POST(request: Request) {
   try {
@@ -54,20 +67,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden: Admin privileges required.' }, { status: 403 })
     }
 
-    const body = await request.json()
-    const { teachers } = body // Array of { full_name, email, phone, subjects }
-
-    if (!Array.isArray(teachers) || teachers.length === 0) {
-      return NextResponse.json({ error: 'No teachers provided' }, { status: 400 })
+    // Validate payload with Zod schema
+    const body = await request.json().catch(() => ({}))
+    const parseResult = bulkCreateTeachersSchema.safeParse(body)
+    if (!parseResult.success) {
+      const firstError = parseResult.error.issues[0]?.message || 'Invalid bulk teacher creation payload'
+      return NextResponse.json({ error: firstError }, { status: 400 })
     }
+
+    const { teachers } = parseResult.data
 
     const results = []
 
     for (const t of teachers) {
-      const email = t.email.trim().toLowerCase()
-      const fullName = t.full_name.trim()
-      // Generate a temporary password e.g. Pass!2026 + random 4-digit number
-      const randomDigits = Math.floor(1000 + Math.random() * 9000)
+      const email = t.email
+      const fullName = t.full_name
+      // Generate a temporary password e.g. Teacher! + random 4-digit number
+      const randomDigits = randomInt(1000, 10000)
       const tempPassword = `Teacher!${randomDigits}`
 
       try {

@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import Link from 'next/link'
-import { Loader2, RefreshCw, Pin, Trash2, Eye, Megaphone, MessageSquare } from 'lucide-react'
+import { Loader2, RefreshCw, Pin, Trash2, Eye, Megaphone, MessageSquare, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
@@ -9,6 +9,7 @@ import Badge from '@/components/ui/Badge'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import EmptyState from '@/components/ui/EmptyState'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+import { useToast } from '@/components/ui/Toast'
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 32px)', boxSizing: 'border-box' },
@@ -97,19 +98,16 @@ export default function AnnouncementsPage() {
 
   useEffect(() => { fetchItems() }, [fetchItems]);
 
+  const [search, setSearch] = useState('')
+  const { showToast } = useToast()
+
   const togglePin = async (id: string, pinned: boolean) => {
     const { error } = await supabase.from('announcements').update({ is_pinned: !pinned }).eq('id', id);
     if (error) {
-      setModal({
-        title: 'Error',
-        message: `Permission error updating announcement: ${error.message}`,
-        variant: 'danger',
-        confirmLabel: 'OK',
-        cancelLabel: '',
-        onConfirm: () => setModal(null),
-      });
+      showToast(`Error updating pin status: ${error.message}`, 'error')
       return;
     }
+    showToast(pinned ? 'Announcement unpinned' : 'Announcement pinned', 'success')
     fetchItems();
   };
 
@@ -136,25 +134,13 @@ export default function AnnouncementsPage() {
           const resData = await res.json();
 
           if (!res.ok || !resData.success) {
-            setModal({
-              title: 'Error',
-              message: `Could not delete announcement: ${resData.error || 'Delete failed'}`,
-              variant: 'danger',
-              confirmLabel: 'OK',
-              cancelLabel: '',
-              onConfirm: () => setModal(null),
-            });
+            showToast(`Could not delete announcement: ${resData.error || 'Delete failed'}`, 'error')
             fetchItems(); // Restore items on error
+          } else {
+            showToast(`Deleted notice "${title}"`, 'info')
           }
         } catch (err: any) {
-          setModal({
-            title: 'Error',
-            message: `Could not delete announcement: ${err.message || 'Network error'}`,
-            variant: 'danger',
-            confirmLabel: 'OK',
-            cancelLabel: '',
-            onConfirm: () => setModal(null),
-          });
+          showToast(`Could not delete announcement: ${err.message || 'Network error'}`, 'error')
           fetchItems(); // Restore items on error
         } finally {
           setDeleting(null);
@@ -164,8 +150,12 @@ export default function AnnouncementsPage() {
   };
 
   const filteredItems = items.filter(i => {
-    if (filter === 'pinned') return i.is_pinned;
-    if (filter === 'urgent') return i.priority === 'high' || i.category === 'Urgent';
+    if (filter === 'pinned' && !i.is_pinned) return false;
+    if (filter === 'urgent' && !(i.priority === 'high' || i.category === 'Urgent')) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      return i.title?.toLowerCase().includes(q) || i.body?.toLowerCase().includes(q) || i.category?.toLowerCase().includes(q);
+    }
     return true;
   });
 
@@ -196,18 +186,39 @@ export default function AnnouncementsPage() {
           </div>
         </div>
 
-        {/* Integrated Filter Toolbar */}
-        <div style={{ padding: '12px 24px', display: 'flex', gap: '8px', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
-          {(['all', 'pinned', 'urgent'] as const).map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{
-              padding: '6px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
-              border: filter === f ? `1px solid ${H.border}` : 'none',
-              background: filter === f ? H.surface : 'transparent',
-              color: filter === f ? H.textPrimary : H.textSec, textTransform: 'capitalize'
-            }}>
-              {f}
-            </button>
-          ))}
+        {/* Integrated Filter Toolbar with Search */}
+        <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+          <div style={{ position: 'relative', minWidth: '220px', flex: '1 1 240px' }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: H.textMuted }} />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search announcements by title or content..."
+              style={{
+                width: '100%',
+                padding: '8px 14px 8px 36px',
+                borderRadius: '8px',
+                border: `1px solid ${H.border}`,
+                background: H.surface,
+                color: H.textPrimary,
+                fontSize: '13px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {(['all', 'pinned', 'urgent'] as const).map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{
+                padding: '6px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                border: filter === f ? `1px solid ${H.border}` : 'none',
+                background: filter === f ? H.surface : 'transparent',
+                color: filter === f ? H.textPrimary : H.textSec, textTransform: 'capitalize'
+              }}>
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div style={{ padding: '24px' }}>

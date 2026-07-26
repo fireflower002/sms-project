@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import { TimetableSkeleton } from '@/components/ui/Skeleton'
-import SubjectModal, { CURATED_PALETTE } from '@/components/admin/SubjectModal'
+import SubjectModal, { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
@@ -42,7 +42,11 @@ export default function AdminTimetableViewPage() {
   const [subjectColors, setSubjectColors] = useState<Record<string, string>>({})
 
   const subjectColor = (s: string, slotColor?: string) => {
-    return slotColor || subjectColors[s] || CURATED_PALETTE[0]
+    if (s === 'Music' && (!slotColor || slotColor === '#14B8A6' || slotColor === '#06B6D4')) {
+      return '#EAB308'
+    }
+    if (slotColor && slotColor !== '#14B8A6') return slotColor
+    return subjectColors[s] || DEFAULT_SUBJECT_COLORS[s] || CURATED_PALETTE[0]
   }
 
   const load = async () => {

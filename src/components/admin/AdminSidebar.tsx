@@ -145,7 +145,13 @@ export default function AdminSidebar() {
 
   // ── Mobile Bottom Navigation Bar & Drawer ──
   if (isMobile) {
-    const mobileQuickItems = ALL_ADMIN_NAV_ITEMS.slice(0, 4)
+    const mobilePrimaryItems: NavItemDef[] = [
+      { href: '/admin', label: 'Home', icon: LayoutDashboard, color: H.accent },
+      { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
+      { href: '/admin/chat', label: 'Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/admin/teachers', label: 'Teachers', icon: Users, color: H.successGreen },
+      { href: '/admin/announcements', label: 'Notices', icon: Megaphone, color: H.skyBlue },
+    ]
 
     return (
       <div style={{
@@ -158,22 +164,50 @@ export default function AdminSidebar() {
         boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
         zIndex: 1000,
       }}>
-        <nav style={{ display: 'flex', justifyContent: 'space-around', padding: '6px 0' }}>
-          {mobileQuickItems.map(({ href, label, icon: Icon, color }) => {
+        <nav style={{
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          padding: '2px 4px',
+        }}>
+          {mobilePrimaryItems.map(({ href, label, icon: Icon, color }) => {
             const active = pathname === href || (href !== '/admin' && pathname.startsWith(href))
             return (
-              <Link key={href} href={href} style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '2px',
-                color: active ? color : H.textMuted,
-                textDecoration: 'none',
-                padding: '4px 8px',
-                fontSize: '11px',
-                fontWeight: '600'
-              }}>
-                <Icon size={20} />
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
+                  color: active ? color : H.textMuted,
+                  textDecoration: 'none',
+                  padding: '6px 4px',
+                  fontSize: '11px',
+                  fontWeight: active ? '700' : '600',
+                  minHeight: H.targetSizes.touchTarget,
+                  minWidth: '44px',
+                  flex: 1,
+                  position: 'relative',
+                  borderRadius: H.radius.md,
+                  backgroundColor: active ? H.accentLight : 'transparent',
+                  transition: H.motion.transitionFast,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {active && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    width: '18px',
+                    height: '3px',
+                    borderRadius: H.radius.full,
+                    backgroundColor: color,
+                  }} />
+                )}
+                <Icon size={19} color={active ? color : H.textMuted} />
                 <span>{label}</span>
               </Link>
             )
@@ -187,13 +221,33 @@ export default function AdminSidebar() {
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '2px',
               color: isMobileMenuOpen ? H.accent : H.textMuted,
               fontSize: '11px',
-              fontWeight: '600'
+              fontWeight: isMobileMenuOpen ? '700' : '600',
+              padding: '6px 4px',
+              minHeight: H.targetSizes.touchTarget,
+              minWidth: '44px',
+              flex: 1,
+              position: 'relative',
+              borderRadius: H.radius.md,
+              backgroundColor: isMobileMenuOpen ? H.accentLight : 'transparent',
+              transition: H.motion.transitionFast,
+              boxSizing: 'border-box',
             }}
           >
-            <Menu size={20} />
+            {isMobileMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '2px',
+                width: '18px',
+                height: '3px',
+                borderRadius: H.radius.full,
+                backgroundColor: H.accent,
+              }} />
+            )}
+            <Menu size={19} color={isMobileMenuOpen ? H.accent : H.textMuted} />
             <span>More</span>
           </button>
         </nav>

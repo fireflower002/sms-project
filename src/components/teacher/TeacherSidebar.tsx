@@ -133,33 +133,110 @@ export default function TeacherSidebar() {
   }
 
   if (isMobile) {
+    // Include primary most-used teacher items directly on the bar
+    const mobilePrimaryItems: TeacherNavItemDef[] = [
+      { href: '/teacher', label: 'Home', icon: LayoutDashboard, color: H.accent },
+      { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
+      { href: '/teacher/chat', label: 'Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: H.purple },
+      { href: '/teacher/profile', label: 'Profile', icon: User, color: H.successGreen },
+    ]
+
     return (
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: H.surface,
         borderTop: `1px solid ${H.border}`,
-        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)', zIndex: 1000,
+        boxShadow: '0 -2px 8px rgba(0,0,0,0.06)',
+        zIndex: 1000,
       }}>
-        <nav style={{ display: 'flex', justifyContent: 'space-around', padding: '6px 0' }}>
-          {ALL_TEACHER_NAV_ITEMS.slice(0, 4).map(({ href, label, icon: Icon, color }) => {
+        <nav style={{
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          padding: '2px 4px',
+        }}>
+          {mobilePrimaryItems.map(({ href, label, icon: Icon, color }) => {
             const active = pathname === href || (href !== '/teacher' && pathname.startsWith(href))
             return (
-              <Link key={href} href={href} style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-                color: active ? color : H.textMuted,
-                textDecoration: 'none', padding: '6px 12px', fontSize: '11px', fontWeight: '600', minHeight: '44px'
-              }}>
-                <Icon size={20} />
+              <Link
+                key={href}
+                href={href}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '2px',
+                  color: active ? color : H.textMuted,
+                  textDecoration: 'none',
+                  padding: '6px 4px',
+                  fontSize: '11px',
+                  fontWeight: active ? '700' : '600',
+                  minHeight: H.targetSizes.touchTarget,
+                  minWidth: '44px',
+                  flex: 1,
+                  position: 'relative',
+                  borderRadius: H.radius.md,
+                  backgroundColor: active ? H.accentLight : 'transparent',
+                  transition: H.motion.transitionFast,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {active && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '2px',
+                    width: '18px',
+                    height: '3px',
+                    borderRadius: H.radius.full,
+                    backgroundColor: color,
+                  }} />
+                )}
+                <Icon size={19} color={active ? color : H.textMuted} />
                 <span>{label}</span>
               </Link>
             )
           })}
-          <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} style={{
-            background: 'none', border: 'none', cursor: 'pointer', display: 'flex',
-            flexDirection: 'column', alignItems: 'center', gap: '2px',
-            color: isMobileMenuOpen ? H.accent : H.textMuted, fontSize: '11px', fontWeight: '600', padding: '6px 12px', minHeight: '44px'
-          }}>
-            <Menu size={20} />
+          <button
+            onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '2px',
+              color: isMobileMenuOpen ? H.accent : H.textMuted,
+              fontSize: '11px',
+              fontWeight: isMobileMenuOpen ? '700' : '600',
+              padding: '6px 4px',
+              minHeight: H.targetSizes.touchTarget,
+              minWidth: '44px',
+              flex: 1,
+              position: 'relative',
+              borderRadius: H.radius.md,
+              backgroundColor: isMobileMenuOpen ? H.accentLight : 'transparent',
+              transition: H.motion.transitionFast,
+              boxSizing: 'border-box',
+            }}
+          >
+            {isMobileMenuOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '2px',
+                width: '18px',
+                height: '3px',
+                borderRadius: H.radius.full,
+                backgroundColor: H.accent,
+              }} />
+            )}
+            <Menu size={19} color={isMobileMenuOpen ? H.accent : H.textMuted} />
             <span>More</span>
           </button>
         </nav>

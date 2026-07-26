@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 
 import { H } from '@/lib/honey'
-import SubjectModal, { CURATED_PALETTE } from '@/components/admin/SubjectModal'
+import SubjectModal, { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
 
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
 
@@ -86,8 +86,8 @@ export default function TimetableBuildPage() {
     })
     merged.forEach((t:any)=>{
       (t.subjects||[]).forEach((s:string)=>{
-        if(!map[s]) {
-          const chosen = CURATED_PALETTE.find(c => !usedColors.has(c)) || CURATED_PALETTE[Object.keys(map).length % CURATED_PALETTE.length]
+        if(!map[s] || (s === 'Music' && (map[s] === '#14B8A6' || map[s] === '#06B6D4'))) {
+          const chosen = DEFAULT_SUBJECT_COLORS[s] || CURATED_PALETTE.find(c => !usedColors.has(c)) || CURATED_PALETTE[Object.keys(map).length % CURATED_PALETTE.length]
           map[s] = chosen
           usedColors.add(chosen)
         }
@@ -161,9 +161,29 @@ export default function TimetableBuildPage() {
         }
       }
     }
-    for (const u of updates) await supabase.from('schedule_assignments').update({teacher_id:u.teacher_id}).eq('id',u.id)
-    const { data:refreshed }=await supabase.from('schedule_assignments').select('*').eq('template_id',templateId)
-    setAssignments(refreshed||[]); setFixResult({fixed,unresolved}); setShowFixDetail(true); setAutoFixing(false)
+    const successfulFixed: FixResult['fixed'] = []
+    for (let idx = 0; idx < updates.length; idx++) {
+      const u = updates[idx]
+      const f = fixed[idx]
+      const { error: updErr } = await supabase.from('schedule_assignments').update({ teacher_id: u.teacher_id }).eq('id', u.id)
+      if (updErr) {
+        unresolved.push({
+          className: f.className,
+          day: f.day,
+          period: f.period,
+          teacher: f.oldTeacher,
+          subject: f.subject,
+          reason: `Database update failed: ${updErr.message}`,
+        })
+      } else {
+        successfulFixed.push(f)
+      }
+    }
+    const { data: refreshed } = await supabase.from('schedule_assignments').select('*').eq('template_id', templateId)
+    setAssignments(refreshed || [])
+    setFixResult({ fixed: successfulFixed, unresolved })
+    setShowFixDetail(true)
+    setAutoFixing(false)
   }
 
   const conflictIds   = getConflictIds(assignments)

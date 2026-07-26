@@ -1,13 +1,15 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X, Upload } from 'lucide-react'
+import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X, Upload, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getItemPublicUrl } from '@/lib/siteUrl'
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
 import { SkeletonBlock } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
+import { exportToCSV } from '@/lib/csvExport'
+import { useToast } from '@/components/ui/Toast'
 
 const styles: { [key: string]: React.CSSProperties } = {
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
@@ -210,6 +212,28 @@ export default function InventoryPage() {
   const [singleQrItem, setSingleQrItem] = useState<any | null>(null)
   const [showBatchQrModal, setShowBatchQrModal] = useState(false)
   const supabase = createClient()
+  const { showToast } = useToast()
+
+  const handleExportCSV = () => {
+    const ok = exportToCSV(
+      'inventory_items',
+      [
+        { label: 'Item Name', key: 'name' },
+        { label: 'Category', key: 'category' },
+        { label: 'Available Qty', key: 'quantity_available' },
+        { label: 'Total Qty', key: 'quantity_total' },
+        { label: 'Condition', key: 'condition' },
+        { label: 'Location', key: 'location' },
+        { label: 'Barcode', key: 'barcode' },
+      ],
+      items
+    )
+    if (ok) {
+      showToast(`Exported ${items.length} inventory items to CSV`, 'success')
+    } else {
+      showToast('No inventory items available to export', 'warning')
+    }
+  }
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
@@ -268,9 +292,10 @@ export default function InventoryPage() {
       }
 
       setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
+      showToast(`Deleted item "${itemToDelete.name}"`, 'info')
       fetchItems()
     } catch (err: any) {
-      alert(err.message || 'Failed to delete item.')
+      showToast(err.message || 'Failed to delete item.', 'error')
     }
   }
 
@@ -348,28 +373,40 @@ export default function InventoryPage() {
         </div>
 
         {/* Integrated Filter Toolbar */}
-        <div style={{ padding: '16px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
-          <div style={{ position: 'relative', minWidth: '240px', flex: 1 }}>
-            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: H.textMuted }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
-              placeholder="Search items..."
-              style={{ ...styles.button, width: '100%', paddingLeft: '36px', minHeight: '38px', fontSize: '13px', background: H.surface, color: H.textPrimary, border: `1px solid ${isSearchFocused ? H.mintGreen : H.border}` }}
-            />
+        <div style={{ padding: '16px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 300px' }}>
+            <div style={{ position: 'relative', minWidth: '200px', flex: 1 }}>
+              <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: H.textMuted }} />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                placeholder="Search items..."
+                style={{ ...styles.button, width: '100%', paddingLeft: '36px', minHeight: '38px', fontSize: '13px', background: H.surface, color: H.textPrimary, border: `1px solid ${isSearchFocused ? H.mintGreen : H.border}` }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
+              {CATEGORIES.map(c => (
+                <button key={c} onClick={() => setCategory(c)} style={{ padding: '6px 12px', borderRadius: '8px', border: category === c ? `1px solid ${H.border}` : 'none', background: category === c ? H.surface : 'transparent', color: category === c ? H.textPrimary : H.textSec, fontWeight: category === c ? 600 : 500, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
-            {CATEGORIES.map(c => (
-              <button key={c} onClick={() => setCategory(c)} style={{ padding: '6px 12px', borderRadius: '8px', border: category === c ? `1px solid ${H.border}` : 'none', background: category === c ? H.surface : 'transparent', color: category === c ? H.textPrimary : H.textSec, fontWeight: category === c ? 600 : 500, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {c}
-              </button>
-            ))}
+
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button onClick={() => setShowLowStock(x => !x)} style={{ ...styles.button, minHeight: '38px', fontSize: '12px', background: showLowStock ? H.accent : H.surface, color: showLowStock ? 'white' : H.textSec, border: `1px solid ${showLowStock ? H.accent : H.border}` }}>
+              <AlertTriangle size={14} /> Low Stock
+            </button>
+            <button
+              onClick={handleExportCSV}
+              style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '12px', gap: '6px' }}
+              title="Export CSV"
+            >
+              <Download size={14} /> Export CSV
+            </button>
           </div>
-          <button onClick={() => setShowLowStock(x => !x)} style={{ ...styles.button, minHeight: '38px', fontSize: '12px', background: showLowStock ? H.accent : H.surface, color: showLowStock ? 'white' : H.textSec, border: `1px solid ${showLowStock ? H.accent : H.border}` }}>
-            <AlertTriangle size={14} /> Low Stock Only
-          </button>
         </div>
 
         {/* Item Grid */}
