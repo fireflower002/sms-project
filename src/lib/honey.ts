@@ -6,7 +6,7 @@ export const H = {
   grass:      '#10B981',              // green for success states
   bg:         '#FAFAF8',              // page background (light warm cream/off-white)
   surface:    '#FFFFFF',              // card/surface background (pure white)
-  border:     '#E8E4DD',              // soft border color
+  border:     'rgba(0, 0, 0, 0.07)',  // subtle hairline border
   text:       '#1C1917',              // primary text (dark warm charcoal)
   muted:      '#78716C',              // secondary text
   sub:        '#A8A29E',              // tertiary text / placeholder
@@ -17,10 +17,10 @@ export const H = {
   purpleLight:'#F3E8FF',
   purpleDark: '#6B21A8',
 
-  // Light-theme aliases (UNCHANGED)
+  // Light-theme aliases (UNCHANGED PALETTE, REFINED ELEVATION)
   cardBg:     '#FFFFFF',
-  cardBorder: '#E8E4DD',
-  cardShadow: '0 2px 8px rgba(0,0,0,0.06)',
+  cardBorder: 'rgba(0, 0, 0, 0.07)',
+  cardShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(28, 25, 23, 0.05)',
   lightBg:    '#FAFAF8',
   accent:     '#F59E0B',
   accentDark: '#92400E',
@@ -78,12 +78,12 @@ export const H = {
     '3xl':  '24px',
   },
 
-  // Centralized Font Weight Scale
+  // Centralized 3-Tier Font Weight Scale
   fontWeight: {
-    regular:   400,
-    medium:    500,
-    semibold:  600,
-    bold:      700,
+    regular:   400, // Body text & metadata descriptions
+    medium:    500, // Interactive labels, form fields & status pills
+    semibold:  600, // Subheadings, table headers & active states
+    bold:      700, // Page headers, metric values & primary emphasis
     extrabold: 800,
     black:     900,
   },
@@ -109,13 +109,13 @@ export const H = {
     touchTarget: '44px',
   },
 
-  // Centralized Shadow Tokens
+  // Refined Layered Shadow Tokens
   shadows: {
-    sm:       '0 1px 2px rgba(0,0,0,0.05)',
-    card:     '0 2px 8px rgba(0,0,0,0.06)',
-    dropdown: '0 -2px 8px rgba(0,0,0,0.06)',
-    lg:       '0 4px 20px rgba(0,0,0,0.05)',
-    modal:    '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    sm:       '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+    card:     '0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(28, 25, 23, 0.05)',
+    dropdown: '0 2px 4px -1px rgba(0, 0, 0, 0.04), 0 8px 16px -2px rgba(0, 0, 0, 0.06)',
+    lg:       '0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 10px 24px -3px rgba(0, 0, 0, 0.06)',
+    modal:    '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03)',
   },
 
   // Centralized Motion & Micro-Animation Tokens
@@ -143,6 +143,13 @@ export const STYLE = `
     font-family: ${H.font};
     margin: 0;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .tabular-nums, table, [data-tabular], .stat-value, .metric-value {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 
   button, input, select, textarea {
@@ -159,7 +166,7 @@ export const STYLE = `
   }
   .interactive-card:hover {
     transform: ${H.motion.hoverLift};
-    border-color: #D6D1C7 !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -167,3 +174,4 @@ export const STYLE = `
   ::-webkit-scrollbar-thumb { background: rgba(120,113,108,0.2); border-radius: 99px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(120,113,108,0.4); }
 `;
+

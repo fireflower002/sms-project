@@ -3,22 +3,24 @@ import { useState, Fragment } from 'react'
 import { Plus, Loader2, Mail, User, X, Book, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
+import { H } from '@/lib/honey'
+
 // Design System Tokens
 const colors = {
-  primary_background: '#FAFAF8',
-  card_background: '#FFFFFF',
-  card_border: '#E8E4DD',
-  card_shadow: '0 4px 12px rgba(0,0,0,0.08)',
-  success_green: '#10B981',
+  primary_background: H.bg,
+  card_background: H.surface,
+  card_border: H.border,
+  card_shadow: H.shadows.modal,
+  success_green: H.successGreen,
   success_dark: '#065F46',
-  success_light: '#D1FAE5',
-  danger_background: '#FEF2F2',
-  danger_text: '#DC2626',
-  text_primary: '#1C1917',
-  text_secondary: '#78716C',
-  text_muted: '#A8A29E',
-  input_background: '#FAFAF8',
-  input_border: '#E8E4DD',
+  success_light: H.successLight,
+  danger_background: H.dangerLight,
+  danger_text: H.danger,
+  text_primary: H.textPrimary,
+  text_secondary: H.textSec,
+  text_muted: H.textMuted,
+  input_background: H.bg,
+  input_border: H.border,
   overlay_background: 'rgba(28, 25, 23, 0.6)',
 }
 

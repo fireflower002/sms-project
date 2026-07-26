@@ -78,7 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 borderRadius: '12px',
                 backgroundColor: H.surface,
                 border: `1px solid ${config.borderColor}`,
-                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+                boxShadow: H.shadows.lg,
                 fontFamily: H.font,
                 fontSize: '13px',
                 fontWeight: 600,

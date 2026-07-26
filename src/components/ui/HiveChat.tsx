@@ -17,23 +17,25 @@ interface ChatMessage {
   full_name?: string
 }
 
+import { H } from '@/lib/honey'
+
 // Design System Tokens
 const colors = {
-  primary_background: '#FAFAF8',
-  card_background: '#FFFFFF',
-  card_border: '#E8E4DD',
-  card_shadow: '0 2px 8px rgba(0,0,0,0.06)',
-  primary_accent: '#F59E0B',
-  primary_dark: '#92400E',
-  primary_light: '#FEF3C7',
-  danger_background: '#FEF2F2',
-  danger_text: '#DC2626',
+  primary_background: H.bg,
+  card_background: H.surface,
+  card_border: H.border,
+  card_shadow: H.cardShadow,
+  primary_accent: H.honey,
+  primary_dark: H.chocolate,
+  primary_light: H.accentLight,
+  danger_background: H.dangerLight,
+  danger_text: H.danger,
   danger_border: '#FECACA',
-  text_primary: '#1C1917',
-  text_secondary: '#78716C',
-  text_muted: '#A8A29E',
-  input_background: '#FAFAF8',
-  input_border: '#E8E4DD',
+  text_primary: H.textPrimary,
+  text_secondary: H.textSec,
+  text_muted: H.textMuted,
+  input_background: H.bg,
+  input_border: H.border,
 };
 
 const styles = {
