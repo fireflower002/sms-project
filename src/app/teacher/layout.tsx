@@ -37,6 +37,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
             .teacher-main-content {
               padding-bottom: 80px;
             }
+            .teacher-main-content:has(.staff-chat-header) {
+              padding-bottom: 0 !important;
+            }
           }
         `}</style>
       </div>

@@ -152,21 +152,29 @@ export const STYLE = `
     font-feature-settings: "tnum";
   }
 
-  button, input, select, textarea {
+  button, input, select, textarea, a.button-link {
     font-family: inherit;
     transition: ${H.motion.transitionFast};
   }
 
-  button:active:not(:disabled) {
+  button:active:not(:disabled), a.button-link:active {
     transform: ${H.motion.activePress};
   }
 
   .interactive-card {
-    transition: ${H.motion.transitionNormal};
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease;
   }
   .interactive-card:hover {
     transform: ${H.motion.hoverLift};
     border-color: rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 4px 16px -2px rgba(28, 25, 23, 0.08) !important;
+  }
+
+  tr.interactive-row {
+    transition: background-color 0.15s ease;
+  }
+  tr.interactive-row:hover {
+    background-color: #FAF9F6 !important;
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }

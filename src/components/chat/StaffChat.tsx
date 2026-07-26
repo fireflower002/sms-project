@@ -522,7 +522,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
             <MessageSquare size={18} color={H.skyDark} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <h2 style={styles.headerTitle}>Staff Communication Channel</h2>
               <span style={styles.liveBadge}>
                 <span style={styles.livePulse} /> Live Realtime
@@ -649,6 +649,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
 
                     {/* Message Bubble Box */}
                     <div
+                      className="staff-chat-bubble"
                       style={{
                         ...styles.bubble,
                         ...(isSelf ? styles.bubbleSelf : styles.bubbleOther),
@@ -762,7 +763,10 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                               <button
                                 onClick={() => handleDelete(msg.id)}
                                 disabled={deletingId === msg.id}
-                                style={styles.actionIconBtnDelete}
+                                style={{
+                                  ...styles.actionIconBtnDelete,
+                                  color: isSelf ? 'rgba(255, 255, 255, 0.9)' : '#DC2626',
+                                }}
                                 title={isAdmin && !isSelf ? "Delete message (Admin moderation)" : "Delete message"}
                                 type="button"
                               >
@@ -828,7 +832,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
           {sending ? (
             <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
           ) : (
-            <Send size={16} style={{ marginLeft: '-1px' }} />
+            <Send size={16} />
           )}
         </button>
       </form>
@@ -842,7 +846,12 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
           .staff-chat-input-form {
             padding: 10px 12px !important;
             gap: 8px !important;
-            margin-bottom: 56px !important;
+          }
+          .staff-chat-input-form input {
+            font-size: 16px !important;
+          }
+          .staff-chat-bubble {
+            max-width: 86% !important;
           }
         }
       `}</style>
@@ -1246,7 +1255,8 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '8px',
-    minWidth: '220px',
+    width: '100%',
+    minWidth: '180px',
   },
 
   editTextarea: {

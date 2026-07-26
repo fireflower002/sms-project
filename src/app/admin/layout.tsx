@@ -12,6 +12,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             .admin-main-content {
               padding-bottom: 80px;
             }
+            .admin-main-content:has(.staff-chat-header) {
+              padding-bottom: 0 !important;
+            }
           }
         `}</style>
       </div>

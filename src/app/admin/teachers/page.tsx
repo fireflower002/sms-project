@@ -25,8 +25,8 @@ const styles: { [key: string]: React.CSSProperties } = {
   // Table
   tableWrapper: { overflowX: 'auto', WebkitOverflowScrolling: 'touch' },
   table: { width: '100%', minWidth: '600px', borderCollapse: 'collapse' },
-  th: { fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: '14px 20px', textAlign: 'left', borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
-  td: { padding: '16px 20px', fontSize: '14px', color: H.textSec, borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
+  th: { fontSize: H.fontSize.xs, fontWeight: H.fontWeight.bold, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', padding: `${H.spacing.sm} ${H.spacing.lg}`, textAlign: 'left', borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
+  td: { padding: `${H.spacing.md} ${H.spacing.lg}`, fontSize: H.fontSize.base, color: H.textSec, borderBottom: `1px solid ${H.border}`, whiteSpace: 'nowrap' },
   trHover: { backgroundColor: H.bg },
   // Badges
   badge: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600 },
