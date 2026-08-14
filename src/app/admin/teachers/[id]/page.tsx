@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   User,
   Mail,
+  Phone,
   BookOpen,
   Calendar,
   CheckCircle2,
@@ -23,14 +24,29 @@ import {
   Clock,
   Briefcase,
   Copy,
-  Check
+  Check,
+  Plus
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
+import SubjectModal from '@/components/admin/SubjectModal'
+import { getSubjectSuggestion, formatSubjectName } from '@/lib/subjectUtils'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+
+const PREDEFINED_SUBJECTS = [
+  'Maths', 'Science', 'English', 'Sinhala', 'Tamil', 'History',
+  'Geography', 'ICT', 'Art', 'Music', 'PE', 'Religion',
+  'Commerce', 'Biology', 'Chemistry', 'Physics', 'Economics', 'Combined Maths'
+]
+
+const CURATED_PALETTE = [
+  '#F59E0B', '#8B5CF6', '#EAB308', '#EF4444', '#06B6D4', '#EC4899',
+  '#10B981', '#F97316', '#3B82F6', '#84CC16', '#D946EF', '#059669',
+  '#7C3AED', '#F43F5E', '#14B8A6', '#6366F1', '#B45309', '#0EA5E9'
+]
 
 export default function TeacherDetailPage() {
   const params = useParams()
@@ -46,18 +62,59 @@ export default function TeacherDetailPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
 
+  // Phone Editing State
+  const [editingPhone, setEditingPhone] = useState(false)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [savingPhone, setSavingPhone] = useState(false)
+  const [phoneError, setPhoneError] = useState('')
+
   // Subject Editing State
   const [editingSubjects, setEditingSubjects] = useState(false)
-  const [subjectInput, setSubjectInput] = useState('')
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>(PREDEFINED_SUBJECTS)
   const [subjectsList, setSubjectsList] = useState<string[]>([])
   const [savingSubjects, setSavingSubjects] = useState(false)
+
+  // Reused Subject Modal State
+  const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false)
+  const [subjectNotice, setSubjectNotice] = useState('')
+  const [subjectError, setSubjectError] = useState('')
 
   // Temp Password Reset Modal State
   const [resetTempPassword, setResetTempPassword] = useState<string | null>(null)
   const [copiedPass, setCopiedPass] = useState(false)
 
+  // Fetch Available Subjects System-Wide
+  const fetchAvailableSubjects = useCallback(async () => {
+    try {
+      const [{ data: profs }, { data: asgns }] = await Promise.all([
+        supabase.from('profiles').select('subjects, subject_colors'),
+        supabase.from('schedule_assignments').select('subject'),
+      ])
+
+      const set = new Set(PREDEFINED_SUBJECTS)
+
+      ;(profs || []).forEach((p: any) => {
+        (p.subjects || []).forEach((s: string) => { if (s && s !== 'Other') set.add(s.trim()) })
+        if (p.subject_colors) {
+          Object.keys(p.subject_colors).forEach((s: string) => { if (s && s !== 'Other') set.add(s.trim()) })
+        }
+      })
+
+      ;(asgns || []).forEach((a: any) => {
+        if (a.subject && a.subject !== 'Other') set.add(a.subject.trim())
+      })
+
+      setAvailableSubjects(Array.from(set).sort((a, b) => a.localeCompare(b)))
+    } catch (e) {
+      console.warn('[TeacherDetailPage] Error fetching available subjects:', e)
+    }
+  }, [supabase])
+
   const fetchTeacherData = useCallback(async () => {
     setLoading(true)
+
+    // Fetch Available Subjects
+    await fetchAvailableSubjects()
 
     // 1. Fetch Profile
     const { data: prof, error: profErr } = await supabase
@@ -79,6 +136,7 @@ export default function TeacherDetailPage() {
           id: allowed.id,
           full_name: allowed.full_name,
           email: allowed.email,
+          phone: allowed.phone || null,
           role: 'teacher',
           subjects: allowed.subjects || [],
           is_active: true,
@@ -87,6 +145,7 @@ export default function TeacherDetailPage() {
           created_at: allowed.created_at,
         })
         setSubjectsList(allowed.subjects || [])
+        setPhoneInput(allowed.phone || '')
       } else {
         setTeacher(null)
       }
@@ -96,6 +155,7 @@ export default function TeacherDetailPage() {
 
     setTeacher(prof)
     setSubjectsList(prof.subjects || [])
+    setPhoneInput(prof.phone || '')
 
     // 2. Fetch Active Timetable Schedule
     const { data: activeTemplate } = await supabase
@@ -136,11 +196,34 @@ export default function TeacherDetailPage() {
 
     setSwaps(swapData || [])
     setLoading(false)
-  }, [teacherId, supabase])
+  }, [teacherId, supabase, fetchAvailableSubjects])
 
   useEffect(() => {
     fetchTeacherData()
   }, [fetchTeacherData])
+
+  // Save Phone Number
+  const handleSavePhone = async () => {
+    setSavingPhone(true)
+    setPhoneError('')
+    try {
+      const val = phoneInput.trim() || null
+      const { error: profErr } = await supabase.from('profiles').update({ phone: val }).eq('id', teacherId)
+      if (profErr) {
+        console.error('[TeacherDetailPage] Failed to update phone in profiles:', profErr)
+        setPhoneError(profErr.message || 'Failed to update phone number.')
+        return
+      }
+
+      setTeacher((prev: any) => ({ ...prev, phone: val }))
+      setEditingPhone(false)
+    } catch (err: any) {
+      console.error('[TeacherDetailPage] Exception saving phone:', err)
+      setPhoneError(err?.message || 'Unexpected error saving phone number.')
+    } finally {
+      setSavingPhone(false)
+    }
+  }
 
   // Toggle Account Active Status
   const handleToggleActive = async () => {
@@ -162,9 +245,10 @@ export default function TeacherDetailPage() {
           .eq('id', teacherId)
 
         if (error) {
+          console.error('Failed to update teacher status:', error.message)
           setModal({
             title: 'Action Failed',
-            message: error.message,
+            message: 'Could not update profile details. Please try again.',
             variant: 'danger',
             confirmLabel: 'OK',
             cancelLabel: '',
@@ -242,35 +326,85 @@ export default function TeacherDetailPage() {
     }
   }
 
-  // Save Subject Modifications
+  // Save Subject Modifications with explicit error reporting
   const handleSaveSubjects = async () => {
     setSavingSubjects(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ subjects: subjectsList })
-      .eq('id', teacherId)
-
-    if (!error) {
-      await supabase
-        .from('allowed_users')
+    try {
+      const { error: profErr } = await supabase
+        .from('profiles')
         .update({ subjects: subjectsList })
-        .eq('email', teacher.email)
+        .eq('id', teacherId)
+
+      if (profErr) {
+        console.error('[TeacherDetailPage] Failed to save subjects to profiles:', profErr)
+        setModal({
+          title: 'Save Failed',
+          message: profErr.message || 'Failed to update teacher subjects in profiles table.',
+          variant: 'danger',
+          confirmLabel: 'OK',
+          cancelLabel: '',
+          onConfirm: () => setModal(null),
+        })
+        setSavingSubjects(false)
+        return
+      }
+
+      if (teacher?.email) {
+        const { error: allowedErr } = await supabase
+          .from('allowed_users')
+          .update({ subjects: subjectsList })
+          .eq('email', teacher.email)
+
+        if (allowedErr) {
+          console.warn('[TeacherDetailPage] allowed_users subjects update warning:', allowedErr.message)
+        }
+      }
+
       setEditingSubjects(false)
-      fetchTeacherData()
+      setIsSubjectModalOpen(false)
+      setSubjectNotice('')
+      setSubjectError('')
+      await fetchTeacherData()
+    } catch (err: any) {
+      console.error('[TeacherDetailPage] Exception saving subjects:', err)
+      setModal({
+        title: 'Error',
+        message: err.message || 'An unexpected error occurred while saving subjects.',
+        variant: 'danger',
+        confirmLabel: 'OK',
+        cancelLabel: '',
+        onConfirm: () => setModal(null),
+      })
+    } finally {
+      setSavingSubjects(false)
     }
-    setSavingSubjects(false)
   }
 
-  const handleAddSubject = () => {
-    const trimmed = subjectInput.trim()
-    if (trimmed && !subjectsList.includes(trimmed)) {
-      setSubjectsList([...subjectsList, trimmed])
-      setSubjectInput('')
+  const handleSelectSubject = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value
+    if (!val) return
+    if (!subjectsList.includes(val)) {
+      setSubjectsList(prev => [...prev, val])
     }
+    setSubjectNotice('')
+    setSubjectError('')
+    e.target.value = ''
   }
 
   const handleRemoveSubject = (sub: string) => {
-    setSubjectsList(subjectsList.filter(s => s !== sub))
+    setSubjectsList(prev => prev.filter(s => s !== sub))
+  }
+
+  const handleSubjectModalSuccess = (updatedMap: Record<string, string>) => {
+    const newKeys = Object.keys(updatedMap).sort((a, b) => a.localeCompare(b))
+    setAvailableSubjects(newKeys)
+
+    // Auto select newly created subjects into the teacher's subject list
+    const newlyAdded = newKeys.filter(k => !availableSubjects.includes(k))
+    if (newlyAdded.length > 0) {
+      setSubjectsList(prev => Array.from(new Set([...prev, ...newlyAdded])))
+      setSubjectNotice(`Subject "${newlyAdded.join(', ')}" added and assigned.`)
+    }
   }
 
   // Delete Teacher
@@ -300,107 +434,179 @@ export default function TeacherDetailPage() {
 
   if (!teacher) {
     return (
-      <div style={{ padding: '40px 24px', maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
-        <AlertTriangle size={48} style={{ color: '#EF4444', marginBottom: '16px' }} />
-        <h2 style={{ fontSize: '20px', fontWeight: 700, color: H.textPrimary }}>Teacher Not Found</h2>
-        <p style={{ fontSize: '14px', color: H.textSec, marginTop: '8px', marginBottom: '24px' }}>
-          No teacher account was found matching ID: <code>{teacherId}</code>
-        </p>
-        <Link
-          href="/admin/teachers"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 18px',
-            backgroundColor: H.honey,
-            color: '#FFF',
-            borderRadius: '10px',
-            fontWeight: 700,
-            textDecoration: 'none',
-          }}
-        >
-          <ArrowLeft size={16} /> Back to Teacher Directory
+      <div style={{ padding: '40px 24px', textAlign: 'center' }}>
+        <h2 style={{ color: H.textPrimary }}>Teacher Profile Not Found</h2>
+        <p style={{ color: H.textSec }}>The requested teacher ID could not be found.</p>
+        <Link href="/admin/teachers" style={{ color: H.honey, fontWeight: 700 }}>
+          ← Back to Teacher List
         </Link>
       </div>
     )
   }
 
   return (
-    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 32px)', boxSizing: 'border-box' }}>
-      {/* Top Breadcrumb Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
+    <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
+      {/* Top Header */}
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <Link
           href="/admin/teachers"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-            fontWeight: '600',
+            gap: '6px',
             color: H.textSec,
+            fontSize: '13px',
+            fontWeight: 600,
             textDecoration: 'none',
-            padding: '6px 12px',
-            borderRadius: '8px',
-            backgroundColor: H.surface,
-            border: `1px solid ${H.border}`,
           }}
         >
-          <ArrowLeft size={14} /> Back to Teachers
+          <ArrowLeft size={16} /> Back to Teacher Management
         </Link>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={fetchTeacherData}
-            title="Refresh profile"
-            style={{
-              padding: '8px 14px',
-              borderRadius: '8px',
-              border: `1px solid ${H.border}`,
-              backgroundColor: H.surface,
-              color: H.textSec,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '13px',
-              fontWeight: 600,
-            }}
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
+        <button
+          onClick={fetchTeacherData}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '8px',
+            border: `1px solid ${H.border}`,
+            backgroundColor: H.surface,
+            color: H.textSec,
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          <RefreshCw size={13} /> Refresh Details
+        </button>
       </div>
 
-      {/* Grid Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-        {/* Profile Card */}
-        <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
-            <div
+      {/* Temp Password Reset Success Alert Banner */}
+      {resetTempPassword && (
+        <div style={{
+          marginBottom: '20px',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          backgroundColor: H.successLight,
+          border: `1px solid ${H.successGreen}`,
+          color: '#065F46'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle2 size={18} /> Password Reset Generated
+            </h3>
+            <button onClick={() => setResetTempPassword(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065F46' }}>
+              <X size={16} />
+            </button>
+          </div>
+          <p style={{ margin: '0 0 10px', fontSize: '13px' }}>
+            A temporary password was generated for <strong>{teacher.email}</strong>. Share it with the teacher:
+          </p>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <input
+              readOnly
+              value={resetTempPassword}
               style={{
-                width: 60,
-                height: 60,
-                borderRadius: '50%',
-                backgroundColor: H.honey,
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${H.border}`,
+                backgroundColor: '#FFF',
+                fontFamily: 'monospace',
+                fontWeight: 700,
+                fontSize: '15px',
+                color: H.textPrimary,
+              }}
+            />
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(resetTempPassword)
+                setCopiedPass(true)
+                setTimeout(() => setCopiedPass(false), 2000)
+              }}
+              style={{
+                padding: '8px 14px',
+                borderRadius: '8px',
+                backgroundColor: copiedPass ? H.successGreen : H.textPrimary,
                 color: '#FFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                fontWeight: 800,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                border: 'none',
+                fontWeight: 700,
+                fontSize: '12px',
+                cursor: 'pointer',
               }}
             >
+              {copiedPass ? 'Copied!' : 'Copy Password'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+        {/* Profile Info Card */}
+        <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: H.honey, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 800 }}>
               {teacher.full_name ? teacher.full_name.charAt(0).toUpperCase() : 'T'}
             </div>
-            <div style={{ flex: 1 }}>
+            <div>
               <h1 style={{ fontSize: '20px', fontWeight: 800, color: H.textPrimary, margin: 0 }}>{teacher.full_name}</h1>
-              <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Mail size={14} /> {teacher.email}
+              <p style={{ fontSize: '13px', color: H.textSec, margin: '2px 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Mail size={13} /> {teacher.email}
               </p>
+              {!editingPhone ? (
+                <p style={{ fontSize: '13px', color: H.textSec, margin: '2px 0 8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Phone size={13} /> {teacher.phone || <span style={{ color: H.textMuted, fontStyle: 'italic' }}>No phone provided</span>}
+                  <button
+                    onClick={() => { setEditingPhone(true); setPhoneInput(teacher.phone || ''); setPhoneError(''); }}
+                    style={{ background: 'none', border: 'none', color: H.honey, cursor: 'pointer', padding: 0, marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}
+                    title="Edit Phone Number"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '4px 0 8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Phone size={13} style={{ color: H.textSec }} />
+                    <input
+                      type="tel"
+                      value={phoneInput}
+                      onChange={e => setPhoneInput(e.target.value)}
+                      placeholder="+94 77 123 4567"
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: 6,
+                        border: `1px solid ${phoneError ? H.danger : H.border}`,
+                        fontSize: '12px',
+                        fontFamily: H.font,
+                        outline: 'none',
+                        width: 140,
+                      }}
+                    />
+                    <button
+                      onClick={handleSavePhone}
+                      disabled={savingPhone}
+                      style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: H.successGreen, color: '#FFF', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      {savingPhone ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />}
+                    </button>
+                    <button
+                      onClick={() => { setEditingPhone(false); setPhoneError(''); }}
+                      style={{ padding: '4px 6px', borderRadius: 6, border: `1px solid ${H.border}`, background: H.bg, color: H.textMuted, fontSize: 11, cursor: 'pointer' }}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  {phoneError && (
+                    <div style={{ fontSize: '11px', color: H.danger, fontWeight: 600 }}>
+                      ⚠️ {phoneError}
+                    </div>
+                  )}
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {teacher.must_change_password || teacher.is_pending ? (
-                  <Badge variant="pending">Must Change Password</Badge>
+                  <Badge variant="pending">Temp Password — Awaiting Change</Badge>
                 ) : teacher.is_active ? (
                   <Badge variant="active">Active Staff</Badge>
                 ) : (
@@ -423,7 +629,7 @@ export default function TeacherDetailPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Password Status:</span>
-              <strong>{teacher.must_change_password ? 'Force Reset Pending' : 'Normal'}</strong>
+              <strong>{teacher.must_change_password ? 'Temp Password — Awaiting Change' : 'Normal'}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>Joined Date:</span>
@@ -528,7 +734,7 @@ export default function TeacherDetailPage() {
 
         {/* Subjects & Timetable Card */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Subjects Card */}
+          {/* UNIFIED SUBJECTS ASSIGNMENT CARD */}
           <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -537,7 +743,7 @@ export default function TeacherDetailPage() {
               </div>
               {!editingSubjects ? (
                 <button
-                  onClick={() => setEditingSubjects(true)}
+                  onClick={() => { setEditingSubjects(true); setSubjectNotice(''); setSubjectError(''); }}
                   style={{
                     padding: '6px 12px',
                     borderRadius: '8px',
@@ -578,7 +784,10 @@ export default function TeacherDetailPage() {
                   <button
                     onClick={() => {
                       setEditingSubjects(false)
+                      setIsSubjectModalOpen(false)
                       setSubjectsList(teacher.subjects || [])
+                      setSubjectNotice('')
+                      setSubjectError('')
                     }}
                     style={{
                       padding: '6px 10px',
@@ -596,46 +805,71 @@ export default function TeacherDetailPage() {
               )}
             </div>
 
+            {/* UNIFIED SUBJECT DROPDOWN & REUSED SUBJECT MODAL TRIGGER */}
             {editingSubjects && (
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-                <input
-                  type="text"
-                  value={subjectInput}
-                  onChange={e => setSubjectInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault()
-                      handleAddSubject()
-                    }
-                  }}
-                  placeholder="Type subject & press enter..."
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Select Subject from List:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setIsSubjectModalOpen(true); setSubjectNotice(''); setSubjectError(''); }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: H.successGreen,
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: 0
+                    }}
+                  >
+                    <Plus size={13} /> Add New Subject
+                  </button>
+                </div>
+
+                <select
+                  id="adminSubjectSelect"
+                  onChange={handleSelectSubject}
+                  defaultValue=""
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '8px 12px',
                     borderRadius: '8px',
                     border: `1px solid ${H.border}`,
+                    backgroundColor: H.bg,
+                    color: H.textPrimary,
                     fontSize: '13px',
                     outline: 'none',
-                  }}
-                />
-                <button
-                  onClick={handleAddSubject}
-                  style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    backgroundColor: H.honey,
-                    color: '#FFF',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: 'pointer',
+                    cursor: 'pointer'
                   }}
                 >
-                  Add
-                </button>
+                  <option value="" disabled>-- Select a subject to assign --</option>
+                  {availableSubjects.map(subj => (
+                    <option key={subj} value={subj} disabled={subjectsList.includes(subj)}>
+                      {subj} {subjectsList.includes(subj) ? '(Assigned)' : ''}
+                    </option>
+                  ))}
+                </select>
+
+                {subjectNotice && (
+                  <p style={{ fontSize: '12px', color: H.successGreen, margin: '2px 0 0', fontWeight: 600 }}>
+                    ✓ {subjectNotice}
+                  </p>
+                )}
+                {subjectError && (
+                  <div style={{ fontSize: '12px', color: '#EF4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <AlertTriangle size={13} /> {subjectError}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* Subject Badges Display */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {subjectsList.length > 0 ? (
                 subjectsList.map((sub, idx) => (
@@ -649,63 +883,72 @@ export default function TeacherDetailPage() {
                       borderRadius: '20px',
                       backgroundColor: H.accentLight,
                       color: H.accentDark,
-                      fontWeight: 600,
                       fontSize: '13px',
+                      fontWeight: 600,
+                      border: `1px solid ${H.accent}40`,
                     }}
                   >
                     {sub}
                     {editingSubjects && (
-                      <X
-                        size={12}
+                      <button
                         onClick={() => handleRemoveSubject(sub)}
-                        style={{ cursor: 'pointer', color: '#991B1B' }}
-                      />
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: H.accentDark,
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
                     )}
                   </span>
                 ))
               ) : (
-                <p style={{ fontSize: '13px', color: H.textMuted, margin: 0 }}>No subjects assigned yet.</p>
+                <p style={{ fontSize: '13px', color: H.textMuted, margin: 0, fontStyle: 'italic' }}>
+                  No subjects currently assigned. Click Edit above to assign subjects.
+                </p>
               )}
             </div>
           </div>
 
-          {/* Weekly Schedule Assignments */}
+          {/* Timetable Schedule Summary */}
           <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <Calendar size={18} style={{ color: H.honey }} />
-              <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>Weekly Class Assignments</h2>
+              <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>Weekly Schedule ({schedule.length} Periods)</h2>
             </div>
 
             {schedule.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {DAYS.map((dayName, index) => {
-                  const dayNum = index + 1
-                  const daySlots = schedule.filter(s => s.day_of_week === dayNum)
-                  if (daySlots.length === 0) return null
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {DAYS.map((dayName, dayIdx) => {
+                  const dayNum = dayIdx + 1
+                  const dayPeriods = schedule.filter(s => s.day_of_week === dayNum)
+                  if (dayPeriods.length === 0) return null
 
                   return (
-                    <div key={dayName} style={{ padding: '12px', borderRadius: '10px', backgroundColor: H.bg, border: `1px solid ${H.border}` }}>
-                      <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: H.honey, marginBottom: '8px' }}>
-                        {dayName} ({daySlots.length} periods)
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
-                        {daySlots.map(slot => (
+                    <div key={dayName} style={{ borderBottom: `1px solid ${H.border}`, paddingBottom: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase' }}>{dayName}</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                        {dayPeriods.map(p => (
                           <div
-                            key={slot.id}
+                            key={p.id}
                             style={{
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              backgroundColor: H.surface,
+                              padding: '6px 10px',
+                              borderRadius: '8px',
                               border: `1px solid ${H.border}`,
+                              backgroundColor: H.bg,
                               fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
                             }}
                           >
-                            <div style={{ fontWeight: 700, color: H.textPrimary }}>
-                              Period {slot.period_number}
-                            </div>
-                            <div style={{ color: H.textSec }}>
-                              {slot.class?.name || 'Class'} • {slot.subject_name || 'Subject'}
-                            </div>
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: p.subject_color || H.honey }} />
+                            <strong>P{p.period_number}:</strong> {p.subject} ({p.class?.name || 'Class'})
                           </div>
                         ))}
                       </div>
@@ -714,168 +957,26 @@ export default function TeacherDetailPage() {
                 })}
               </div>
             ) : (
-              <p style={{ fontSize: '13px', color: H.textMuted, margin: 0, padding: '16px 0', textAlign: 'center' }}>
-                No active timetable assignments found for this teacher.
+              <p style={{ fontSize: '13px', color: H.textMuted, margin: 0, fontStyle: 'italic' }}>
+                No active timetable periods assigned to this teacher.
               </p>
             )}
-          </div>
-
-          {/* Recent Activity: Swaps & Absences */}
-          <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Clock size={18} style={{ color: H.honey }} />
-              <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>Recent Swaps & Absences</h2>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {absences.length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: '12px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Absence History
-                  </h4>
-                  {absences.map(abs => (
-                    <div
-                      key={abs.id}
-                      style={{
-                        padding: '10px',
-                        borderRadius: '8px',
-                        border: `1px solid ${H.border}`,
-                        backgroundColor: H.bg,
-                        marginBottom: '6px',
-                        fontSize: '13px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <strong>{abs.absence_date}</strong> — {abs.absence_type.replace('_', ' ')}
-                        {abs.reason && <span style={{ color: H.textMuted }}> ({abs.reason})</span>}
-                      </div>
-                      <Badge variant={abs.status === 'covered' ? 'active' : 'pending'}>
-                        {abs.status || 'Reported'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {swaps.length > 0 && (
-                <div>
-                  <h4 style={{ fontSize: '12px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Swap Requests
-                  </h4>
-                  {swaps.map(swp => (
-                    <div
-                      key={swp.id}
-                      style={{
-                        padding: '10px',
-                        borderRadius: '8px',
-                        border: `1px solid ${H.border}`,
-                        backgroundColor: H.bg,
-                        marginBottom: '6px',
-                        fontSize: '13px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <strong>{swp.swap_date}</strong> — {swp.requester?.full_name} ↔ {swp.target?.full_name}
-                      </div>
-                      <Badge variant={swp.status === 'accepted' ? 'active' : swp.status === 'rejected' ? 'inactive' : 'pending'}>
-                        {swp.status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {absences.length === 0 && swaps.length === 0 && (
-                <p style={{ fontSize: '13px', color: H.textMuted, margin: 0, textAlign: 'center', padding: '12px 0' }}>
-                  No recent absences or swap requests recorded.
-                </p>
-              )}
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Reused Subject & Color Manager Modal */}
+      <SubjectModal
+        isOpen={isSubjectModalOpen}
+        onClose={() => setIsSubjectModalOpen(false)}
+        onSuccess={handleSubjectModalSuccess}
+      />
+
       <ConfirmModal
         open={!!modal}
         {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
         onCancel={() => setModal(null)}
       />
-
-      {/* Temporary Password Reset Result Modal */}
-      {resetTempPassword && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.45)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: 16,
-        }}>
-          <div style={{
-            backgroundColor: H.surface, border: `1px solid ${H.border}`,
-            borderRadius: 16, boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-            width: '100%', maxWidth: 440, padding: 24, boxSizing: 'border-box',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: H.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <CheckCircle2 size={22} style={{ color: H.grass }} />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: H.textPrimary }}>Password Reset Generated</h3>
-                <p style={{ margin: '2px 0 0', fontSize: 13, color: H.textSec }}>Share this temporary password with {teacher?.full_name}</p>
-              </div>
-            </div>
-
-            <div style={{
-              backgroundColor: H.bg, border: `1px solid ${H.border}`, borderRadius: 12,
-              padding: '16px', marginBottom: 16, textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-                New Temporary Password
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 800, fontFamily: 'monospace', letterSpacing: '0.08em', color: H.textPrimary, userSelect: 'all' }}>
-                {resetTempPassword}
-              </div>
-            </div>
-
-            <p style={{ fontSize: 12.5, color: H.textSec, marginTop: 0, marginBottom: 20, lineHeight: 1.5 }}>
-              The teacher will be required to change this password on their next sign in before accessing their account.
-            </p>
-
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(resetTempPassword)
-                  setCopiedPass(true)
-                  setTimeout(() => setCopiedPass(false), 2000)
-                }}
-                style={{
-                  flex: 1, padding: '10px 16px', borderRadius: 10, fontWeight: 700, fontSize: 13,
-                  backgroundColor: H.purple, color: '#FFFFFF', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}
-              >
-                {copiedPass ? <Check size={16} /> : <Copy size={16} />}
-                {copiedPass ? 'Copied to Clipboard!' : 'Copy Password'}
-              </button>
-              <button
-                onClick={() => setResetTempPassword(null)}
-                style={{
-                  padding: '10px 16px', borderRadius: 10, fontWeight: 600, fontSize: 13,
-                  backgroundColor: H.bg, color: H.textPrimary, border: `1px solid ${H.border}`, cursor: 'pointer',
-                }}
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

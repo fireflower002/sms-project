@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { CalendarDays, Clock, Trash2, Loader2, Star, Eye, Coffee, Info, AlertTriangle, Calendar } from 'lucide-react'
+import { CalendarDays, Clock, Trash2, Loader2, Star, Eye, Coffee, Info, AlertTriangle, Calendar, Pencil, FileSpreadsheet } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatTime } from '@/lib/utils'
 import { H } from '@/lib/honey'
@@ -23,7 +23,7 @@ const styles: { [key: string]: React.CSSProperties } = {
 
 // SUB-COMPONENTS ==============================================================
 
-const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { template: any; onSetActive: (id: string) => void; onConfirmDelete: (t: any) => void; activating: boolean }) => {
+const TemplateCard = ({ template, totalCount, onSetActive, onConfirmDelete, activating }: { template: any; totalCount: number; onSetActive: (id: string) => void; onConfirmDelete: (t: any) => void; activating: boolean }) => {
   const numPeriods = (() => {
     const t = template;
     if (!t.start_time || !t.end_time || !t.period_duration) return 0;
@@ -34,21 +34,34 @@ const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { 
   const breaks = template.breaks || [];
 
   return (
-    <div style={{ ...styles.templateCard, border: `2px solid ${template.is_active ? H.purple : H.border}` }}>
+    <div style={styles.templateCard}>
       <div style={{ padding: '20px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: 700, color: H.textPrimary, margin: 0 }}>{template.name}</h3>
-          {template.is_active && (
-            <Badge variant="sky" icon={<Star size={12}/>}>Active</Badge>
-          )}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 600, color: H.textPrimary, margin: 0 }}>{template.name}</h2>
+              {template.is_active ? (
+                <Badge variant="category" icon={<Star size={12} />}>Active Schedule</Badge>
+              ) : (
+                <Badge variant="inactive">Draft / Inactive</Badge>
+              )}
+            </div>
+            <p style={{ color: H.textSec, fontSize: '13px', margin: '4px 0 0' }}>
+              Created: {new Date(template.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+            </p>
+          </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', color: H.textSec, fontSize: '13px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={14} />{formatTime(template.start_time)} – {formatTime(template.end_time)}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><CalendarDays size={14} />{numPeriods} periods ({template.period_duration} min)</span>
-          {breaks.length > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Coffee size={14} />{breaks.length} break{breaks.length !== 1 ? 's' : ''}</span>}
+
+        <div style={{ marginTop: '16px', display: 'flex', gap: '20px', flexWrap: 'wrap', fontSize: '13px', color: H.textSec }}>
+          <div><strong>Hours:</strong> {formatTime(template.start_time)} – {formatTime(template.end_time)}</div>
+          <div><strong>Duration:</strong> {numPeriods} periods ({template.period_duration} min)</div>
+          <div><strong>Breaks:</strong> {breaks.length} scheduled</div>
         </div>
       </div>
       <div style={{ borderTop: `1px solid ${H.border}`, padding: '14px 24px', background: H.bg, display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap' }}>
+        <Link href={`/admin/timetable/${template.id}/build`} style={{ ...styles.button, ...styles.buttonPrimary }}>
+          <Pencil size={15} /> Edit Schedule
+        </Link>
         <Link href={`/admin/timetable/view/${template.id}`} style={{ ...styles.button, ...styles.buttonSecondary }}>
           <Eye size={15} /> View Schedule
         </Link>
@@ -57,7 +70,12 @@ const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { 
             {activating ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Star size={15} />} Set Active
           </button>
         )}
-        <button onClick={() => onConfirmDelete(template)} style={{ ...styles.button, ...styles.buttonDanger }}>
+        <button
+          onClick={() => onConfirmDelete(template)}
+          disabled={totalCount <= 1}
+          title={totalCount <= 1 ? "Cannot delete the sole timetable template" : "Delete template"}
+          style={{ ...styles.button, ...styles.buttonDanger, opacity: totalCount <= 1 ? 0.4 : 1, cursor: totalCount <= 1 ? 'not-allowed' : 'pointer' }}
+        >
           <Trash2 size={15} /> Delete
         </button>
       </div>
@@ -65,7 +83,7 @@ const TemplateCard = ({ template, onSetActive, onConfirmDelete, activating }: { 
   );
 };
 
-const DeleteModal = ({ template, onCancel, onDelete, deleting, error }: { template: any; onCancel: () => void; onDelete: (t: any) => void; deleting: boolean; error: string | null }) => (
+const DeleteModal = ({ template, totalCount, onCancel, onDelete, deleting, error }: { template: any; totalCount: number; onCancel: () => void; onDelete: (t: any) => void; deleting: boolean; error: string | null }) => (
   <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
     <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(28,25,23,0.6)', backdropFilter: 'blur(4px)' }} onClick={onCancel} />
     <div style={{ position: 'relative', width: '100%', maxWidth: '480px', borderRadius: '16px', backgroundColor: H.surface, border: `1px solid ${H.border}`, boxShadow: H.cardShadow, padding: '28px 32px' }}>
@@ -75,13 +93,13 @@ const DeleteModal = ({ template, onCancel, onDelete, deleting, error }: { templa
       </p>
       {template.is_active && (
         <div style={{ background: H.accentLight, border: `1px solid ${H.accent}`, color: H.accentDark, borderRadius: '12px', padding: '12px 16px', display: 'flex', gap: '12px', alignItems: 'center', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
-          <AlertTriangle size={18} />This is the Active Master Schedule. Deleting it will leave no active timetable.
+          <AlertTriangle size={18} />This is the Active Master Schedule. Deleting it will reassign linked absences and set the newest remaining template as Active.
         </div>
       )}
       {error && <p style={{ color: H.danger, fontSize: '13px' }}>{error}</p>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
         <button onClick={onCancel} style={{ ...styles.button, ...styles.buttonSecondary }}>Cancel</button>
-        <button onClick={() => onDelete(template)} disabled={deleting} style={{ ...styles.button, background: H.danger, color: '#FFFFFF', opacity: deleting ? 0.7 : 1 }}>
+        <button onClick={() => onDelete(template)} disabled={deleting || totalCount <= 1} style={{ ...styles.button, background: H.danger, color: '#FFFFFF', opacity: (deleting || totalCount <= 1) ? 0.7 : 1 }}>
           {deleting ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Yes, Delete Template'}
         </button>
       </div>
@@ -123,6 +141,10 @@ export default function TimetablePage() {
   };
 
   const handleDelete = async (template: any) => {
+    if (templates.length <= 1) {
+      setDeleteError('Cannot delete the sole timetable template. At least one template must exist to maintain school scheduling and absence history.');
+      return;
+    }
     setDeleting(template.id);
     setDeleteError(null);
     try {
@@ -158,6 +180,9 @@ export default function TimetablePage() {
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <Link href="/admin/classes" style={{ ...styles.button, ...styles.buttonSecondary }}>Manage Classes</Link>
+            <Link href="/admin/timetable/import" style={{ ...styles.button, ...styles.buttonSecondary, color: H.purple, borderColor: H.purple }}>
+              <FileSpreadsheet size={16} /> Import Yearly Timetable
+            </Link>
             <Link href="/admin/timetable/new" style={{ ...styles.button, ...styles.buttonPrimary }}>+ New Template</Link>
           </div>
         </div>
@@ -179,7 +204,7 @@ export default function TimetablePage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {templates.map(t => (
-                <TemplateCard key={t.id} template={t} onSetActive={handleSetActive} onConfirmDelete={setConfirmDelete} activating={activating === t.id} />
+                <TemplateCard key={t.id} template={t} totalCount={templates.length} onSetActive={handleSetActive} onConfirmDelete={setConfirmDelete} activating={activating === t.id} />
               ))}
             </div>
           )}
@@ -189,6 +214,7 @@ export default function TimetablePage() {
       {confirmDelete && (
         <DeleteModal
           template={confirmDelete}
+          totalCount={templates.length}
           onCancel={() => { setConfirmDelete(null); setDeleteError(null); }}
           onDelete={handleDelete}
           deleting={deleting === confirmDelete.id}

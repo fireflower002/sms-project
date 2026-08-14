@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp, Calendar, Palette } from 'lucide-react'
+import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, ChevronDown, ChevronUp, Calendar, Palette, UserCheck, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 
@@ -39,6 +39,7 @@ export default function TimetableBuildPage() {
   const [loading, setLoading]           = useState(true)
   const [savingKey, setSavingKey]       = useState<string|null>(null)
   const [errorMsg, setErrorMsg]         = useState<string|null>(null)
+  const isProcessingDrop = useRef(false)
   const dragCard = useRef<CardData|null>(null)
   const [draggingCard, setDraggingCard] = useState<CardData|null>(null)
   const [dragOverKey, setDragOverKey]   = useState<string|null>(null)
@@ -73,11 +74,33 @@ export default function TimetableBuildPage() {
       supabase.from('allowed_users').select('email,subjects'),
     ])
     if (e1||e2||e3||e4) { setErrorMsg(`Load error: ${(e1||e2||e3||e4)?.message}`); setLoading(false); return }
-    setTemplate(tmpl); setClasses(cls||[])
     const allowedMap:Record<string,string[]>={}
     ;(alwd||[]).forEach((a:any)=>{ if(a.email&&a.subjects?.length) allowedMap[a.email.toLowerCase()]=a.subjects })
     const merged=(tch||[]).map((t:any)=>({...t,subjects:Array.from(new Set([...(t.subjects||[]),...(allowedMap[t.email?.toLowerCase()]||[])])).filter(Boolean)}))
     setTeachers(merged); setAssignments(asgn||[])
+
+    const teacherMap = new Map((merged || []).map((t: any) => [t.id, t]))
+    const enrichedCls = (cls || []).map((c: any) => {
+      let stored: any = null
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem(`ct_cache_${c.id}`) || localStorage.getItem(`ct_cache_${c.slug}`)
+          if (raw) stored = JSON.parse(raw)
+        } catch (e) {}
+      }
+      const ctId = c.class_teacher_id || stored?.teacherId
+      const ctPer = c.class_teacher_periods || stored?.periods || 1
+      const ctSub = c.class_teacher_subject || stored?.subject
+      const teacher = ctId ? teacherMap.get(ctId) : undefined
+      return {
+        ...c,
+        class_teacher_id: ctId,
+        class_teacher_periods: ctPer,
+        class_teacher_subject: ctSub,
+        class_teacher: c.class_teacher || (teacher ? { full_name: teacher.full_name, subjects: teacher.subjects } : undefined)
+      }
+    })
+    setTemplate(tmpl); setClasses(enrichedCls||[])
     const map:Record<string,string>={}
     const usedColors = new Set<string>()
     merged.forEach((t:any)=>{
@@ -94,7 +117,7 @@ export default function TimetableBuildPage() {
       })
     })
     setSubjectColors(map)
-    if (cls&&cls.length>0) setSelectedClass(c=>c||cls[0].id)
+    if (enrichedCls && enrichedCls.length > 0) setSelectedClass(c => c || enrichedCls[0].id)
     setLoading(false)
   },[templateId])
 
@@ -103,17 +126,67 @@ export default function TimetableBuildPage() {
   const periods = template ? generatePeriods(template.start_time,template.end_time,template.period_duration,template.breaks||[]).filter((p:any)=>!p.is_break) : []
   const getAssignment = (classId:string,day:number,period:number) => assignments.find(a=>a.class_id===classId&&a.day_of_week===day&&a.period_number===period)
 
-  const doSave = async (classId:string,day:number,period:number,card:CardData) => {
+  const isCTLockedPeriod = (classId: string, periodNumber: number) => {
+    const curClass = classes.find(c => c.id === classId)
+    if (!curClass || !curClass.class_teacher_id || !curClass.class_teacher_subject) return false
+    const periodCount = curClass.class_teacher_periods || 1
+    return periodNumber <= periodCount
+  }
+
+  const doSave = async (classId:string,day:number,period:number,card:CardData, isPreFill: boolean = false) => {
+    const curClass = classes.find(c => c.id === classId)
+    if (curClass && curClass.class_teacher_id && curClass.class_teacher_subject) {
+      const perCount = curClass.class_teacher_periods || 1
+      if (period <= perCount && !isPreFill) {
+        if (card.teacherId !== curClass.class_teacher_id || card.subject !== curClass.class_teacher_subject) {
+          const ctTeacher = teachers.find(t => t.id === curClass.class_teacher_id)
+          const teacherName = ctTeacher?.full_name || curClass.class_teacher?.full_name || 'Class Teacher'
+          setErrorMsg(`Period P${period} is locked for Class Teacher (${teacherName} - ${curClass.class_teacher_subject}). Other subjects or teachers cannot replace it.`)
+          return
+        }
+      }
+    }
+
     const key=`${classId}-${day}-${period}`; setSavingKey(key); setErrorMsg(null)
     const existing=getAssignment(classId,day,period); let err:any=null
-    if (existing) ({ error:err }=await supabase.from('schedule_assignments').update({teacher_id:card.teacherId,subject:card.subject,subject_color:card.color}).eq('id',existing.id))
-    else ({ error:err }=await supabase.from('schedule_assignments').insert({template_id:templateId,class_id:classId,day_of_week:day,period_number:period,teacher_id:card.teacherId,subject:card.subject,subject_color:card.color}))
-    if (err) { setErrorMsg(`Save failed: ${err.message}`); setSavingKey(null); return }
+    if (existing) {
+      const { error } = await supabase.from('schedule_assignments')
+        .update({ teacher_id: card.teacherId, subject: card.subject, subject_color: card.color })
+        .eq('id', existing.id)
+        .retry(false)
+      err = error
+    } else {
+      const { error } = await supabase.from('schedule_assignments')
+        .insert({ template_id: templateId, class_id: classId, day_of_week: day, period_number: period, teacher_id: card.teacherId, subject: card.subject, subject_color: card.color })
+        .retry(false)
+      err = error
+    }
+    if (err) {
+      if (err.code === '23505' || err.message?.includes('conflict') || err.message?.includes('unique')) {
+        const clsName = curClass?.name || 'this class'
+        const tName = card.teacherName || teachers.find(t => t.id === card.teacherId)?.full_name || 'This teacher'
+        setErrorMsg(`Save failed: ${tName} is already scheduled for another class in Period P${period} (${DAYS[day-1]}) and cannot be assigned to ${clsName}.`)
+      } else {
+        setErrorMsg(`Save failed: ${err.message}`)
+      }
+      setSavingKey(null)
+      return
+    }
     const { data }=await supabase.from('schedule_assignments').select('*').eq('template_id',templateId)
     setAssignments(data||[]); setSavingKey(null)
   }
 
   const clearAssignment = async (classId:string,day:number,period:number) => {
+    const curClass = classes.find(c => c.id === classId)
+    if (curClass && curClass.class_teacher_id && curClass.class_teacher_subject) {
+      const perCount = curClass.class_teacher_periods || 1
+      if (period <= perCount) {
+        const ctTeacher = teachers.find(t => t.id === curClass.class_teacher_id)
+        const teacherName = ctTeacher?.full_name || curClass.class_teacher?.full_name || 'Class Teacher'
+        setErrorMsg(`Period P${period} is locked for Class Teacher (${teacherName} - ${curClass.class_teacher_subject}) and cannot be deleted.`)
+        return
+      }
+    }
     const existing=getAssignment(classId,day,period); if(!existing) return
     setSavingKey(`${classId}-${day}-${period}`)
     await supabase.from('schedule_assignments').delete().eq('id',existing.id)
@@ -126,10 +199,65 @@ export default function TimetableBuildPage() {
   const onDragLeave = (key:string,e:React.DragEvent) => { if(!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverKey(k=>k===key?null:k) }
   const onDrop = (classId:string,day:number,period:number,e:React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); setDragOverKey(null); setDraggingCard(null)
+    if (isProcessingDrop.current) return
+    isProcessingDrop.current = true
+
     let card:CardData|null=dragCard.current; dragCard.current=null
     if (!card) { try{ const r=e.dataTransfer.getData('application/json'); if(r) card=JSON.parse(r) }catch{} }
+
+    setTimeout(() => { isProcessingDrop.current = false }, 100)
+
     if (!card||!card.teacherId||!card.subject) { setErrorMsg('Drop failed — try again'); return }
+
+    const curClass = classes.find(c => c.id === classId)
+    if (curClass && curClass.class_teacher_id && curClass.class_teacher_subject) {
+      const perCount = curClass.class_teacher_periods || 1
+      if (period <= perCount) {
+        if (card.teacherId !== curClass.class_teacher_id || card.subject !== curClass.class_teacher_subject) {
+          const ctTeacher = teachers.find(t => t.id === curClass.class_teacher_id)
+          const teacherName = ctTeacher?.full_name || curClass.class_teacher?.full_name || 'Class Teacher'
+          setErrorMsg(`Period P${period} is reserved and locked for Class Teacher (${teacherName} - ${curClass.class_teacher_subject}).`)
+          return
+        }
+      }
+    }
+
     doSave(classId,day,period,card)
+  }
+
+  const handlePreFillClassTeacher = async () => {
+    if (!selectedClass || !templateId) return
+    const curClass = classes.find(c => c.id === selectedClass)
+    if (!curClass || !curClass.class_teacher_id || !curClass.class_teacher_subject) {
+      setErrorMsg('No Class Teacher configured for this class. Please assign one under Admin > Grades & Classes.')
+      return
+    }
+
+    const ctTeacher = teachers.find(t => t.id === curClass.class_teacher_id)
+    const teacherName = ctTeacher?.full_name || curClass.class_teacher?.full_name || 'Class Teacher'
+    const subject = curClass.class_teacher_subject
+    const color = subjectColors[subject] || DEFAULT_SUBJECT_COLORS[subject] || CURATED_PALETTE[0]
+    const periodCount = curClass.class_teacher_periods || 1
+
+    setAutoFixing(true)
+    setErrorMsg(null)
+    try {
+      // Pre-fill Mon-Fri for Period 1 (and Period 2 if set)
+      for (let day = 1; day <= 5; day++) {
+        for (let period = 1; period <= Math.min(periodCount, periods.length); period++) {
+          await doSave(selectedClass, day, period, {
+            teacherId: curClass.class_teacher_id,
+            teacherName,
+            subject,
+            color,
+          }, true)
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(`Pre-fill failed: ${err.message}`)
+    } finally {
+      setAutoFixing(false)
+    }
   }
 
   const autoFixConflicts = async () => {
@@ -146,9 +274,20 @@ export default function TimetableBuildPage() {
     teachers.forEach(t=>{ (t.subjects||[]).forEach((s:string)=>{ if(!subjectTeachers[s])subjectTeachers[s]=[]; subjectTeachers[s].push(t) }) })
     const fixed:FixResult['fixed']=[], unresolved:FixResult['unresolved']=[], updates:{id:string;teacher_id:string}[]=[]
     for (const group of conflictGroups) {
-      group.sort((a:any,b:any)=>{ const ca=classes.find(c=>c.id===a.class_id)?.name||''; const cb=classes.find(c=>c.id===b.class_id)?.name||''; return ca.localeCompare(cb) })
+      group.sort((a:any,b:any)=>{
+        const isCT_A = isCTLockedPeriod(a.class_id, a.period_number)
+        const isCT_B = isCTLockedPeriod(b.class_id, b.period_number)
+        if (isCT_A && !isCT_B) return -1
+        if (!isCT_A && isCT_B) return 1
+        const ca=classes.find(c=>c.id===a.class_id)?.name||''; const cb=classes.find(c=>c.id===b.class_id)?.name||''; return ca.localeCompare(cb)
+      })
       for (let i=1;i<group.length;i++) {
         const conflict=group[i]; const cls=classes.find(c=>c.id===conflict.class_id)
+        if (isCTLockedPeriod(conflict.class_id, conflict.period_number)) {
+          const tName=teachers.find(t=>t.id===conflict.teacher_id)?.full_name||'Teacher'
+          unresolved.push({ className:cls?.name||'Class', day:conflict.day_of_week, period:conflict.period_number, teacher:tName, subject:conflict.subject, reason:'Locked Class Teacher period cannot be reassigned during auto-fix' })
+          continue
+        }
         const slotKey=`${conflict.day_of_week}|${conflict.period_number}`; const subject=conflict.subject
         const alt=(subjectTeachers[subject]||[]).find((t:any)=>t.id!==conflict.teacher_id&&!busyMap[t.id]?.has(slotKey))
         if (alt) {
@@ -346,6 +485,7 @@ export default function TimetableBuildPage() {
           <div style={{ padding:'10px 16px', borderBottom:`1px solid ${H.border}`, background:H.surface, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' as const, flexShrink:0, position:'sticky', top:0, zIndex:25 }}>
             <select value={selectedClass} onChange={e=>setSelectedClass(e.target.value)}
               style={{ padding:'7px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:700, fontSize:13, outline:'none', cursor:'pointer', minWidth:160, maxWidth:220 }}>
+              <option value="">-- Select Class --</option>
               {Object.entries(gradeGroups).sort(([a],[b])=>Number(a)-Number(b)).map(([grade,cls])=>(
                 <optgroup key={grade} label={`Grade ${grade}`}>
                   {(cls as any[]).map((c:any)=><option key={c.id} value={c.id} style={{ background:H.surface }}>{c.name}</option>)}
@@ -363,6 +503,32 @@ export default function TimetableBuildPage() {
               ))}
             </div>
 
+            {selectedClassData?.class_teacher_id && selectedClassData?.class_teacher_subject && (
+              <button
+                onClick={handlePreFillClassTeacher}
+                disabled={autoFixing}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 12px',
+                  borderRadius: 8,
+                  border: `1px solid ${H.purple}40`,
+                  background: `${H.purple}15`,
+                  color: H.purple,
+                  fontFamily: H.font,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: autoFixing ? 'wait' : 'pointer',
+                  transition: 'all 0.15s',
+                }}
+                title={`Pre-fill P1${selectedClassData.class_teacher_periods === 2 ? '-P2' : ''} across Monday–Friday for ${selectedClassData.class_teacher?.full_name || 'Class Teacher'}`}
+              >
+                <UserCheck size={13} />
+                Pre-Fill Class Teacher (P1{selectedClassData.class_teacher_periods === 2 ? '-P2' : ''} {selectedClassData.class_teacher_subject})
+              </button>
+            )}
+
             {selectedClassData && (
               <span style={{ fontFamily:H.font, fontSize:12, color:H.sub, marginLeft:'auto' }}>
                 {selectedClassData.name} · {DAYS[selectedDay-1]}
@@ -373,7 +539,27 @@ export default function TimetableBuildPage() {
 
           {/* Period slots — Full Container Width */}
           <div style={{ flex:1, overflowY:'auto', padding:'16px 16px 100px 16px' }}>
-            <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', boxSizing:'border-box' }}>
+            {classes.length === 0 ? (
+              <div style={{ background: H.surface, border: `1px solid ${H.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center', margin: '40px auto', maxWidth: 440 }}>
+                <AlertTriangle size={32} style={{ color: '#fb923c', margin: '0 auto 12px' }} />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: H.textPrimary, margin: '0 0 6px' }}>No Classes Available</h3>
+                <p style={{ fontSize: 13, color: H.textSec, margin: '0 0 20px' }}>
+                  You cannot add subjects to a timetable until classes are created.
+                </p>
+                <Link href="/admin/classes" style={{ padding: '10px 20px', borderRadius: 10, background: H.purple, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  Go to Grades & Classes →
+                </Link>
+              </div>
+            ) : !selectedClass ? (
+              <div style={{ background: H.surface, border: `1px solid ${H.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center', margin: '40px auto', maxWidth: 440 }}>
+                <Calendar size={32} style={{ color: H.purple, margin: '0 auto 12px' }} />
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: H.textPrimary, margin: '0 0 6px' }}>Select a Class</h3>
+                <p style={{ fontSize: 13, color: H.textSec, margin: '0 0 20px' }}>
+                  Please select a class from the top dropdown to view and edit its timetable schedule.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:10, width:'100%', boxSizing:'border-box' }}>
               {periods.map((period:any)=>{
                 const asgn        = selectedClass?getAssignment(selectedClass,selectedDay,period.period_number):null
                 const asgnTeacher = asgn?teachers.find(t=>t.id===asgn.teacher_id):null
@@ -381,6 +567,7 @@ export default function TimetableBuildPage() {
                 const isSaving    = savingKey===slotKey
                 const isOver      = dragOverKey===slotKey
                 const isConflict  = asgn?conflictIds.has(asgn.id):false
+                const isCTLocked  = Boolean(selectedClassData && selectedClassData.class_teacher_id && selectedClassData.class_teacher_subject && period.period_number <= (selectedClassData.class_teacher_periods || 1))
                 const slotColor   = isConflict?'#f97316':(asgn?.subject_color||H.purple)
 
                 return (
@@ -389,12 +576,13 @@ export default function TimetableBuildPage() {
                     onDragLeave={e=>onDragLeave(slotKey,e)} onDrop={e=>onDrop(selectedClass,selectedDay,period.period_number,e)}
                     style={{
                       display:'flex', width:'100%', boxSizing:'border-box', borderRadius:12, border:`1px solid`, minHeight:68,
-                      borderColor:isConflict?'#f97316':isOver?H.purple:asgn?slotColor:H.border,
-                      background:isConflict?hex2rgba('#f97316',0.07):isOver?hex2rgba(H.purple,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
+                      borderColor:isConflict?'#f97316':isCTLocked?`${H.purple}80`:isOver?H.purple:asgn?slotColor:H.border,
+                      background:isConflict?hex2rgba('#f97316',0.07):isCTLocked?`${H.purple}08`:isOver?hex2rgba(H.purple,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
                       transition:'all 0.12s', transform:isOver?'scale(1.005)':'scale(1)', overflow:'hidden', position:'relative'
                     }}>
 
                     {isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:'#f97316' }}/>}
+                    {isCTLocked && !isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:H.purple }}/>}
 
                     {/* Period # + time */}
                     <div style={{ width:72, flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:8, borderRight:`1px solid ${asgn?hex2rgba(slotColor,0.3):H.border}`, background:asgn?hex2rgba(slotColor,0.1):'#F5F5F4' }}>
@@ -413,21 +601,40 @@ export default function TimetableBuildPage() {
                         <>
                           <div style={{ flex:1, borderRadius:8, overflow:'hidden', boxShadow:`0 2px 6px ${hex2rgba(slotColor,0.25)}`, minWidth:0 }}>
                             <div style={{ background:slotColor, padding:'5px 10px', display:'flex', alignItems:'center', gap:6 }}>
-                              {isConflict && <AlertTriangle size={11} style={{ color:'#fff', flexShrink:0 }}/>}
+                              {isConflict ? <AlertTriangle size={11} style={{ color:'#fff', flexShrink:0 }}/> : isCTLocked ? <Lock size={11} style={{ color:'#fff', flexShrink:0 }}/> : null}
                               <span style={{ fontFamily:H.font, fontSize:13, fontWeight:800, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asgn.subject}</span>
-                              {isConflict && <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.9)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>Conflict</span>}
+                              {isConflict ? (
+                                <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.9)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>Conflict</span>
+                              ) : isCTLocked ? (
+                                <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.95)', fontWeight:800, whiteSpace:'nowrap', flexShrink:0, display:'inline-flex', alignItems:'center', gap:3, background:'rgba(0,0,0,0.25)', padding:'2px 6px', borderRadius:4 }}>
+                                  <Lock size={10} /> Class Teacher Locked
+                                </span>
+                              ) : null}
                             </div>
                             <div style={{ padding:'3px 10px', background:hex2rgba(slotColor,0.14), display:'flex', alignItems:'center', gap:5 }}>
                               <div style={{ width:14, height:14, borderRadius:'50%', background:avatarColor(asgnTeacher.full_name), display:'flex', alignItems:'center', justifyContent:'center', fontSize:8, fontWeight:700, color:'#fff', flexShrink:0 }}>{asgnTeacher.full_name.charAt(0)}</div>
                               <span style={{ fontFamily:H.font, fontSize:11, color:H.muted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{asgnTeacher.full_name}</span>
                             </div>
                           </div>
-                          <button onClick={e=>{e.stopPropagation();clearAssignment(selectedClass,selectedDay,period.period_number)}} style={{ background:'#F5F5F4', border:`1px solid ${H.border}`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:H.muted, flexShrink:0, padding:0 }}><X size={14}/></button>
+                          {isCTLocked ? (
+                            <div title="Reserved and locked for Class Teacher" style={{ background:`${H.purple}15`, border:`1px solid ${H.purple}30`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', color:H.purple, flexShrink:0 }}>
+                              <Lock size={13}/>
+                            </div>
+                          ) : (
+                            <button onClick={e=>{e.stopPropagation();clearAssignment(selectedClass,selectedDay,period.period_number)}} style={{ background:'#F5F5F4', border:`1px solid ${H.border}`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:H.muted, flexShrink:0, padding:0 }}><X size={14}/></button>
+                          )}
                         </>
                       ) : isOver && draggingCard ? (
                         <div style={{ flex:1, borderRadius:8, overflow:'hidden', opacity:0.7, minWidth:0 }}>
                           <div style={{ background:draggingCard.color, padding:'5px 10px' }}><span style={{ fontFamily:H.font, fontSize:13, fontWeight:800, color:'#fff' }}>{draggingCard.subject}</span></div>
                           <div style={{ padding:'3px 10px', background:hex2rgba(draggingCard.color,0.15) }}><span style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>{draggingCard.teacherName}</span></div>
+                        </div>
+                      ) : isCTLocked ? (
+                        <div style={{ display:'flex', alignItems:'center', gap:6, color:H.purple }}>
+                          <Lock size={14}/>
+                          <span style={{ fontFamily:H.font, fontSize:12, fontWeight:700 }}>
+                            Locked for Class Teacher ({selectedClassData?.class_teacher?.full_name || 'Class Teacher'} - {selectedClassData?.class_teacher_subject})
+                          </span>
                         </div>
                       ) : (
                         <span style={{ fontFamily:H.font, fontSize:13, color:isOver?H.purple:H.sub, fontWeight:isOver?600:400 }}>
@@ -438,7 +645,8 @@ export default function TimetableBuildPage() {
                   </div>
                 )
               })}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

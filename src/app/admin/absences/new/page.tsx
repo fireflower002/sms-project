@@ -2,11 +2,17 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserX, UserCheck, Loader2, Search, CheckCircle2, AlertTriangle, Star, Bell, Send, RotateCcw } from 'lucide-react'
+import { ArrowLeft, UserX, UserCheck, Loader2, Search, CheckCircle2, AlertTriangle, Star, Bell, Send, RotateCcw, ShieldAlert, CalendarDays } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { todaySLT, generatePeriods } from '@/lib/utils'
+import { todaySLT, generatePeriods, dateToDayOfWeek, formatTime, formatSLT } from '@/lib/utils'
 
 import { H } from '@/lib/honey'
+import {
+  SchoolCalendarEvent,
+  SchoolSettings,
+  DEFAULT_SCHOOL_SETTINGS,
+  getCalendarReason,
+} from '@/lib/calendarService'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', padding:'20px 22px', ...x })
 const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:12, fontFamily:H.font, fontWeight:700, fontSize:14, padding:'12px 20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8, width:'100%', minHeight:48, boxShadow:'0 4px 12px rgba(139,92,246,0.25)', boxSizing:'border-box' as const, ...x })
@@ -48,9 +54,10 @@ function NewAbsenceContent() {
   })
   const [selectedTeacher, setSelectedTeacher] = useState<any>(null)
   const [suggestions, setSuggestions]         = useState<Record<number,any[]>>({})
+  const [manualOverride, setManualOverride]   = useState<Record<number,boolean>>({})
   const [loadingSugs, setLoadingSugs]         = useState(false)
   const [assignedSubs, setAssignedSubs]       = useState<Record<number,string>>({})
-  const [savingSubs, setSavingSubs]           = useState(false)
+  const [savingPill, setSavingPill]           = useState<Record<number,boolean>>({})
   const [absenceId, setAbsenceId]             = useState<string|null>(null)
   const [notifying, setNotifying]             = useState<Record<number,boolean>>({})
   const [notified, setNotified]               = useState<Record<number,boolean>>({})
@@ -67,7 +74,7 @@ function NewAbsenceContent() {
           setAbsenceId(abs.id)
           setForm(f=>({...f, teacher_id:abs.teacher_id, absence_date:abs.absence_date, absence_type:abs.absence_type, custom_periods:abs.custom_periods||[], reason:abs.reason||'' }))
           setSelectedTeacher(abs.teacher); setSearch(abs.teacher?.full_name||'')
-          setTimeout(()=>loadSuggestionsFor(abs.teacher_id,abs.absence_date,abs.absence_type,abs.custom_periods||[],t||[],tmpl),100)
+          setTimeout(()=>loadSuggestionsFor(abs.teacher_id,abs.absence_date,abs.absence_type,abs.custom_periods||[],t||[],tmpl,abs.id),100)
         }
       }
       setFetching(false)
@@ -85,78 +92,230 @@ function NewAbsenceContent() {
 
   const selectTeacher = (t:any) => { setSelectedTeacher(t); setForm(f=>({...f,teacher_id:t.id})); setSearch(t.full_name); setSuggestions({}); setAssignedSubs({}); setAbsenceId(null); setNotified({}) }
 
-  const loadSuggestionsFor = async (teacherId:string, absenceDate:string, absenceType:string, customPeriods:number[], teacherList:any[], tmpl:any) => {
+  const loadSuggestionsFor = async (teacherId:string, absenceDate:string, absenceType:string, customPeriods:number[], teacherList:any[], tmpl:any, targetAbsenceId?: string) => {
     setLoadingSugs(true)
     if (!tmpl) { setLoadingSugs(false); return }
     const allP = generatePeriods(tmpl.start_time,tmpl.end_time,tmpl.period_duration,tmpl.breaks||[]).filter((p:any)=>!p.is_break)
-    const absent = absenceType==='full_day'?allP.map((p:any)=>p.period_number):absenceType==='morning_block'?allP.slice(0,Math.ceil(allP.length/2)).map((p:any)=>p.period_number):absenceType==='afternoon_block'?allP.slice(Math.ceil(allP.length/2)).map((p:any)=>p.period_number):customPeriods
-    const dayOfWeek = Math.min(new Date(absenceDate+' 12:00').getDay()||7,5)
+    const rawAbsent = absenceType==='full_day'?allP.map((p:any)=>p.period_number):absenceType==='morning_block'?allP.slice(0,Math.ceil(allP.length/2)).map((p:any)=>p.period_number):absenceType==='afternoon_block'?allP.slice(Math.ceil(allP.length/2)).map((p:any)=>p.period_number):customPeriods
+    const dayOfWeek = dateToDayOfWeek(absenceDate)
+    
     const [{data:absentSlots},{data:allSlots}] = await Promise.all([
-      supabase.from('schedule_assignments').select('period_number,subject,class_id,class:classes(name)').eq('teacher_id',teacherId).eq('day_of_week',dayOfWeek),
-      supabase.from('schedule_assignments').select('teacher_id,period_number').eq('day_of_week',dayOfWeek),
+      supabase.from('schedule_assignments').select('id,period_number,subject,class_id,class:classes(name)').eq('teacher_id',teacherId).eq('day_of_week',dayOfWeek).eq('template_id',tmpl.id),
+      supabase.from('schedule_assignments').select('teacher_id,period_number').eq('day_of_week',dayOfWeek).eq('template_id',tmpl.id),
     ])
+
+    const heldMap = new Map((absentSlots||[]).map((s:any)=>[s.period_number, s]))
+    // ONLY include periods where the absent teacher holds a scheduled class
+    const absent = rawAbsent.filter((p:number) => heldMap.has(p))
+
     const busy:Record<number,Set<string>>={};
     for (const s of allSlots||[]) { if(!busy[s.period_number])busy[s.period_number]=new Set(); busy[s.period_number].add(s.teacher_id) }
     const newSugs:Record<number,any[]>={}
     for (const p of absent) {
-      const slot:any=(absentSlots||[]).find((s:any)=>s.period_number===p)
-      const free=teacherList.filter(t=>t.id!==teacherId&&!(busy[p]?.has(t.id)))
-      newSugs[p]=free.map(t=>({...t,sameSubject:(t.subjects||[]).includes(slot?.subject||''),className:slot?.class?.name||'',subject:slot?.subject||'',classId:slot?.class_id||null})).sort((a,b)=>(b.sameSubject?1:0)-(a.sameSubject?1:0)||a.full_name.localeCompare(b.full_name)).slice(0,6)
+      const slot:any = heldMap.get(p)
+      const free = teacherList.filter(t => t.id !== teacherId && !(busy[p]?.has(t.id)))
+      newSugs[p] = free.map(t => ({
+        ...t,
+        sameSubject: (t.subjects||[]).includes(slot?.subject||''),
+        className: slot?.class?.name || '',
+        subject: slot?.subject || '',
+        classId: slot?.class_id || null,
+        scheduleAssignmentId: slot?.id || null
+      })).sort((a,b) => (b.sameSubject ? 1 : 0) - (a.sameSubject ? 1 : 0) || a.full_name.localeCompare(b.full_name))
     }
-    setSuggestions(newSugs); setLoadingSugs(false)
+    setSuggestions(newSugs)
+
+    // Preload existing substitutions if absence exists
+    const currentAbsId = targetAbsenceId || absenceId
+    if (currentAbsId) {
+      const { data: existingSubs } = await supabase.from('substitutions').select('*').eq('absence_id', currentAbsId)
+      if (existingSubs && existingSubs.length > 0) {
+        const initialAssigned: Record<number, string> = {}
+        const initialNotified: Record<number, boolean> = {}
+        for (const subRow of existingSubs) {
+          if (subRow.substitute_teacher_id) {
+            initialAssigned[subRow.period_number] = subRow.substitute_teacher_id
+          }
+          if (subRow.notified) {
+            initialNotified[subRow.period_number] = true
+          }
+        }
+        setAssignedSubs(initialAssigned)
+        setNotified(initialNotified)
+      }
+    }
+
+    setLoadingSugs(false)
   }
 
   const handleSubmit = async () => {
     if (!form.teacher_id) { setError('Please select a teacher'); return }
+    if (!template?.id) { setError('No active timetable template found — contact admin.'); return }
     setLoading(true); setError('')
     try {
       const {data:{session}}=await supabase.auth.getSession(); const user=session?.user
       const {data:existing}=await supabase.from('absences').select('id').eq('teacher_id',form.teacher_id).eq('absence_date',form.absence_date).maybeSingle()
       if (existing) { setError('Absence already recorded for this teacher on that date.'); return }
-      const {data:abs,error:err}=await supabase.from('absences').insert({ teacher_id:form.teacher_id, absence_date:form.absence_date, absence_type:form.absence_type, custom_periods:form.absence_type==='custom_periods'?form.custom_periods:null, reason:form.reason||null, recorded_by:user?.id }).select().single()
+      let {data:abs,error:err}=await supabase.from('absences').insert({ teacher_id:form.teacher_id, absence_date:form.absence_date, absence_type:form.absence_type, custom_periods:form.absence_type==='custom_periods'?form.custom_periods:null, reason:form.reason||null, recorded_by:user?.id, status:'approved', template_id: template.id }).select().single()
+      if (err && (err.message.includes('status') || err.message.includes('schema cache') || err.message.includes('column'))) {
+        const res = await supabase.from('absences').insert({ teacher_id:form.teacher_id, absence_date:form.absence_date, absence_type:form.absence_type, custom_periods:form.absence_type==='custom_periods'?form.custom_periods:null, reason:form.reason||null, recorded_by:user?.id, template_id: template.id }).select().single()
+        abs = res.data
+        err = res.error
+      }
       if (err) { setError(err.message); return }
-      setAbsenceId(abs.id); await loadSuggestionsFor(form.teacher_id,form.absence_date,form.absence_type,form.custom_periods,teachers,template)
+      setAbsenceId(abs.id); await loadSuggestionsFor(form.teacher_id,form.absence_date,form.absence_type,form.custom_periods,teachers,template,abs.id)
     } finally { setLoading(false) }
   }
 
-  const saveSubstitutions = async () => {
-    if (!absenceId) return; setSavingSubs(true)
+  const handleToggleCandidate = async (pNum: number, candidate: any, slot: any) => {
+    if (!absenceId) return
+    const isCurrentlySelected = assignedSubs[pNum] === candidate.id
+    const prevSubId = assignedSubs[pNum]
+
+    setSavingPill(p => ({ ...p, [pNum]: true }))
+    setError('')
+
     try {
-      const dayOfWeek=Math.min(new Date(form.absence_date+' 12:00').getDay()||7,5)
-      const {data:absentSlots}=await supabase.from('schedule_assignments').select('period_number,subject,class_id').eq('teacher_id',form.teacher_id).eq('day_of_week',dayOfWeek)
-      const rows=Object.entries(assignedSubs).map(([pStr,subId])=>{
-        const p=Number(pStr);
-        const slot=(absentSlots||[]).find((s:any)=>s.period_number===p);
-        return {
-          absence_id: absenceId,
-          substitute_teacher_id: subId,
-          period_number: p,
-          class_id: slot?.class_id || null,
-          subject: slot?.subject || null,
+      if (isCurrentlySelected) {
+        // Deselect -> delete row from substitutions table
+        const { error: delErr } = await supabase
+          .from('substitutions')
+          .delete()
+          .eq('absence_id', absenceId)
+          .eq('period_number', pNum)
+
+        if (delErr) throw delErr
+
+        setAssignedSubs(p => {
+          const copy = { ...p }
+          delete copy[pNum]
+          return copy
+        })
+        setNotified(p => ({ ...p, [pNum]: false }))
+
+        // Trigger unassign notification for candidate
+        fetch('/api/notify/substitute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            substitute_teacher_id: candidate.id,
+            substitute_name: candidate.full_name || '',
+            period_number: pNum,
+            class_name: slot?.className || slot?.class_name || '',
+            subject: slot?.subject || '',
+            absence_date: form.absence_date,
+            action: 'unassign'
+          })
+        }).catch(err => console.warn('[handleToggleCandidate] unassign notify error:', err))
+
+      } else {
+        // Candidate switch -> send unassign notification to previous candidate
+        if (prevSubId && prevSubId !== candidate.id) {
+          const prevSub = teachers.find(t => t.id === prevSubId)
+          fetch('/api/notify/substitute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              substitute_teacher_id: prevSubId,
+              substitute_name: prevSub?.full_name || '',
+              period_number: pNum,
+              class_name: slot?.className || slot?.class_name || '',
+              subject: slot?.subject || '',
+              absence_date: form.absence_date,
+              action: 'unassign'
+            })
+          }).catch(err => console.warn('[handleToggleCandidate] prevSub unassign notify error:', err))
         }
-      })
-      if (rows.length>0) {
-        const { error: subErr } = await supabase.from('substitutions').insert(rows)
-        if (subErr) throw subErr
+
+        // Select -> upsert row into substitutions table
+        const rowToUpsert = {
+          absence_id: absenceId,
+          substitute_teacher_id: candidate.id,
+          period_number: pNum,
+          class_id: slot?.classId || slot?.class_id || null,
+          subject: slot?.subject || null,
+          schedule_assignment_id: slot?.scheduleAssignmentId || slot?.schedule_assignment_id || null,
+          status: 'assigned',
+          notified: true,
+          notified_at: new Date().toISOString()
+        }
+
+        const { error: upsertErr } = await supabase
+          .from('substitutions')
+          .upsert(rowToUpsert, { onConflict: 'absence_id,period_number' })
+
+        if (upsertErr) throw upsertErr
+
+        setAssignedSubs(p => ({ ...p, [pNum]: candidate.id }))
+        setNotified(p => ({ ...p, [pNum]: true }))
+
+        // Trigger assign notification for candidate
+        fetch('/api/notify/substitute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            substitute_teacher_id: candidate.id,
+            substitute_name: candidate.full_name || '',
+            absent_teacher_name: selectedTeacher?.full_name || '',
+            period_number: pNum,
+            class_name: slot?.className || slot?.class_name || '',
+            subject: slot?.subject || '',
+            absence_date: form.absence_date,
+            action: 'assign'
+          })
+        }).catch(err => console.warn('[handleToggleCandidate] assign notify error:', err))
       }
-      setSuccess(true)
-      setTimeout(()=>router.push('/admin/disruptions?tab=absences'),1500)
     } catch (err: any) {
-      console.error('[saveSubstitutions] Error:', err)
-      setError(err?.message || 'Failed to save period coverage.')
+      console.error('[handleToggleCandidate] DB error:', err)
+      setError(err?.message || 'Failed to update substitution assignment in database.')
     } finally {
-      setSavingSubs(false)
+      setSavingPill(p => ({ ...p, [pNum]: false }))
     }
   }
 
   const notifySubstitute = async (pNum:number) => {
-    const subId=assignedSubs[pNum]; if(!subId||!selectedTeacher) return
+    const subId=assignedSubs[pNum]; if(!subId||!selectedTeacher||!absenceId) return
     setNotifying(p=>({...p,[pNum]:true}))
-    const sub=teachers.find(t=>t.id===subId); const slot=(suggestions[pNum]||[])[0]||{}
-    const formattedDate=new Date(form.absence_date+'T12:00:00').toLocaleDateString('en-LK',{weekday:'long',day:'2-digit',month:'long'})
-    await supabase.from('notifications').insert({ user_id:subId, type:'substitute_assigned', title:`Cover duty — Period ${pNum}`, body:`You are assigned to cover ${slot.className||'a class'}${slot.subject?` (${slot.subject})`:''} on ${formattedDate}. Covering for ${selectedTeacher.full_name}.`, link:'/teacher', is_read:false })
-    await fetch('/api/notify/substitute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({substitute_teacher_id:subId,substitute_name:sub?.full_name||'',absent_teacher_name:selectedTeacher.full_name,period_number:pNum,class_name:slot.className||'',subject:slot.subject||'',absence_date:form.absence_date})}).catch(()=>{})
-    setNotifying(p=>({...p,[pNum]:false})); setNotified(p=>({...p,[pNum]:true}))
+    setError('')
+    try {
+      const sub=teachers.find(t=>t.id===subId); const slot=(suggestions[pNum]||[])[0]||{}
+      
+      const res = await fetch('/api/notify/substitute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          substitute_teacher_id: subId,
+          substitute_name: sub?.full_name || '',
+          absent_teacher_name: selectedTeacher.full_name,
+          period_number: pNum,
+          class_name: slot.className || '',
+          subject: slot.subject || '',
+          absence_date: form.absence_date
+        })
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.error) {
+        throw new Error(json.error || 'Failed to send notification')
+      }
+
+      // Mark substitution row as notified in DB if columns exist
+      try {
+        await supabase.from('substitutions').update({
+          notified: true,
+          notified_at: new Date().toISOString()
+        }).eq('absence_id', absenceId).eq('period_number', pNum)
+      } catch (subUpdateErr) {
+        console.warn('[notifySubstitute] Warning updating notified flag:', subUpdateErr)
+      }
+
+      setNotified(p => ({ ...p, [pNum]: true }))
+    } catch (err: any) {
+      console.error('[notifySubstitute] Error:', err)
+      setError(`Notification error: ${err?.message || 'Failed to send notification'}`)
+    } finally {
+      setNotifying(p=>({...p,[pNum]:false}))
+    }
   }
 
   const [canceling, setCanceling] = useState(false)
@@ -323,9 +482,16 @@ function NewAbsenceContent() {
         {absenceId && (
           <div style={card()}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:10, marginBottom:12 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                <StepBadge n={3}/>
-                <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.purple }}>Assign Cover &amp; Notify</span>
+              <div>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <StepBadge n={3}/>
+                  <span style={{ fontFamily:H.font, fontWeight:900, fontSize:15, color:H.purple }}>Assign Cover &amp; Notify</span>
+                </div>
+                {form.absence_date && (
+                  <div style={{ marginTop:4, marginLeft:36, fontFamily:H.font, fontSize:12, fontWeight:700, color:H.purple, display:'flex', alignItems:'center', gap:5 }}>
+                    <CalendarDays size={13}/> Absence Date: {formatSLT(form.absence_date, 'EEEE, dd MMM yyyy')}
+                  </div>
+                )}
               </div>
               <button
                 type="button"
@@ -355,26 +521,108 @@ function NewAbsenceContent() {
               </div>
             )}
 
-            <p style={{ fontFamily:H.font, fontSize:13, color:H.sub, marginBottom:16 }}>Click a teacher to assign them, then notify directly.</p>
+            <p style={{ fontFamily:H.font, fontSize:13, color:H.sub, marginBottom:16 }}>Assign cover teachers for period(s) held by <strong>{selectedTeacher?.full_name || 'absent teacher'}</strong>. Available teachers are listed with subject matches prioritized.</p>
 
             {loadingSugs ? (
               <div style={{ textAlign:'center', padding:32 }}><Loader2 size={20} style={{ color:H.purple, animation:'spin 0.7s linear infinite', margin:'0 auto' }}/></div>
+            ) : Object.keys(suggestions).length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', background: '#F5F5F4', borderRadius: 12, border: `1px solid ${H.border}` }}>
+                <CheckCircle2 size={28} style={{ color: H.grass, margin: '0 auto 8px' }} />
+                <div style={{ fontFamily: H.font, fontWeight: 700, fontSize: 14, color: H.text }}>No Scheduled Classes to Cover</div>
+                <div style={{ fontFamily: H.font, fontSize: 12, color: H.sub, marginTop: 4 }}>
+                  {selectedTeacher?.full_name || 'This teacher'} has no teaching periods scheduled on this day.
+                </div>
+              </div>
             ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                {absentPeriods.map(pNum=>{
+              <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                {Object.keys(suggestions).map(Number).sort((a,b)=>a-b).map(pNum=>{
                   const sugs  = suggestions[pNum]||[]
                   const subId = assignedSubs[pNum]
                   const sub   = subId ? teachers.find(t=>t.id===subId) : null
                   const slot  = sugs[0]||{}
+
+                  const pInfo = periods.find((p: any) => p.period_number === pNum)
+                  const timeRangeStr = pInfo ? `${formatTime(pInfo.start_time)}–${formatTime(pInfo.end_time)}` : ''
+
+                  const isOverride = !!manualOverride[pNum]
+                  const rawCandidates: any[] = isOverride
+                    ? teachers.filter(t => t.id !== selectedTeacher?.id).map(t => ({
+                        ...t,
+                        isFree: sugs.some(x => x.id === t.id),
+                        sameSubject: (t.subjects || []).includes(slot.subject || ''),
+                      }))
+                    : sugs.map(t => ({ ...t, isFree: true }))
+
+                  const subjectMatches = rawCandidates
+                    .filter(t => t.sameSubject)
+                    .sort((a, b) => a.full_name.localeCompare(b.full_name))
+
+                  const otherCandidates = rawCandidates
+                    .filter(t => !t.sameSubject)
+                    .sort((a, b) => a.full_name.localeCompare(b.full_name))
+
+                  const renderCandidatePill = (t: any) => {
+                    const sel = subId === t.id
+                    const isPillSaving = savingPill[pNum]
+                    return (
+                      <button key={t.id}
+                        disabled={isPillSaving}
+                        onClick={() => handleToggleCandidate(pNum, t, slot)}
+                        style={{
+                          padding: '7px 13px',
+                          borderRadius: 20,
+                          border: `2px solid ${sel ? H.grass : t.sameSubject ? H.purple : H.border}`,
+                          cursor: isPillSaving ? 'wait' : 'pointer',
+                          fontFamily: H.font,
+                          fontSize: 12,
+                          fontWeight: sel ? 800 : 500,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          transition: 'all 0.15s',
+                          background: sel ? `${H.grass}20` : t.sameSubject ? 'rgba(139,92,246,0.12)' : '#F5F5F4',
+                          color: sel ? H.grass : t.sameSubject ? H.purple : H.text,
+                          opacity: isPillSaving ? 0.6 : t.isFree ? 1 : 0.65,
+                        }}
+                      >
+                        {isPillSaving ? <Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> : sel ? <CheckCircle2 size={12} /> : t.sameSubject && <Star size={11} style={{ color: H.purple, fill: H.purple }} />}
+                        <span>{t.full_name}</span>
+                        {!t.isFree && <span style={{ fontSize: 10, color: '#f87171', fontWeight: 700 }}>(Busy P{pNum})</span>}
+                        {t.sameSubject && t.isFree && !sel && <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 700 }}>(★ Match)</span>}
+                        {sel && <span style={{ fontSize: 10, opacity: 0.9, fontWeight: 800, color: H.grass }}>(Saved)</span>}
+                      </button>
+                    )
+                  }
+
                   return (
                     <div key={pNum} style={{ borderRadius:14, border:`2px solid ${subId?H.grass:H.border}`, overflow:'hidden' }}>
                       {/* Period header */}
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px', background:subId?`${H.grass}0a`:'#F5F5F4' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                          <div style={{ width:32, height:32, borderRadius:9, background:subId?H.grass:'rgba(239,68,68,0.2)', color:subId?'#fff':'#f87171', fontFamily:H.font, fontWeight:900, fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:`2px solid ${subId?H.border:'rgba(239,68,68,0.4)'}` }}>P{pNum}</div>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:subId?`${H.grass}0a`:'#F5F5F4' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                          <div style={{ width:40, height:40, borderRadius:10, background:subId?H.grass:'rgba(239,68,68,0.15)', color:subId?'#fff':'#ef4444', fontFamily:H.font, fontWeight:900, fontSize:13, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, border:`2px solid ${subId?H.border:'rgba(239,68,68,0.3)'}` }}>
+                            P{pNum}
+                          </div>
                           <div>
-                            <div style={{ fontFamily:H.font, fontSize:13, fontWeight:800, color:H.text }}>{slot.className||'—'}</div>
-                            {slot.subject && <div style={{ fontFamily:H.font, fontSize:11, color:H.sub }}>{slot.subject}</div>}
+                            <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' }}>
+                              <span style={{ fontFamily:H.font, fontSize:14, fontWeight:800, color:H.text }}>
+                                Period {pNum} {timeRangeStr ? `· ${timeRangeStr}` : ''}
+                              </span>
+                              {slot.className && (
+                                <span style={{ fontFamily:H.font, fontSize:12, fontWeight:700, color:H.text, background:H.surface, padding:'2px 8px', borderRadius:6, border:`1px solid ${H.border}` }}>
+                                  {slot.className}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:12, marginTop:3, flexWrap:'wrap' }}>
+                              {slot.subject && (
+                                <span style={{ fontFamily:H.font, fontSize:11, color:H.purple, fontWeight:700 }}>
+                                  Subject: {slot.subject}
+                                </span>
+                              )}
+                              <span style={{ fontFamily:H.font, fontSize:11, color:H.sub, fontWeight:600 }}>
+                                Covering for: <strong style={{ color:H.text }}>{selectedTeacher?.full_name || 'Absent Teacher'}</strong>
+                              </span>
+                            </div>
                           </div>
                         </div>
                         {subId && (
@@ -383,7 +631,7 @@ function NewAbsenceContent() {
                               ? <span style={{ fontFamily:H.font, fontSize:11, fontWeight:700, color:H.grass, display:'flex', alignItems:'center', gap:4 }}><CheckCircle2 size={12}/> Notified</span>
                               : <button onClick={()=>notifySubstitute(pNum)} disabled={notifying[pNum]}
                                   style={{ display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:9, border:`2px solid #60a5fa44`, background:'rgba(96,165,250,0.1)', color:'#60a5fa', fontFamily:H.font, fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                                  {notifying[pNum]?<Loader2 size={11} style={{ animation:'spin 0.7s linear infinite' }}/>:<><Bell size={11}/> Notify {sub?.full_name.split(' ')[0]}</>}
+                                  {notifying[pNum]?<Loader2 size={11} style={{ animation:'spin 0.7s linear infinite' }}/>:<><Bell size={11}/> Notify {sub?.full_name?.split(' ')[0] || sub?.full_name}</>}
                                 </button>
                             }
                           </div>
@@ -391,24 +639,61 @@ function NewAbsenceContent() {
                       </div>
 
                       {/* Teacher pills */}
-                      <div style={{ padding:'12px 16px', background:H.surface }}>
-                        {sugs.length===0 ? (
-                          <div style={{ fontFamily:H.font, fontSize:12, color:'#fb923c', display:'flex', alignItems:'center', gap:6 }}><AlertTriangle size={13}/> All teachers busy this period</div>
+                      <div style={{ padding:'14px 16px', background:H.surface, display:'flex', flexDirection:'column', gap:12 }}>
+                        {rawCandidates.length === 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            <div style={{ fontFamily: H.font, fontSize: 12, color: '#fb923c', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <AlertTriangle size={13} /> No free teachers available for Period {pNum}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setManualOverride(p => ({ ...p, [pNum]: true }))}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 8, background: '#F5F5F4', border: `1px solid ${H.border}`, color: H.purple, fontSize: 11, fontWeight: 700, cursor: 'pointer', width: 'fit-content' }}
+                            >
+                              <ShieldAlert size={12} /> Manual Override / Show All Teachers
+                            </button>
+                          </div>
                         ) : (
                           <>
-                            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-                              {sugs.map(t=>{
-                                const sel = subId===t.id
-                                return (
-                                  <button key={t.id} onClick={()=>{ setAssignedSubs(p=>({...p,[pNum]:sel?undefined!:t.id})); if(sel)setNotified(p=>({...p,[pNum]:false})) }}
-                                    style={{ padding:'7px 13px', borderRadius:20, border:`2px solid ${sel?H.grass:t.sameSubject?H.purple:H.border}`, cursor:'pointer', fontFamily:H.font, fontSize:12, fontWeight:sel?800:500, display:'flex', alignItems:'center', gap:5, transition:'all 0.15s', background:sel?`${H.grass}20`:t.sameSubject?'rgba(139,92,246,0.12)':'#F5F5F4', color:sel?H.grass:t.sameSubject?H.purple:H.text }}>
-                                    {sel ? <CheckCircle2 size={11}/> : t.sameSubject && <Star size={10} style={{ color:H.purple, fill:H.purple }}/>}
-                                    {t.full_name.split(' ')[0]} {t.full_name.split(' ').slice(-1)[0]}
-                                  </button>
-                                )
-                              })}
+                            <div style={{ display:'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ fontSize: 11, fontWeight: 800, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {isOverride ? 'Manual Override Mode (Showing all teachers)' : 'Candidate Selection'}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setManualOverride(p => ({ ...p, [pNum]: !p[pNum] }))}
+                                style={{ border: 'none', background: 'transparent', color: H.purple, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}
+                              >
+                                <ShieldAlert size={11} /> {isOverride ? 'Show Only Free' : 'Manual Override'}
+                              </button>
                             </div>
-                            {sugs.some(t=>t.sameSubject) && <div style={{ marginTop:6, fontFamily:H.font, fontSize:11, color:H.sub, display:'flex', alignItems:'center', gap:4 }}><Star size={9} style={{ color:H.purple, fill:H.purple }}/> teaches this subject</div>}
+
+                            {/* Group 1: Same Subject Match */}
+                            {subjectMatches.length > 0 && (
+                              <div style={{ background: 'rgba(139,92,246,0.04)', borderRadius: 12, padding: '10px 12px', border: `1px solid rgba(139,92,246,0.2)` }}>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: H.purple, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <Star size={12} style={{ color: H.purple, fill: H.purple }} />
+                                  SAME SUBJECT MATCH ({subjectMatches.length}) {slot.subject ? `· ${slot.subject}` : ''}
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                  {subjectMatches.map(t => renderCandidatePill(t))}
+                                </div>
+                               </div>
+                            )}
+
+                            {/* Group 2: Other Available Teachers */}
+                            {otherCandidates.length > 0 && (
+                              <div style={{ marginTop: subjectMatches.length > 0 ? 2 : 0 }}>
+                                {subjectMatches.length > 0 && (
+                                  <div style={{ fontSize: 11, fontWeight: 700, color: H.sub, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                    Other Available Teachers ({otherCandidates.length})
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                  {otherCandidates.map(t => renderCandidatePill(t))}
+                                </div>
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
@@ -422,17 +707,17 @@ function NewAbsenceContent() {
               <div style={{ marginTop:16, display:'flex', flexDirection:'column', gap:8 }}>
                 {Object.keys(assignedSubs).some(p=>!notified[Number(p)]) && (
                   <button onClick={notifyAll}
-                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'10px 16px', borderRadius:12, border:`2px solid #60a5fa44`, background:'rgba(96,165,250,0.08)', color:'#60a5fa', fontFamily:H.font, fontSize:13, fontWeight:700, cursor:'pointer', width:'100%' }}>
-                    <Send size={13}/> Notify all assigned substitutes
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'11px 16px', borderRadius:12, border:`2px solid #60a5fa44`, background:'rgba(96,165,250,0.12)', color:'#2563eb', fontFamily:H.font, fontSize:13, fontWeight:700, cursor:'pointer', width:'100%' }}>
+                    <Send size={13}/> Notify all assigned substitutes ({Object.keys(assignedSubs).filter(p=>!notified[Number(p)]).length})
                   </button>
                 )}
-                <button onClick={saveSubstitutions} disabled={savingSubs} style={gBtn({ opacity:savingSubs?0.7:1 })}>
-                  {savingSubs ? <><Loader2 size={15} style={{ animation:'spin 0.7s linear infinite' }}/> Saving…</> : <><CheckCircle2 size={15}/> Save {Object.keys(assignedSubs).length} Substitution{Object.keys(assignedSubs).length!==1?'s':''}</>}
+                <button onClick={()=>router.push('/admin/disruptions?tab=absences')} style={gBtn()}>
+                  <CheckCircle2 size={16}/> Done — Return to Disruptions Dashboard
                 </button>
               </div>
             )}
             <button onClick={()=>router.push('/admin/disruptions?tab=absences')} style={ghost({ width:'100%', justifyContent:'center', marginTop:8, padding:'9px 16px' })}>
-              Skip for now
+              {Object.keys(assignedSubs).length>0 ? 'Back to Dashboard' : 'Skip for now'}
             </button>
           </div>
         )}

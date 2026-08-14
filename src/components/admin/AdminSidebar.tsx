@@ -49,9 +49,9 @@ export const ADMIN_NAV_SECTIONS: NavSectionDef[] = [
   {
     title: 'Schedule',
     items: [
-      { href: '/admin/classes', label: 'Classes', icon: BookOpen, color: H.purple },
       { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
-      { href: '/admin/disruptions', label: 'Disruptions', icon: ClipboardList, color: H.purple },
+      { href: '/admin/classes', label: 'Classes', icon: BookOpen, color: H.purple },
+      { href: '/admin/disruptions', label: 'Attendance & Coverage', icon: ClipboardList, color: H.purple },
     ],
   },
   {
@@ -64,6 +64,7 @@ export const ADMIN_NAV_SECTIONS: NavSectionDef[] = [
     title: 'Communications',
     items: [
       { href: '/admin/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/admin/calendar', label: 'Calendar', icon: Calendar, color: H.skyBlue },
       { href: '/admin/announcements', label: 'Notices', icon: Megaphone, color: H.skyBlue },
       { href: '/admin/profile-requests', label: 'Requests', icon: Bell, color: H.skyBlue },
     ],
@@ -147,9 +148,9 @@ export default function AdminSidebar() {
   if (isMobile) {
     const mobilePrimaryItems: NavItemDef[] = [
       { href: '/admin', label: 'Home', icon: LayoutDashboard, color: H.accent },
-      { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
-      { href: '/admin/chat', label: 'Chat', icon: MessageSquare, color: H.skyBlue },
       { href: '/admin/teachers', label: 'Teachers', icon: Users, color: H.successGreen },
+      { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
+      { href: '/admin/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
       { href: '/admin/announcements', label: 'Notices', icon: Megaphone, color: H.skyBlue },
     ]
 

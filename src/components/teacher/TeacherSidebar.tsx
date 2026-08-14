@@ -133,13 +133,13 @@ export default function TeacherSidebar() {
   }
 
   if (isMobile) {
-    // Include primary most-used teacher items directly on the bar
+    // Include primary most-used teacher items directly on the bar (ordered identically to desktop sidebar)
     const mobilePrimaryItems: TeacherNavItemDef[] = [
       { href: '/teacher', label: 'Home', icon: LayoutDashboard, color: H.accent },
       { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
-      { href: '/teacher/chat', label: 'Chat', icon: MessageSquare, color: H.skyBlue },
       { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: H.purple },
-      { href: '/teacher/profile', label: 'Profile', icon: User, color: H.successGreen },
+      { href: '/teacher/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
+      { href: '/teacher/announcements', label: 'Notices', icon: Megaphone, color: H.skyBlue },
     ]
 
     return (

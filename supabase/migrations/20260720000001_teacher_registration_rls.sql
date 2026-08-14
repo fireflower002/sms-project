@@ -14,6 +14,7 @@
 -- ============================================================
 
 -- Allow public/anon to check email pre-approval status
+DROP POLICY IF EXISTS "allowed_select_public" ON allowed_users;
 CREATE POLICY "allowed_select_public"
   ON allowed_users
   FOR SELECT

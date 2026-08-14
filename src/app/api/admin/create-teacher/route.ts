@@ -6,6 +6,7 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 const createTeacherSchema = z.object({
   full_name: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100, 'Full name cannot exceed 100 characters'),
   email: z.string().trim().toLowerCase().email('Invalid email address format'),
+  phone: z.string().trim().optional(),
   tempPassword: z.string().min(6, 'Temporary password must be at least 6 characters'),
   subjects: z.array(z.string().trim()).optional().default([]),
 })
@@ -81,24 +82,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: firstError }, { status: 400 })
     }
 
-    const { full_name: normalizedName, email: normalizedEmail, tempPassword, subjects } = parseResult.data
+    const { full_name: normalizedName, email: normalizedEmail, phone: rawPhone, tempPassword, subjects } = parseResult.data
+    const normalizedPhone = rawPhone?.trim() || null
 
-    // 4. Create Supabase Auth user server-side with email pre-confirmed
-    const { data: authData, error: createAuthError } = await adminSupabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: { full_name: normalizedName },
-    })
-
-    if (createAuthError) {
-      console.error('[API create-teacher] Auth createUser error:', createAuthError)
-      return NextResponse.json({ error: createAuthError.message || 'Failed to create user in Auth system.' }, { status: 400 })
-    }
-
-    const userId = authData.user.id
-
-    // 5. Upsert into allowed_users (is_registered = true since Auth user is created)
+    // 4. Pre-upsert into allowed_users so handle_new_user trigger can populate default profile fields
     const allowedPayload: any = {
       email: normalizedEmail,
       full_name: normalizedName,
@@ -109,13 +96,29 @@ export async function POST(request: Request) {
     const { error: allowedErr } = await adminSupabase.from('allowed_users').upsert(allowedPayload, { onConflict: 'email' })
     if (allowedErr) console.warn('[API create-teacher] allowed_users upsert warning:', allowedErr.message)
 
-    // 6. Ensure profile is created with must_change_password = true
+    // 5. Create Supabase Auth user server-side with email pre-confirmed
+    const { data: authData, error: createAuthError } = await adminSupabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { full_name: normalizedName, must_change_password: true, role: 'teacher' },
+    })
+
+    if (createAuthError) {
+      console.error('[API create-teacher] Auth createUser error:', createAuthError)
+      return NextResponse.json({ error: createAuthError.message || 'Failed to create user in Auth system.' }, { status: 400 })
+    }
+
+    const userId = authData.user.id
+
+    // 6. Ensure profile is updated with phone and must_change_password = true
     const profilePayload: any = {
       id: userId,
       email: normalizedEmail,
       full_name: normalizedName,
       role: 'teacher',
       subjects: subjects || [],
+      phone: normalizedPhone,
       must_change_password: true,
     }
     const { error: profileErr } = await adminSupabase.from('profiles').upsert(profilePayload, { onConflict: 'id' })

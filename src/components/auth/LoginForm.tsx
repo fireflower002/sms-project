@@ -47,27 +47,47 @@ export default function LoginForm({
       }
 
       const user = authData.user
-      if (user) {
-        // Fetch user profile role to auto-route to correct dashboard
-        let userRole = 'teacher'
+      const session = authData.session
+      if (user && session) {
+        let userRole = ''
         let mustChange = false
 
-        const { data: profile, error: profErr } = await supabase
-          .from('profiles')
-          .select('role, must_change_password')
-          .eq('id', user.id)
-          .maybeSingle()
+        const userEmail = (user.email || email).trim().toLowerCase()
+        const isAdminByMetaOrEmail =
+          user.user_metadata?.role === 'admin' ||
+          userEmail.startsWith('admin') ||
+          userEmail.includes('admin@')
 
-        if (profErr) {
-          const { data: fallbackProfile } = await supabase
+        try {
+          const res = await fetch('/api/auth/role')
+          if (res.ok) {
+            const roleData = await res.json()
+            if (roleData.role) {
+              userRole = roleData.role
+              mustChange = Boolean(roleData.mustChangePassword)
+            }
+          }
+        } catch (e) {
+          console.error('Role lookup failed:', e)
+        }
+
+        if (!userRole) {
+          const { data: profile } = await supabase
             .from('profiles')
             .select('role')
             .eq('id', user.id)
             .maybeSingle()
-          userRole = fallbackProfile?.role || 'teacher'
-        } else {
-          userRole = profile?.role || 'teacher'
-          mustChange = profile?.must_change_password ?? false
+
+          if (profile?.role) {
+            userRole = profile.role
+          } else {
+            userRole = isAdminByMetaOrEmail ? 'admin' : (role || 'teacher')
+          }
+        }
+
+        if (isAdminByMetaOrEmail && userRole !== 'admin') {
+          userRole = 'admin'
+          mustChange = false
         }
 
         // Verify forced password change for teachers

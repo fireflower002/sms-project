@@ -1,8 +1,8 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Pin, Send, Megaphone, AlertCircle } from 'lucide-react'
+import { Loader2, Pin, Send, Megaphone, AlertCircle, Calendar as CalendarIcon, Users as UsersIcon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 import { H } from '@/lib/honey'
@@ -33,11 +33,27 @@ export default function NewAnnouncementPage() {
   const [error, setError]           = useState('')
   const [titleError, setTitleError] = useState('')
   const [bodyError, setBodyError]   = useState('')
+  const [classes, setClasses]       = useState<any[]>([])
+  const [selectedClasses, setSelectedClasses] = useState<string[]>([])
   const [form, setForm]             = useState({
     title: '', body: '', category: 'General',
     priority: 'medium', is_pinned: false,
     send_telegram: true, is_published: true,
+    start_date: '', end_date: '', expiry_date: '',
   })
+
+  useEffect(() => {
+    const fetchClasses = async () => {
+      const { data } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+      setClasses(data || [])
+    }
+    fetchClasses()
+  }, [supabase])
+
   const set = (k: string, v: any) => {
     setForm(p => ({ ...p, [k]: v }))
     if (k === 'title') setTitleError('')
@@ -80,6 +96,9 @@ export default function NewAnnouncementPage() {
         is_pinned: form.is_pinned,
         is_published: form.is_published,
         is_active: true,
+        start_date: form.start_date ? new Date(form.start_date).toISOString() : null,
+        end_date: form.end_date ? new Date(form.end_date).toISOString() : null,
+        expiry_date: form.expiry_date ? new Date(form.expiry_date).toISOString() : null,
       }
       if (user?.id) insertPayload.created_by = user.id
 
@@ -90,25 +109,56 @@ export default function NewAnnouncementPage() {
         .single()
 
       if (insertErr) {
-        setError(`Failed to post announcement: ${insertErr.message}`)
+        console.error('Failed to post announcement:', insertErr.message)
+        setError('Could not post announcement. Please check message details and try again.')
         setLoading(false)
         return
       }
 
+      // If targeted classes are selected, link them
+      if (selectedClasses.length > 0 && data?.id) {
+        const links = selectedClasses.map(classId => ({
+          announcement_id: data.id,
+          class_id: classId
+        }))
+        const { error: linksErr } = await supabase
+          .from('announcement_classes')
+          .insert(links)
+
+        if (linksErr) {
+          console.error('Failed to link targeted classes for announcement:', linksErr.message)
+          setError('Announcement posted, but target classes could not be attached. You can edit the notice to retry.')
+          setLoading(false)
+          return
+        }
+      }
+
+      let tgParam = 'disabled'
       if (form.send_telegram) {
         try {
-          await fetch('/api/notify/announcement', {
+          const tgRes = await fetch('/api/notify/announcement', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: form.title.trim(), body: form.body.trim(), priority: form.priority }),
           })
-        } catch {}
+          const tgData = await tgRes.json().catch(() => ({}))
+          if (tgData?.telegram?.status) {
+            tgParam = tgData.telegram.status
+          } else if (tgRes.ok) {
+            tgParam = 'sent'
+          } else {
+            tgParam = 'failed'
+          }
+        } catch {
+          tgParam = 'failed'
+        }
       }
 
       setLoading(false)
-      router.push('/admin/announcements')
+      router.push(`/admin/announcements?posted=1&tg=${tgParam}`)
     } catch (err: any) {
-      setError(`An unexpected error occurred: ${err.message || err}`)
+      console.error('Unexpected error posting announcement:', err)
+      setError('Could not post announcement. Please try again.')
       setLoading(false)
     }
   }
@@ -172,6 +222,89 @@ export default function NewAnnouncementPage() {
               ) : (
                 <p style={{ fontFamily: H.font, fontSize: 11, color: H.sub, marginTop: 5 }}>{form.body.length} characters</p>
               )}
+            </div>
+          </div>
+
+          {/* Target Audience & Dates Card */}
+          <div style={card({ display: 'flex', flexDirection: 'column', gap: 16 })}>
+            <h2 style={{ fontFamily: H.font, fontSize: 15, fontWeight: 900, color: H.skyBlue, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <UsersIcon size={16} color={H.skyBlue}/> Target Audience & Dates (Optional)
+            </h2>
+
+            {/* Target Classes */}
+            <div>
+              <Label>Target Classes</Label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {classes.map(cls => {
+                  const isSelected = selectedClasses.includes(cls.id)
+                  return (
+                    <button
+                      key={cls.id}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedClasses(selectedClasses.filter(id => id !== cls.id))
+                        } else {
+                          setSelectedClasses([...selectedClasses, cls.id])
+                        }
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        border: `1px solid ${isSelected ? H.skyBlue : H.border}`,
+                        background: isSelected ? H.skyLight : '#FFFFFF',
+                        color: isSelected ? H.skyDark : H.text,
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      {cls.name}
+                    </button>
+                  )
+                })}
+              </div>
+              <p style={{ fontFamily: H.font, fontSize: 11, color: H.sub, margin: 0 }}>
+                {selectedClasses.length === 0 ? 'Visible to all teachers.' : `Targeting ${selectedClasses.length} class(es).`}
+              </p>
+            </div>
+
+            {/* Date inputs grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+              <div>
+                <Label>Relevant Start Date</Label>
+                <input
+                  type="date"
+                  style={inp()}
+                  value={form.start_date}
+                  onChange={e => set('start_date', e.target.value)}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+              </div>
+              <div>
+                <Label>Relevant End Date</Label>
+                <input
+                  type="date"
+                  style={inp()}
+                  value={form.end_date}
+                  onChange={e => set('end_date', e.target.value)}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+              </div>
+              <div>
+                <Label>Expiry Date</Label>
+                <input
+                  type="date"
+                  style={inp()}
+                  value={form.expiry_date}
+                  onChange={e => set('expiry_date', e.target.value)}
+                  onFocus={focus}
+                  onBlur={blur}
+                />
+              </div>
             </div>
           </div>
 

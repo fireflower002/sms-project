@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Users, BookOpen, Archive, UserX,
-  Sun, Moon, Sunset, CheckCircle, Clock, AlertCircle, ArrowUpRight
+  Sun, Moon, Sunset, CheckCircle, Clock, AlertCircle, ArrowUpRight, Pencil
 } from 'lucide-react'
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
@@ -185,7 +185,7 @@ const AbsencesTable = ({ absences }: { absences: any[] }) => {
     return (
       <div style={{ textAlign: 'center', padding: '40px 24px', color: H.textSec, fontSize: '14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
         <CheckCircle size={32} style={{ color: H.successGreen }} />
-        <span style={{ fontWeight: 600, color: H.textPrimary }}>All teachers are present today.</span>
+        <span style={{ fontWeight: 600, color: H.textPrimary }}>No active or pending teacher absences.</span>
         <span style={{ fontSize: '13px', color: H.textMuted }}>Everything is running smoothly. No cover required.</span>
       </div>
     )
@@ -197,25 +197,44 @@ const AbsencesTable = ({ absences }: { absences: any[] }) => {
         <thead>
           <tr>
             <th style={styles.th}>Teacher</th>
+            <th style={styles.th}>Date</th>
+            <th style={styles.th}>Status</th>
             <th style={styles.th}>Reason</th>
-            <th style={{ ...styles.th, textAlign: 'right' }}>Reported At</th>
+            <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
-          {absences.map((absence: any) => (
-            <tr
-              key={absence.id}
-              style={{ ...(hoveredRow === absence.id && styles.trHover) }}
-              onMouseEnter={() => setHoveredRow(absence.id)}
-              onMouseLeave={() => setHoveredRow(null)}
-            >
-              <td style={{ ...styles.td, color: H.textPrimary, fontWeight: 600 }}>{absence.profiles?.full_name || 'N/A'}</td>
-              <td style={styles.td}>{absence.reason}</td>
-              <td style={{ ...styles.td, textAlign: 'right', color: H.textMuted }}>
-                {new Date(absence.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </td>
-            </tr>
-          ))}
+          {absences.map((absence: any) => {
+            const currentStatus = absence.status || 'pending'
+            const isPending = currentStatus === 'pending' || currentStatus === 'late_submission'
+            const isLate = currentStatus === 'late_submission'
+            return (
+              <tr
+                key={absence.id}
+                style={{ ...(hoveredRow === absence.id && styles.trHover) }}
+                onMouseEnter={() => setHoveredRow(absence.id)}
+                onMouseLeave={() => setHoveredRow(null)}
+              >
+                <td style={{ ...styles.td, color: H.textPrimary, fontWeight: 600 }}>{absence.teacher?.full_name || absence.profiles?.full_name || 'Teacher'}</td>
+                <td style={styles.td}>{absence.absence_date || '-'}</td>
+                <td style={styles.td}>
+                  {isLate ? (
+                    <Badge variant="danger">Late Sub.</Badge>
+                  ) : isPending ? (
+                    <Badge variant="pending">Pending</Badge>
+                  ) : (
+                    <Badge variant="active">Approved</Badge>
+                  )}
+                </td>
+                <td style={{ ...styles.td, fontStyle: 'italic' }}>{absence.reason || '-'}</td>
+                <td style={{ ...styles.td, textAlign: 'right' }}>
+                  <Link href="/admin/disruptions?tab=absences" style={{ textDecoration: 'none', fontSize: '12px', color: H.purple, fontWeight: 700 }}>
+                    Review →
+                  </Link>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -272,6 +291,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ teachers: 0, classes: 0, items: 0 })
   const [todaysAbsences, setTodaysAbsences] = useState<any[]>([])
   const [pending, setPending] = useState({ swaps: 0, requests: 0 })
+  const [activeTimetable, setActiveTimetable] = useState<any>(null)
   const [hoveredTile, setHoveredTile] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
@@ -284,31 +304,41 @@ export default function AdminDashboard() {
         router.push('/admin/login')
         return
       }
-      
-      const today = new Date().toISOString().split('T')[0]
+
+      let absenceRes: any = await supabase.from('absences').select('id, absence_date, reason, created_at, status, teacher:profiles!teacher_id(full_name)').not('template_id', 'is', null).order('absence_date', { ascending: false }).limit(10)
+      if (absenceRes.error) {
+        absenceRes = await supabase.from('absences').select('id, absence_date, reason, created_at, status, profiles(full_name)').not('template_id', 'is', null).order('absence_date', { ascending: false }).limit(10)
+      }
 
       const [
         userData,
         teacherStats,
         classStats,
         itemStats,
-        absenceData,
         swapData,
-        requestData
+        requestData,
+        timetableRes
       ] = await Promise.all([
         supabase.from('profiles').select('full_name').eq('id', session.user.id).single(),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
         supabase.from('classes').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('inventory').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('absences').select('id, reason, created_at, profiles(full_name)').eq('absence_date', today),
         supabase.from('swap_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('profile_change_requests').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('timetable_templates').select('id, name').eq('is_active', true).maybeSingle(),
       ])
 
       setUser(userData.data)
       setStats({ teachers: teacherStats.count || 0, classes: classStats.count || 0, items: itemStats.count || 0 })
-      setTodaysAbsences(absenceData.data || [])
+      setTodaysAbsences(absenceRes.data || [])
       setPending({ swaps: swapData.count || 0, requests: requestData.count || 0 })
+
+      let activeTmpl = timetableRes?.data
+      if (!activeTmpl) {
+        const { data: fallbackTmpl } = await supabase.from('timetable_templates').select('id, name').order('created_at', { ascending: false }).limit(1).maybeSingle()
+        activeTmpl = fallbackTmpl
+      }
+      setActiveTimetable(activeTmpl)
 
       setLoading(false)
     }
@@ -328,7 +358,7 @@ export default function AdminDashboard() {
     { href: '/admin/teachers', label: 'Active Teachers', value: stats.teachers, icon: Users, color: H.successGreen },
     { href: '/admin/classes', label: 'Active Classes', value: stats.classes, icon: BookOpen, color: H.skyBlue },
     { href: '/admin/inventory', label: 'Inventory Items', value: stats.items, icon: Archive, color: H.mintGreen },
-    { href: '/admin/disruptions?tab=absences', label: 'Absences Today', value: todaysAbsences.length, icon: UserX, color: H.accent },
+    { href: '/admin/disruptions?tab=absences', label: 'Total Absences', value: todaysAbsences.length, icon: UserX, color: H.accent },
   ]
 
   if (loading) {
@@ -347,9 +377,11 @@ export default function AdminDashboard() {
               Here is today's school overview.
             </p>
           </div>
-          <div style={styles.statusBadge}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: H.successGreen }} />
-            School Overview • {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={styles.statusBadge}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: H.successGreen }} />
+              School Overview • {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+            </div>
           </div>
         </div>
 

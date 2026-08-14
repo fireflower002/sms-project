@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     if (!targetUserId) {
-      return NextResponse.json({ error: 'Teacher account not found.' }, { status: 444 })
+      return NextResponse.json({ error: 'Teacher account not found.' }, { status: 404 })
     }
 
     // 4. Generate random temporary password

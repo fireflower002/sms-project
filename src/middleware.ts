@@ -107,23 +107,29 @@ export async function middleware(request: NextRequest) {
   let role: string | undefined = undefined
   let mustChangePassword = false
 
-  const { data: profile, error: profErr } = await supabase
+  const userEmail = user.email?.toLowerCase() || ''
+  const isAdminByEmailOrMeta =
+    user.user_metadata?.role === 'admin' ||
+    userEmail.startsWith('admin') ||
+    userEmail.includes('admin@')
+
+  const { data: profile } = await supabase
     .from('profiles')
-    .select('role, must_change_password')
+    .select('role')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (profErr) {
-    const { data: fallbackProfile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    role = fallbackProfile?.role
+  if (profile?.role === 'admin' || isAdminByEmailOrMeta) {
+    role = 'admin'
+    mustChangePassword = false
   } else {
-    role = profile?.role
-    mustChangePassword = profile?.must_change_password ?? false
+    role = profile?.role || (user.user_metadata?.role as string) || (userEmail.startsWith('admin') ? 'admin' : 'teacher')
+    const { data: allowed } = await supabase
+      .from('allowed_users')
+      .select('must_change_password')
+      .eq('email', user.email || '')
+      .maybeSingle()
+    mustChangePassword = allowed?.must_change_password ?? false
   }
 
   // Force password change redirect for teachers

@@ -148,7 +148,8 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
           .limit(100)
 
         if (error) {
-          setError(error.message)
+          console.error('[HiveChat] Error fetching messages:', error.message)
+          setError('Could not load chat messages. Please try again.')
           return
         }
 
@@ -163,7 +164,8 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
         setMessages(formatted)
         setTimeout(scrollToBottom, 100)
       } catch (err: any) {
-        setError(err.message)
+        console.error('[HiveChat] Unexpected fetch error:', err)
+        setError('Could not load chat messages. Please try again.')
       }
     }
 
@@ -227,7 +229,8 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
       .insert({ sender_id: user.id, body: content })
 
     if (insertError) {
-      setError(insertError.message);
+      console.error('[HiveChat] Error sending message:', insertError.message)
+      setError('Message failed to send. Please check your connection.');
       setNewMessage(content); // Restore message on failure
     }
     setSending(false)

@@ -39,19 +39,34 @@ export default function TeacherAnnouncementsPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.push('/teacher/login'); return }
 
-      const [{ data: anns }, { data: reads }] = await Promise.all([
-        supabase.from('announcements').select('*').eq('is_published', true).eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
+      const [{ data: anns }, { data: reads }, { data: schedule }] = await Promise.all([
+        supabase.from('announcements').select('*, targets:announcement_classes(class_id, class:classes(name))').eq('is_published', true).eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
         supabase.from('announcement_reads').select('announcement_id').eq('user_id', session.user.id),
+        supabase.from('schedule_assignments').select('class_id').eq('teacher_id', session.user.id),
       ])
 
+      const myClassIds = Array.from(new Set((schedule || []).map((s: any) => s.class_id)))
+      const now = new Date()
+
+      // Filter by expiry and targeting
+      const filteredAnns = (anns || []).filter((ann: any) => {
+        // Expiry check
+        if (ann.expiry_date && new Date(ann.expiry_date) < now) return false;
+
+        // Class targeting check
+        const classTargets = ann.targets || [];
+        if (classTargets.length === 0) return true; // public
+        return classTargets.some((t: any) => myClassIds.includes(t.class_id));
+      });
+
       const initialReadIds = new Set((reads || []).map((r: any) => r.announcement_id))
-      setItems(anns || [])
+      setItems(filteredAnns)
       setReadIds(initialReadIds)
       setLoading(false)
 
       // Auto-mark as read after a short delay
       setTimeout(async () => {
-        const unreadItems = (anns || []).filter((a: any) => !initialReadIds.has(a.id))
+        const unreadItems = filteredAnns.filter((a: any) => !initialReadIds.has(a.id))
         if (unreadItems.length > 0) {
           const newReads = unreadItems.map(item => ({ announcement_id: item.id, user_id: session.user.id }))
           await supabase.from('announcement_reads').upsert(newReads)
@@ -107,24 +122,43 @@ export default function TeacherAnnouncementsPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {filteredItems.map(item => {
-                const isRead = readIds.has(item.id)
-                return (
-                  <div key={item.id} style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderLeft: `4px solid ${item.priority === 'high' ? H.danger : item.priority === 'medium' ? H.accent : H.border}`, borderRadius: '14px', overflow: 'hidden' }}>
-                    <div style={{ padding: '20px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
-                        {!isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: H.skyBlue, flexShrink: 0 }} title="Unread" />}
-                        {item.is_pinned && <Badge variant="pending">Pinned</Badge>}
-                        {item.priority && <Badge variant={getPriorityBadgeVariant(item.priority)}>{item.priority} Priority</Badge>}
-                        <Badge variant="category">{item.target_audience || 'All'}</Badge>
-                        <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{formatSLT(item.created_at, 'dd MMM, h:mm a')}</span>
-                      </div>
-                      <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>{item.title}</h2>
-                      <p style={{ fontSize: '14px', color: H.textSec, lineHeight: 1.7, margin: 0 }}>{item.body}</p>
-                    </div>
-                  </div>
-                )
-              })}
+               {filteredItems.map(item => {
+                 const isRead = readIds.has(item.id)
+                 const classNames = item.targets?.map((t: any) => t.class?.name).filter(Boolean) || [];
+
+                 return (
+                   <div key={item.id} style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderLeft: `4px solid ${item.priority === 'high' ? H.danger : item.priority === 'medium' ? H.accent : H.border}`, borderRadius: '14px', overflow: 'hidden' }}>
+                     <div style={{ padding: '20px 24px' }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                         {!isRead && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: H.skyBlue, flexShrink: 0 }} title="Unread" />}
+                         {item.is_pinned && <Badge variant="pending">Pinned</Badge>}
+                         {item.priority && <Badge variant={getPriorityBadgeVariant(item.priority)}>{item.priority} Priority</Badge>}
+                         
+                         {classNames.length === 0 ? (
+                           <Badge variant="category">All Teachers</Badge>
+                         ) : (
+                           classNames.map((name: string) => (
+                             <Badge key={name} variant="pending">{name}</Badge>
+                           ))
+                         )}
+
+                         <span style={{ fontSize: '12px', color: H.textMuted, marginLeft: 'auto', fontVariantNumeric: 'tabular-nums' }}>{formatSLT(item.created_at, 'dd MMM, h:mm a')}</span>
+                       </div>
+                       <h2 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>{item.title}</h2>
+                       <p style={{ fontSize: '14px', color: H.textSec, lineHeight: 1.7, margin: 0 }}>{item.body}</p>
+
+                       {/* Relevant Dates info */}
+                       {(item.start_date || item.end_date) && (
+                         <div style={{ fontSize: '12px', color: H.textSec, background: H.bg, padding: '8px 12px', borderRadius: '8px', marginTop: '12px', display: 'inline-block' }}>
+                           <span style={{ fontWeight: 700 }}>Relevant:</span>{' '}
+                           {item.start_date ? formatSLT(item.start_date, 'dd MMM yyyy') : 'Start'} to{' '}
+                           {item.end_date ? formatSLT(item.end_date, 'dd MMM yyyy') : 'End'}
+                         </div>
+                       )}
+                     </div>
+                   </div>
+                 )
+               })}
             </div>
           )}
         </div>

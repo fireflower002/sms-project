@@ -157,7 +157,7 @@ const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDo
               </div>
               <div style={{ flexShrink: 0 }}>
                 {t.must_change_password ? (
-                  <Badge variant="pending">Reset Req.</Badge>
+                  <Badge variant="pending">Temp Pass — Awaiting Change</Badge>
                 ) : t.is_active ? (
                   <Badge variant="active">Active</Badge>
                 ) : (
@@ -201,7 +201,7 @@ const TeachersTable = ({ teachers, onActionDone }: { teachers: any[]; onActionDo
               <td style={{ ...styles.td, color: H.textSec, maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={t.email}>{t.email}</td>
               <td style={styles.td}>
                 {t.must_change_password ? (
-                  <Badge variant="pending">Password Reset Required</Badge>
+                  <Badge variant="pending">Temp Password — Awaiting Change</Badge>
                 ) : t.is_active ? (
                   <Badge variant="active">Active</Badge>
                 ) : (
@@ -388,10 +388,15 @@ export default function TeachersPage() {
       onConfirm: async () => {
         setModal(null);
         setDeletingPending(id);
-        await supabase.from('allowed_users').delete().eq('id', id);
+        const { error } = await supabase.from('allowed_users').delete().eq('id', id);
         setDeletingPending(null);
-        showToast(`Deleted pre-registration for ${name}`, 'info');
-        fetchTeachers();
+        if (error) {
+          console.error('Failed to delete pre-registration:', error.message);
+          showToast('Unable to cancel staff invitation. Please try again.', 'error');
+        } else {
+          showToast(`Deleted pre-registration for ${name}`, 'info');
+          fetchTeachers();
+        }
       }
     });
   };

@@ -1,40 +1,84 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Loader2, CheckCircle2, AlertCircle, KeyRound, AlertTriangle, User, Plus, X } from 'lucide-react'
+import { Loader2, CheckCircle2, KeyRound, AlertTriangle, User, Phone, BookOpen, Info, ShieldCheck, Mail, Lock } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import { SkeletonBlock } from '@/components/ui/Skeleton'
-
 import ChangePasswordModal from '@/components/teacher/ChangePasswordModal'
 
+const DEFAULT_SUBJECT_COLORS: Record<string, string> = {
+  English: '#3B82F6',
+  Maths: '#6366F1',
+  Mathematics: '#6366F1',
+  Science: '#10B981',
+  History: '#F59E0B',
+  Music: '#EAB308',
+  Sinhala: '#F97316',
+  Tamil: '#8B5CF6',
+  Geography: '#0284C7',
+  ICT: '#84CC16',
+  Art: '#EC4899',
+  PE: '#059669',
+  Religion: '#7C3AED',
+  Commerce: '#D946EF',
+  Biology: '#14B8A6',
+  Chemistry: '#4338CA',
+  Physics: '#0EA5E9',
+  Economics: '#B45309',
+  'Combined Maths': '#E11D48',
+}
+
 const styles: { [key: string]: React.CSSProperties } = {
-  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font },
-  pageHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
-  pageTitle: { fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0 },
-  pageSubtitle: { fontSize: '14px', color: H.textSec, marginTop: '4px', margin: '4px 0 0' },
+  page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '96px' },
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
   button: { border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '13px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', minHeight: '40px', transition: 'all 0.15s ease' },
   buttonPrimary: { background: H.grass, color: 'white' },
   buttonSecondary: { background: H.surface, color: H.textSec, border: `1px solid ${H.border}` },
-  label: { display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' },
+  label: { display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: '8px' },
+  sectionHeader: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' },
+  sectionIconContainer: { width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: '15px', fontWeight: 700, color: H.textPrimary, margin: 0 },
+  sectionSubtitle: { fontSize: '12px', color: H.textSec, margin: '2px 0 0' },
 }
 
 const inputStyle = (isFocused: boolean): React.CSSProperties => ({
-  width: '100%', padding: '12px 16px', borderRadius: '10px',
+  width: '100%',
+  padding: '12px 16px 12px 42px',
+  borderRadius: '10px',
   border: `2px solid ${isFocused ? H.grass : H.border}`,
-  background: H.bg, color: H.textPrimary, fontFamily: H.font,
-  fontSize: '14px', outline: 'none', boxSizing: 'border-box' as const,
-  transition: 'border-color 0.2s ease', minHeight: '44px',
+  background: H.surface,
+  color: H.textPrimary,
+  fontFamily: H.font,
+  fontSize: '14px',
+  outline: 'none',
+  boxSizing: 'border-box' as const,
+  transition: 'border-color 0.2s ease',
+  minHeight: '44px',
 })
 
-const PREDEFINED_SUBJECTS = [
-  'Maths','Science','English','Sinhala','Tamil','History',
-  'Geography','ICT','Art','Music','PE','Religion',
-  'Commerce','Biology','Chemistry','Physics','Economics','Combined Maths'
-]
+const readOnlyInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 16px 12px 42px',
+  borderRadius: '10px',
+  border: `1px solid ${H.border}`,
+  background: '#FAF9F6',
+  color: H.textSec,
+  fontFamily: H.font,
+  fontSize: '14px',
+  outline: 'none',
+  boxSizing: 'border-box' as const,
+  minHeight: '44px',
+  cursor: 'not-allowed',
+}
+
+function getInitials(name?: string) {
+  if (!name) return 'T'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
 
 export default function TeacherProfilePage() {
   const [loading, setLoading] = useState(true)
@@ -43,34 +87,19 @@ export default function TeacherProfilePage() {
   const [success, setSuccess] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [pendingRequest, setPendingRequest] = useState<any>(null)
-  const [form, setForm] = useState({ full_name: '', phone: '', subjects: [] as string[] })
+  const [form, setForm] = useState({ full_name: '', phone: '' })
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
-  
-  // Custom subject state (Issue #2 fix)
-  const [customInput, setCustomInput] = useState('')
-  const [showOtherInput, setShowOtherInput] = useState(false)
 
   const supabase = createClient()
   const router = useRouter()
 
-  const customSubjects = form.subjects.filter(s => !PREDEFINED_SUBJECTS.includes(s) && s !== 'Other')
-
-  const currentSubjectsSorted = Array.from(new Set([
-    ...form.subjects.filter(s => s !== 'Other'),
-    ...(customInput.trim() ? [customInput.trim()] : [])
-  ])).sort()
-
-  const baselineSubjects = pendingRequest?.new_subjects ? pendingRequest.new_subjects : (profile?.subjects || [])
   const baselineName = pendingRequest?.new_full_name ? pendingRequest.new_full_name : (profile?.full_name || '')
   const baselinePhone = pendingRequest?.new_phone ? pendingRequest.new_phone : (profile?.phone || '')
 
-  const profileSubjectsSorted = [...baselineSubjects].filter((s: string) => s !== 'Other').sort()
-
   const hasChanges = profile && (
     form.full_name.trim() !== baselineName ||
-    form.phone.trim() !== baselinePhone ||
-    JSON.stringify(currentSubjectsSorted) !== JSON.stringify(profileSubjectsSorted)
+    form.phone.trim() !== baselinePhone
   )
 
   useEffect(() => {
@@ -78,19 +107,28 @@ export default function TeacherProfilePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user) { router.push('/teacher/login'); return }
 
-      const [{ data: prof }, { data: pending }] = await Promise.all([
+      const userEmail = session.user.email?.toLowerCase()
+
+      const [{ data: prof }, { data: pending }, { data: allowed }, { data: schedData }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('profile_change_requests').select('*').eq('teacher_id', session.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        userEmail ? supabase.from('allowed_users').select('subjects').eq('email', userEmail).maybeSingle() : Promise.resolve({ data: null }),
+        supabase.from('schedule_assignments').select('subject').eq('teacher_id', session.user.id),
       ])
 
       let profileData = prof
-      if (!profileData && session.user.email) {
+      if (!profileData && userEmail) {
+        const isAdmin =
+          session.user.user_metadata?.role === 'admin' ||
+          userEmail.startsWith('admin') ||
+          userEmail.includes('admin@')
+
         profileData = {
           id: session.user.id,
-          email: session.user.email.toLowerCase(),
-          full_name: session.user.user_metadata?.full_name || session.user.email.split('@')[0] || 'Teacher',
-          role: 'teacher',
-          subjects: [],
+          email: userEmail,
+          full_name: session.user.user_metadata?.full_name || userEmail.split('@')[0] || (isAdmin ? 'Admin' : 'Teacher'),
+          role: isAdmin ? 'admin' : 'teacher',
+          subjects: allowed?.subjects || [],
           must_change_password: false,
           is_active: true
         }
@@ -98,17 +136,30 @@ export default function TeacherProfilePage() {
       }
 
       if (!profileData) { router.push('/teacher/login'); return }
+
+      // AUTOMATIC HEALING DATABASE SYNC:
+      // Merge subjects from profiles.subjects, allowed_users.subjects & schedule_assignments
+      const existingProfileSubs: string[] = profileData.subjects || []
+      const allowedSubs: string[] = allowed?.subjects || []
+      const schedSubs: string[] = (schedData || []).map((s: any) => s.subject).filter(Boolean)
+
+      const mergedSubjects = Array.from(new Set([...existingProfileSubs, ...allowedSubs, ...schedSubs]))
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0 && s !== 'Other')
+        .sort((a, b) => a.localeCompare(b))
+
+      // If profiles.subjects is missing any subjects, update database automatically!
+      if (JSON.stringify(existingProfileSubs.sort()) !== JSON.stringify(mergedSubjects) && mergedSubjects.length > 0) {
+        await supabase.from('profiles').update({ subjects: mergedSubjects }).eq('id', session.user.id)
+        profileData.subjects = mergedSubjects
+      }
+
       setProfile(profileData)
       setPendingRequest(pending || null)
 
-      const initialSubs: string[] = pending?.new_subjects ? pending.new_subjects : (profileData.subjects || [])
       const initialName: string = pending?.new_full_name ? pending.new_full_name : (profileData.full_name || '')
       const initialPhone: string = pending?.new_phone ? pending.new_phone : (profileData.phone || '')
 
-      setForm({ full_name: initialName, phone: initialPhone, subjects: initialSubs })
-      
-      const hasCustom = initialSubs.some(s => !PREDEFINED_SUBJECTS.includes(s))
-      if (hasCustom) setShowOtherInput(true)
+      setForm({ full_name: initialName, phone: initialPhone })
 
       if (profileData.must_change_password || (typeof window !== 'undefined' && window.location.search.includes('changePassword=true'))) {
         setShowPasswordModal(true)
@@ -126,23 +177,9 @@ export default function TeacherProfilePage() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user) { setError('Not authenticated'); setSubmitting(false); return }
 
-    let finalSubjects = [...form.subjects]
-    const trimmedCustom = customInput.trim()
-    if (trimmedCustom && !finalSubjects.includes(trimmedCustom)) {
-      finalSubjects.push(trimmedCustom)
-    }
-    finalSubjects = Array.from(new Set(finalSubjects.filter(s => s && s !== 'Other')))
-
     const payload: any = {}
     if (form.full_name.trim() !== (profile?.full_name || '')) payload.new_full_name = form.full_name.trim()
     if (form.phone.trim() !== (profile?.phone || '')) payload.new_phone = form.phone.trim()
-    
-    const profileSubsSorted = [...(profile?.subjects || [])].filter((s: string) => s !== 'Other').sort()
-    const finalSubsSorted = [...finalSubjects].sort()
-
-    if (JSON.stringify(finalSubsSorted) !== JSON.stringify(profileSubsSorted)) {
-      payload.new_subjects = finalSubjects
-    }
 
     if (Object.keys(payload).length === 0) {
       setError('No profile changes detected to submit.')
@@ -157,30 +194,14 @@ export default function TeacherProfilePage() {
       .maybeSingle()
 
     if (err) {
-      setError(err.message)
+      console.error('Failed to submit profile change request:', err.message)
+      setError('Could not submit profile update request. Please try again.')
     } else {
       setSuccess(true)
-      setForm(f => ({ ...f, subjects: finalSubjects }))
-      setCustomInput('')
       if (insertedReq) setPendingRequest(insertedReq)
-      setTimeout(() => setSuccess(false), 4000)
+      setTimeout(() => setSuccess(false), 5000)
     }
     setSubmitting(false)
-  }
-
-  const toggleSubject = (s: string) => setForm(f => ({ ...f, subjects: f.subjects.includes(s) ? f.subjects.filter(x => x !== s) : [...f.subjects, s] }))
-
-  const handleAddCustomSubject = () => {
-    const trimmed = customInput.trim()
-    if (!trimmed) return
-    if (!form.subjects.includes(trimmed)) {
-      setForm(f => ({ ...f, subjects: [...f.subjects, trimmed] }))
-    }
-    setCustomInput('')
-  }
-
-  const removeCustomSubject = (subj: string) => {
-    setForm(f => ({ ...f, subjects: f.subjects.filter(x => x !== subj) }))
   }
 
   if (loading) {
@@ -188,8 +209,11 @@ export default function TeacherProfilePage() {
       <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
         <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden', maxWidth: '800px', margin: '0 auto' }}>
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <SkeletonBlock width="36px" height="36px" borderRadius="10px" />
-            <SkeletonBlock width="160px" height="20px" />
+            <SkeletonBlock width="44px" height="44px" borderRadius="50%" />
+            <div>
+              <SkeletonBlock width="160px" height="20px" />
+              <SkeletonBlock width="200px" height="14px" />
+            </div>
           </div>
           <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <SkeletonBlock width="40%" height="16px" />
@@ -202,43 +226,85 @@ export default function TeacherProfilePage() {
     )
   }
 
+  const assignedSubjects: string[] = profile?.subjects || []
+  const subjectColors: Record<string, string> = profile?.subject_colors || {}
+
   return (
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '96px' }}>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
+      <div style={{ maxWidth: '780px', margin: '0 auto' }}>
+        <div style={styles.card}>
 
-          {/* Contiguous Header Bar */}
-          <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={20} style={{ color: '#059669' }} />
+          {/* HERO HEADER BAR */}
+          <div style={{ padding: '24px', borderBottom: `1px solid ${H.border}`, backgroundColor: H.surface }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '50%',
+                  backgroundColor: H.grass,
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  fontWeight: 800,
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
+                }}>
+                  {getInitials(profile?.full_name || profile?.email)}
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>
+                      {profile?.full_name || 'Teacher Profile'}
+                    </h1>
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: H.successLight,
+                      color: '#065F46',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase'
+                    }}>
+                      Teacher
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0' }}>{profile?.email}</p>
+                </div>
               </div>
-              <div>
-                <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Profile</h1>
-                <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0' }}>{profile?.email}</p>
-              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(true)}
+                style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}
+              >
+                <KeyRound size={14} /> Change Password
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowPasswordModal(true)}
-              style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}
-            >
-              <KeyRound size={14} /> Change Password
-            </button>
           </div>
 
-          {/* Notifications */}
+          {/* NOTIFICATION BANNERS */}
           <div style={{ padding: '0 24px' }}>
             {pendingRequest && (
-              <div style={{ padding: '16px 20px', marginTop: '20px', background: H.accentLight, border: `1px solid ${H.accent}`, borderRadius: '12px' }}>
-                <h3 style={{ margin: '0 0 6px', color: H.accentDark, fontSize: '14px', fontWeight: 700 }}>Request Pending Approval</h3>
-                <p style={{ margin: 0, fontSize: '13px', color: H.textSec }}>Your profile change request submitted on {formatSLT(pendingRequest.created_at, 'dd MMM')} is awaiting admin approval.</p>
+              <div style={{ padding: '14px 18px', marginTop: '20px', background: H.accentLight, border: `1px solid ${H.accent}`, borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <Info size={18} style={{ color: H.accentDark, minWidth: 18, marginTop: 2 }} />
+                <div>
+                  <h3 style={{ margin: '0 0 4px', color: H.accentDark, fontSize: '13px', fontWeight: 700 }}>Request Pending Approval</h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: H.textSec }}>
+                    Your profile change request submitted on {formatSLT(pendingRequest.created_at, 'dd MMM')} is awaiting admin review.
+                  </p>
+                </div>
               </div>
             )}
             {success && (
-              <div style={{ padding: '16px 20px', marginTop: '20px', background: H.successLight, border: `1px solid ${H.grass}`, borderRadius: '12px' }}>
-                <h3 style={{ margin: '0 0 6px', color: '#065F46', fontSize: '14px', fontWeight: 700 }}>Request Submitted!</h3>
-                <p style={{ margin: 0, fontSize: '13px', color: H.textSec }}>An admin will review your changes shortly.</p>
+              <div style={{ padding: '14px 18px', marginTop: '20px', background: H.successLight, border: `1px solid ${H.grass}`, borderRadius: '12px', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <CheckCircle2 size={18} style={{ color: '#065F46', minWidth: 18, marginTop: 2 }} />
+                <div>
+                  <h3 style={{ margin: '0 0 4px', color: '#065F46', fontSize: '13px', fontWeight: 700 }}>Request Submitted!</h3>
+                  <p style={{ margin: 0, fontSize: '12px', color: H.textSec }}>Your requested display name change has been submitted to school administrators for approval.</p>
+                </div>
               </div>
             )}
             {error && (
@@ -249,83 +315,200 @@ export default function TeacherProfilePage() {
             )}
           </div>
 
-          {/* Form */}
           <form onSubmit={handleSubmit}>
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <div>
-                <label style={styles.label}>Full Display Name</label>
-                <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} onFocus={() => setFocusedField('name')} onBlur={() => setFocusedField(null)} style={inputStyle(focusedField === 'name')} />
-              </div>
-              <div>
-                <label style={styles.label}>Phone Number</label>
-                <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} onFocus={() => setFocusedField('phone')} onBlur={() => setFocusedField(null)} style={inputStyle(focusedField === 'phone')} />
-              </div>
-              <div>
-                <label style={styles.label}>Subjects I Teach</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {PREDEFINED_SUBJECTS.map(s => (
-                    <button key={s} type="button" onClick={() => toggleSubject(s)} style={{ ...styles.button, minHeight: '36px', padding: '6px 14px', background: form.subjects.includes(s) ? H.successLight : H.bg, color: form.subjects.includes(s) ? '#065F46' : H.textSec, border: `1px solid ${form.subjects.includes(s) ? H.grass : H.border}` }}>
-                      {s}
-                    </button>
-                  ))}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-                  {/* Added custom subjects */}
-                  {customSubjects.map(cs => (
-                    <button key={cs} type="button" onClick={() => removeCustomSubject(cs)} style={{ ...styles.button, minHeight: '36px', padding: '6px 12px', background: H.successLight, color: '#065F46', border: `1px solid ${H.grass}` }} title="Click to remove custom subject">
-                      {cs} <X size={13} style={{ marginLeft: 4 }} />
-                    </button>
-                  ))}
-
-                  {/* "Other" Pill */}
-                  <button
-                    type="button"
-                    onClick={() => setShowOtherInput(v => !v)}
-                    style={{
-                      ...styles.button,
-                      minHeight: '36px',
-                      padding: '6px 14px',
-                      background: showOtherInput ? '#F5F3FF' : H.bg,
-                      color: showOtherInput ? '#6D28D9' : H.textSec,
-                      border: `1px dashed ${showOtherInput ? '#8B5CF6' : H.border}`,
-                      fontWeight: 700,
-                    }}
-                  >
-                    {showOtherInput ? 'Hide Other' : '+ Other Subject'}
-                  </button>
+              {/* SECTION 1: PERSONAL INFORMATION (EDITABLE & READ-ONLY EMAIL) */}
+              <div>
+                <div style={styles.sectionHeader}>
+                  <div style={{ ...styles.sectionIconContainer, backgroundColor: H.successLight }}>
+                    <User size={16} style={{ color: '#065F46' }} />
+                  </div>
+                  <div>
+                    <h2 style={styles.sectionTitle}>Personal Details</h2>
+                    <p style={styles.sectionSubtitle}>Manage your display name, contact number, and account information</p>
+                  </div>
                 </div>
 
-                {/* Custom Subject Input Field (Issue #2 Fix) */}
-                {showOtherInput && (
-                  <div style={{ marginTop: '14px', padding: '14px 16px', backgroundColor: '#FAF5FF', borderRadius: '12px', border: '1px solid #E9D5FF' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#6D28D9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
-                      Add Custom Subject
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+                  <div>
+                    <label style={styles.label} htmlFor="fullNameInput">Full Display Name</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <User size={16} style={{ position: 'absolute', left: 14, color: H.textMuted, pointerEvents: 'none' }} />
                       <input
-                        type="text"
-                        value={customInput}
-                        onChange={e => setCustomInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomSubject(); } }}
-                        onFocus={() => setFocusedField('custom_subject')}
+                        id="fullNameInput"
+                        value={form.full_name}
+                        onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+                        onFocus={() => setFocusedField('name')}
                         onBlur={() => setFocusedField(null)}
-                        placeholder="Type custom subject name (e.g., Robotics)..."
-                        style={{ ...inputStyle(focusedField === 'custom_subject'), flex: 1, minWidth: '220px', minHeight: '40px', padding: '8px 14px' }}
+                        placeholder="e.g. Nimali Perera"
+                        style={inputStyle(focusedField === 'name')}
                       />
-                      <button
-                        type="button"
-                        onClick={handleAddCustomSubject}
-                        disabled={!customInput.trim()}
-                        style={{ ...styles.button, ...styles.buttonPrimary, minHeight: '40px', opacity: customInput.trim() ? 1 : 0.5 }}
-                      >
-                        <Plus size={14} /> Add Subject
-                      </button>
+                    </div>
+                    <p style={{ fontSize: '11px', color: H.textMuted, marginTop: '6px', margin: '6px 0 0' }}>
+                      Submits a change request for admin approval before updating.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={styles.label} htmlFor="phoneInput">Phone Number</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Phone size={16} style={{ position: 'absolute', left: 14, color: H.textMuted, pointerEvents: 'none' }} />
+                      <input
+                        id="phoneInput"
+                        value={form.phone}
+                        onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                        onFocus={() => setFocusedField('phone')}
+                        onBlur={() => setFocusedField(null)}
+                        placeholder="+94 77 123 4567"
+                        style={inputStyle(focusedField === 'phone')}
+                      />
                     </div>
                   </div>
-                )}
+
+                  {/* READ-ONLY EMAIL ADDRESS WITH AUTHENTICATION EXPLANATION NOTE */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <label style={{ ...styles.label, marginBottom: 0 }} htmlFor="emailInput">Email Address</label>
+                      <span style={{ fontSize: '11px', color: H.textMuted, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Lock size={12} /> Tied to Login Credentials
+                      </span>
+                    </div>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <Mail size={16} style={{ position: 'absolute', left: 14, color: H.textMuted, pointerEvents: 'none' }} />
+                      <input
+                        id="emailInput"
+                        value={profile?.email || ''}
+                        readOnly
+                        disabled
+                        style={readOnlyInputStyle}
+                      />
+                    </div>
+                    <p style={{ fontSize: '11px', color: H.textMuted, marginTop: '6px' }}>
+                      Your email address is permanently linked to your authentication credentials. To update your account email, please contact a school administrator.
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              <hr style={{ border: 'none', borderTop: `1px solid ${H.border}`, margin: 0 }} />
+
+              {/* SECTION 2: ASSIGNED SUBJECTS (READ-ONLY) */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                  <div style={styles.sectionHeader}>
+                    <div style={{ ...styles.sectionIconContainer, backgroundColor: H.purpleLight }}>
+                      <BookOpen size={16} style={{ color: H.purpleDark }} />
+                    </div>
+                    <div>
+                      <h2 style={styles.sectionTitle}>Assigned Subjects</h2>
+                      <p style={styles.sectionSubtitle}>Subjects currently assigned to you by administrators</p>
+                    </div>
+                  </div>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    backgroundColor: H.bg,
+                    border: `1px solid ${H.border}`,
+                    color: H.textMuted,
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase'
+                  }}>
+                    <ShieldCheck size={12} /> Read-Only
+                  </span>
+                </div>
+
+                {/* Read-Only Subject Badges */}
+                <div style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  backgroundColor: H.bg,
+                  border: `1px solid ${H.border}`,
+                  marginBottom: '14px'
+                }}>
+                  {assignedSubjects.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                      {assignedSubjects.map(subj => {
+                        const themeColor = subjectColors[subj] || DEFAULT_SUBJECT_COLORS[subj] || H.grass
+                        return (
+                          <span
+                            key={subj}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '8px 14px',
+                              borderRadius: '24px',
+                              backgroundColor: H.surface,
+                              border: `1px solid ${H.border}`,
+                              color: H.textPrimary,
+                              fontSize: '13px',
+                              fontWeight: 700,
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                            }}
+                          >
+                            <span style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              backgroundColor: themeColor,
+                              display: 'inline-block',
+                              flexShrink: 0
+                            }} />
+                            {subj}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '13px', color: H.textMuted, fontStyle: 'italic' }}>
+                      No subjects currently assigned by admin.
+                    </p>
+                  )}
+                </div>
+
+                {/* Clear Callout Guidance Note for Teachers */}
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  backgroundColor: '#F5F3FF',
+                  border: '1px solid #DDD6FE',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px'
+                }}>
+                  <Info size={16} style={{ color: '#6D28D9', minWidth: 16, marginTop: 2 }} />
+                  <p style={{ margin: 0, fontSize: '12px', color: '#5B21B6', lineHeight: 1.5, fontWeight: 500 }}>
+                    <strong>Subject Assignment Notice:</strong> Subject assignments are managed by school administrators. If your listed subjects are incorrect or need updating, please contact your school administrator to update your profile in the Admin Dashboard.
+                  </p>
+                </div>
+              </div>
+
             </div>
-            <div style={{ padding: '16px 24px', borderTop: `1px solid ${H.border}`, display: 'flex', justifyContent: 'flex-end', gap: '12px', background: H.bg }}>
-              <button type="submit" disabled={submitting || !hasChanges} style={{ ...styles.button, ...styles.buttonPrimary, opacity: (submitting || !hasChanges) ? 0.6 : 1 }}>
+
+            {/* ACTION FOOTER */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: `1px solid ${H.border}`,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              backgroundColor: '#FAF9F6'
+            }}>
+              <button
+                type="submit"
+                disabled={submitting || !hasChanges}
+                style={{
+                  ...styles.button,
+                  ...styles.buttonPrimary,
+                  opacity: (submitting || !hasChanges) ? 0.5 : 1,
+                  cursor: (submitting || !hasChanges) ? 'not-allowed' : 'pointer'
+                }}
+              >
                 {submitting ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={16} />}
                 Request Profile Changes
               </button>

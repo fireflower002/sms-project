@@ -35,17 +35,40 @@ const ABSENCE_TYPES = [
   { value: 'custom_periods', label: 'Specific Periods', desc: 'Choose which periods to miss', icon: <Sparkles size={20} /> },
 ]
 
+import {
+  SchoolCalendarEvent,
+  SchoolSettings,
+  DEFAULT_SCHOOL_SETTINGS,
+  getDefaultAbsenceDate,
+  getCalendarReason,
+  getCurrentSLTDate,
+  getCurrentSLTTime,
+  getEffectiveMinimumAbsenceDate,
+} from '@/lib/calendarService'
+
 export default function ReportAbsencePage() {
   const [submitting, setSubmitting] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [cancelSuccess, setCancelSuccess] = useState(false)
   const [loading, setLoading] = useState(true)
   const [done, setDone] = useState(false)
+  const [isLateSubmitted, setIsLateSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [template, setTemplate] = useState<any>(null)
   const [alreadyExists, setAlreadyExists] = useState(false)
   const [existingAbsence, setExistingAbsence] = useState<any>(null)
-  const [form, setForm] = useState({ absence_date: todaySLT(), absence_type: 'full_day', reason: '', custom_periods: [] as number[] })
+
+  const [events, setEvents] = useState<SchoolCalendarEvent[]>([])
+  const [settings, setSettings] = useState<SchoolSettings>(DEFAULT_SCHOOL_SETTINGS)
+  const [isEmergency, setIsEmergency] = useState(false)
+  const [dateReason, setDateReason] = useState<any>(null)
+
+  const [form, setForm] = useState({
+    absence_date: todaySLT(),
+    absence_type: 'full_day',
+    reason: '',
+    custom_periods: [] as number[],
+  })
   const [focusedField, setFocusedField] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
@@ -56,10 +79,22 @@ export default function ReportAbsencePage() {
       const user = session?.user
       if (!user) { router.push('/teacher/login'); return }
 
-      const [{ data: tmpl }, { data: existing }] = await Promise.all([
+      const [{ data: tmpl }, { data: existing }, { data: calEvents }, { data: schoolSets }] = await Promise.all([
         supabase.from('timetable_templates').select('*').eq('is_active', true).maybeSingle(),
         supabase.from('absences').select('*').eq('teacher_id', user.id).eq('absence_date', todaySLT()).maybeSingle(),
+        supabase.from('school_calendar_events').select('*'),
+        supabase.from('school_settings').select('*').eq('school_id', 'default').maybeSingle(),
       ])
+
+      const currentEvents = calEvents || []
+      const currentSets = schoolSets || DEFAULT_SCHOOL_SETTINGS
+      setEvents(currentEvents)
+      setSettings(currentSets)
+
+      const defResult = getDefaultAbsenceDate(currentEvents, currentSets, false, tmpl?.start_time || '07:50', tmpl?.end_time || '13:30')
+      setForm(f => ({ ...f, absence_date: defResult.date }))
+      setDateReason(defResult)
+
       setTemplate(tmpl || null)
       setExistingAbsence(existing || null)
       setAlreadyExists(!!existing)
@@ -68,13 +103,20 @@ export default function ReportAbsencePage() {
     load()
   }, [router, supabase])
 
+  // Update date reason when selected date changes
+  useEffect(() => {
+    if (events.length > 0 || settings) {
+      const reasonObj = getCalendarReason(form.absence_date, events, settings)
+      setDateReason(reasonObj)
+    }
+  }, [form.absence_date, events, settings])
+
   const handleCancelAbsence = async () => {
     if (!existingAbsence?.id) return
     setCancelling(true)
     setError('')
 
     try {
-      // Call dedicated API endpoint that uses service role client to remove substitutions & absence
       const res = await fetch('/api/teacher/cancel-absence', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,14 +129,13 @@ export default function ReportAbsencePage() {
         throw new Error(json.error || 'Failed to cancel absence record.')
       }
 
-      // Update state only after confirmed server deletion
       setAlreadyExists(false)
       setExistingAbsence(null)
       setCancelSuccess(true)
       setTimeout(() => setCancelSuccess(false), 5000)
     } catch (err: any) {
       console.error('[handleCancelAbsence] Error:', err)
-      setError(err.message || 'Failed to cancel absence. Please try again.')
+      setError('Could not cancel absence notice. Please try again.')
     } finally {
       setCancelling(false)
     }
@@ -103,20 +144,88 @@ export default function ReportAbsencePage() {
   const periods = template ? generatePeriods(template.start_time, template.end_time, template.period_duration, template.breaks || []).filter((p: any) => !p.is_break) : []
   const togglePeriod = (n: number) => setForm(f => ({ ...f, custom_periods: f.custom_periods.includes(n) ? f.custom_periods.filter(x => x !== n) : [...f.custom_periods, n] }))
 
+  const minDate = getEffectiveMinimumAbsenceDate(settings, template?.start_time || '07:50', template?.end_time || '13:30')
+  const maxDateObj = new Date()
+  maxDateObj.setDate(maxDateObj.getDate() + 30)
+  const maxDate = maxDateObj.toISOString().split('T')[0]
+
+  const today = getCurrentSLTDate()
+  const isTodaySelected = form.absence_date === today
+  const isPastCutoff = dateReason?.isPastCutoff || false
+
+  const isLessThan2HoursBeforeStart = template?.start_time ? (() => {
+    const currentSLT = new Date(`${getCurrentSLTDate()}T${getCurrentSLTTime()}:00+05:30`)
+    const targetSLT = new Date(`${form.absence_date}T${template.start_time}:00+05:30`)
+    const diffMs = targetSLT.getTime() - currentSLT.getTime()
+    const bufferMs = (settings.absence_buffer_hours ?? 2) * 60 * 60 * 1000
+    return form.absence_date >= today && diffMs < bufferMs
+  })() : false
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSubmitting(true)
+
+    // Reject past dates outright
+    if (form.absence_date < today) {
+      setError("You cannot submit an absence for a past date")
+      setSubmitting(false)
+      return
+    }
+
+    // Calendar & Cutoff Validation
+    const calendarCheck = getCalendarReason(form.absence_date, events, settings)
+    if (!calendarCheck.isAvailable && (!isTodaySelected || !isEmergency)) {
+      setError(`Cannot submit absence: ${calendarCheck.reason}`)
+      setSubmitting(false)
+      return
+    }
+
     const { data: { session } } = await supabase.auth.getSession()
     const user = session?.user
     if (!user) { setError('Not authenticated'); setSubmitting(false); return }
-    if (alreadyExists) { setError('You already have an absence recorded for today.'); setSubmitting(false); return }
 
-    const payload: any = { teacher_id: user.id, absence_date: form.absence_date, absence_type: form.absence_type, reason: form.reason || null }
+    const { data: existingOnDate } = await supabase
+      .from('absences')
+      .select('id')
+      .eq('teacher_id', user.id)
+      .eq('absence_date', form.absence_date)
+      .maybeSingle()
+
+    if (existingOnDate) {
+      setError(`You already have an absence recorded for ${form.absence_date}.`)
+      setSubmitting(false)
+      return
+    }
+
+    if (!template || !template.id) {
+      setError('No active timetable template found — contact admin.')
+      setSubmitting(false)
+      return
+    }
+
+    const isLate = isLessThan2HoursBeforeStart || (isTodaySelected && isEmergency)
+
+    const payload: any = {
+      teacher_id: user.id,
+      absence_date: form.absence_date,
+      absence_type: form.absence_type,
+      reason: form.reason || null,
+      status: isLate ? 'late_submission' : 'pending',
+      template_id: template.id,
+    }
     if (form.absence_type === 'custom_periods') payload.custom_periods = form.custom_periods
 
     const { error: err } = await supabase.from('absences').insert(payload)
-    if (err) { setError(err.message) } else { setDone(true) }
+    if (err) {
+      console.error('[handleSubmit] Insert absence error:', err.message)
+      setError('Could not submit absence notice. Please check your entries and try again.')
+    } else {
+      if (isLate) {
+        setIsLateSubmitted(true)
+      }
+      setDone(true)
+    }
     setSubmitting(false)
   }
 
@@ -132,7 +241,13 @@ export default function ReportAbsencePage() {
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, padding: '40px', textAlign: 'center', maxWidth: '480px', width: '100%' }}>
         <CheckCircle2 size={52} style={{ color: H.grass, margin: '0 auto 16px' }} />
         <h2 style={{ fontSize: '20px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>Absence Reported</h2>
-        <p style={{ fontSize: '14px', color: H.textSec, margin: '0 0 24px' }}>The school administration has been notified. Cover will be arranged if necessary.</p>
+        {isLateSubmitted ? (
+          <p style={{ fontSize: '14px', color: H.danger, fontWeight: 600, margin: '0 0 24px' }}>
+            This is a late submission — please also contact admin directly to arrange cover, as it may not be reviewed in time.
+          </p>
+        ) : (
+          <p style={{ fontSize: '14px', color: H.textSec, margin: '0 0 24px' }}>The school administration has been notified. Cover will be arranged if necessary.</p>
+        )}
         <Link href="/teacher" style={{ ...styles.button, ...styles.buttonPrimary }}>Back to Dashboard</Link>
       </div>
     </div>
@@ -214,7 +329,33 @@ export default function ReportAbsencePage() {
             <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div>
                 <label style={styles.label}><Calendar size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> Absence Date</label>
-                <input type="date" value={form.absence_date} onChange={e => setForm(f => ({ ...f, absence_date: e.target.value }))} style={inputStyle(focusedField === 'date')} onFocus={() => setFocusedField('date')} onBlur={() => setFocusedField(null)} required />
+                <input type="date" min={minDate} max={maxDate} value={form.absence_date} onChange={e => setForm(f => ({ ...f, absence_date: e.target.value }))} style={inputStyle(focusedField === 'date')} onFocus={() => setFocusedField('date')} onBlur={() => setFocusedField(null)} required />
+                
+                {dateReason && (
+                  <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '8px', backgroundColor: dateReason.isAvailable ? H.skyLight : '#FEF2F2', border: `1px solid ${dateReason.isAvailable ? H.skyBlue : '#FCA5A5'}`, fontSize: '12px', color: dateReason.isAvailable ? H.skyDark : '#991B1B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                    <span>{dateReason.reason || (dateReason.isAvailable ? 'Valid school working day' : 'Selected date is unavailable')}</span>
+                  </div>
+                )}
+
+                {isTodaySelected && isPastCutoff && settings.allow_emergency_absence && (
+                  <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', backgroundColor: '#FFFBEB', border: `1px solid ${H.warning}`, fontSize: '13px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: H.chocolate, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={isEmergency} onChange={e => setIsEmergency(e.target.checked)} />
+                      Emergency Absence (Late Submission)
+                    </label>
+                    <div style={{ fontSize: '11px', color: H.textSec, marginTop: '4px', paddingLeft: '24px' }}>
+                      Buffer window ({settings.absence_buffer_hours ?? 2} hours before school day start) has passed. Checking this will tag your submission for immediate admin review.
+                    </div>
+                  </div>
+                )}
+
+                {isLessThan2HoursBeforeStart && (
+                  <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', backgroundColor: '#FEF2F2', border: `1px solid ${H.danger}`, fontSize: '13px', color: '#991B1B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <span>This is a late submission — please also contact admin directly to arrange cover, as it may not be reviewed in time.</span>
+                  </div>
+                )}
               </div>
 
               <div>

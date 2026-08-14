@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, AlertCircle, Package, CheckCircle2 } from 'lucide-react'
+import { Loader2, AlertCircle, Package, CheckCircle2, Printer, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getItemPublicUrl } from '@/lib/siteUrl'
 
@@ -40,6 +40,14 @@ function InventoryFormContent() {
   const [fetchingItem, setFetching] = useState(!!editId)
   const [error, setError]           = useState('')
   const [staffList, setStaffList]   = useState<any[]>([])
+  const [savedItem, setSavedItem]   = useState<{
+    id: string
+    name: string
+    category: string
+    barcode: string
+    public_token: string
+  } | null>(null)
+
   const [form, setForm]             = useState({
     name:'', description:'', category:'Electronics', serial_number:'', barcode:'',
     condition:'good', condition_notes:'', assigned_to:'', public_token:'',
@@ -47,6 +55,20 @@ function InventoryFormContent() {
     location:'', purchase_date:'', purchase_price:'', notes:''
   })
   const set = (k: string, v: any) => setForm(p => ({...p,[k]:v}))
+
+  const handleResetForm = () => {
+    setForm({
+      name: '', description: '', category: 'Electronics', serial_number: '', barcode: '',
+      condition: 'good', condition_notes: '', assigned_to: '', public_token: crypto.randomUUID(),
+      quantity_total: 1, low_stock_threshold: 1,
+      location: '', purchase_date: '', purchase_price: '', notes: ''
+    })
+    setError('')
+    setSavedItem(null)
+    if (editId) {
+      router.push('/admin/inventory/new')
+    }
+  }
 
   useEffect(() => {
     const loadStaffAndItem = async () => {
@@ -128,6 +150,13 @@ function InventoryFormContent() {
           .update(payload)
           .eq('id', editId)
         if (err) throw err
+        setSavedItem({
+          id: editId,
+          name: form.name.trim(),
+          category: form.category,
+          barcode: form.barcode || 'INV-2026',
+          public_token: public_token,
+        })
       } else {
         const { data, error: err } = await supabase
           .from('inventory')
@@ -140,9 +169,16 @@ function InventoryFormContent() {
           .single()
         if (err) throw err
         if (!data) throw new Error('Failed to create inventory item.')
+        setSavedItem({
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          barcode: data.barcode,
+          public_token: data.public_token || public_token,
+        })
       }
 
-      router.push('/admin/inventory')
+      setLoading(false)
     } catch (err: any) {
       setError(err.message || 'Failed to save inventory item.')
       setLoading(false)
@@ -156,6 +192,137 @@ function InventoryFormContent() {
     return (
       <div style={{ minHeight:'60vh', display:'flex', alignItems:'center', justifyContent:'center', color:H.text }}>
         <Loader2 size={32} style={{ animation:'spin 0.7s linear infinite', color: H.mintGreen }} />
+      </div>
+    )
+  }
+
+  if (savedItem) {
+    const qrUrl = getItemPublicUrl(savedItem.public_token)
+    return (
+      <div style={{ minHeight: '100vh', background: H.bg, fontFamily: H.font, color: H.text }}>
+        <header style={{ height: 68, padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, background: H.surface, backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 30 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Package size={20} style={{ color: H.mintGreen }} />
+            <div>
+              <h1 style={{ fontFamily: H.font, fontSize: 17, fontWeight: 800, color: H.text, margin: 0 }}>Item Saved</h1>
+              <p style={{ fontFamily: H.font, fontSize: 11, color: H.muted, margin: 0 }}>Confirmation & Print Actions</p>
+            </div>
+          </div>
+        </header>
+
+        <main style={{ maxWidth: 640, margin: '40px auto', padding: '0 20px' }}>
+          <div style={{ ...card({ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }) }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#166534' }}>
+              <CheckCircle2 size={36} />
+            </div>
+            <div>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#166534', background: '#D1FAE5', padding: '4px 12px', borderRadius: 20, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Inventory Item Successfully Saved
+              </span>
+              <h2 style={{ fontSize: 22, fontWeight: 800, color: H.text, margin: '12px 0 6px' }}>{savedItem.name}</h2>
+              <p style={{ fontSize: 13, color: H.sub, margin: 0 }}>
+                Category: <strong>{savedItem.category}</strong> • Barcode: <code style={{ fontFamily: 'DM Mono, monospace', color: H.mintGreen }}>{savedItem.barcode}</code>
+              </p>
+            </div>
+
+            {/* QR Card Preview */}
+            <div style={{ border: '2px dashed #06B6D4', borderRadius: 16, padding: 20, textAlign: 'center', background: '#FAF9F6', width: '100%', maxWidth: 280, boxSizing: 'border-box' }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(qrUrl)}`}
+                alt="QR Sticker"
+                style={{ width: 140, height: 140, margin: '0 auto', display: 'block', borderRadius: 8, border: `1px solid ${H.border}`, background: '#fff', padding: 6 }}
+              />
+              <p style={{ fontSize: 10, color: H.sub, margin: '8px 0 0', fontFamily: 'DM Mono, monospace' }}>
+                {savedItem.barcode}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 360, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const printWin = window.open('', '_blank');
+                  if (printWin) {
+                    printWin.document.write(`
+                      <html>
+                        <head><title>Print QR Sticker - ${savedItem.name}</title></head>
+                        <body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0;">
+                          <div style="border: 2px dashed #000; padding: 16px; border-radius: 12px; text-align: center; width: 200px;">
+                            <h3 style="margin: 0 0 6px; font-size: 14px;">${savedItem.name}</h3>
+                            <p style="margin: 0 0 10px; font-size: 11px; color: #666;">${savedItem.category} | ${savedItem.barcode}</p>
+                            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}" style="width: 120px; height: 120px;" />
+                            <p style="margin: 8px 0 0; font-size: 10px; color: #888;">Scan to verify item</p>
+                          </div>
+                          <script>window.onload = function() { window.print(); window.close(); }</script>
+                        </body>
+                      </html>
+                    `);
+                    printWin.document.close();
+                  }
+                }}
+                style={{
+                  background: H.grass,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 12,
+                  fontFamily: H.font,
+                  fontWeight: 800,
+                  fontSize: 14,
+                  padding: '12px 20px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.08)'
+                }}
+              >
+                <Printer size={16} /> Print QR Code
+              </button>
+
+              <a
+                href={qrUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: H.surface,
+                  color: H.text,
+                  border: `1px solid ${H.border}`,
+                  borderRadius: 12,
+                  fontFamily: H.font,
+                  fontWeight: 700,
+                  fontSize: 13,
+                  padding: '10px 20px',
+                  textDecoration: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8
+                }}
+              >
+                <ExternalLink size={15} /> View Public Item Page
+              </a>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  style={ghost({ padding: '10px 14px', fontSize: 13, justifyContent: 'center' })}
+                >
+                  + Add Another Item
+                </button>
+
+                <Link
+                  href="/admin/inventory?created=1"
+                  style={{ ...ghost({ padding: '10px 14px', fontSize: 13, justifyContent: 'center' }), background: H.surface, color: H.text }}
+                >
+                  Inventory List →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     )
   }

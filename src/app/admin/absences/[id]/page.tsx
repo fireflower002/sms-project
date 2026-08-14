@@ -128,10 +128,21 @@ export default function AbsenceDetailPage() {
     const newTeacherId = reassignTeacher[subId]
     if (!newTeacherId) return
     setSavingReassign(subId)
+
+    const existingSub = subs.find(s => s.id === subId)
+    const prevTeacherName = existingSub?.substitute?.full_name || 'Previous cover'
+    const prevReason = existingSub?.swap_reason || ''
+    const updatedHistoryReason = prevReason
+      ? `Reassigned from ${prevTeacherName} (Declined: "${prevReason}")`
+      : `Reassigned from ${prevTeacherName}`
+
     const { error: e } = await supabase.from('substitutions').update({
       substitute_teacher_id: newTeacherId,
       status: 'assigned',
+      swap_reason: updatedHistoryReason,
+      swap_requested_at: null,
     }).eq('id', subId)
+
     if (e) { setError(`Reassign failed: ${e.message}`) }
     else { setReassigning(null) }
     setSavingReassign(null)
@@ -401,6 +412,11 @@ export default function AbsenceDetailPage() {
                         <div style={{ fontSize:'11px', color:H.sub, marginTop:'2px' }}>
                           {sub.class?.name}{sub.subject ? ` · ${sub.subject}` : ''}
                         </div>
+                        {sub.swap_reason && (
+                          <div style={{ fontSize:'10.5px', color:H.purple, marginTop:'3px', fontWeight:600 }}>
+                            History: {sub.swap_reason}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

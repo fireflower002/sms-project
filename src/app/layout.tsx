@@ -8,6 +8,8 @@ const font = Plus_Jakarta_Sans({
   display: 'swap',
 })
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'School Management System',
   description: 'Timetable, staff, inventory and communication for Sri Lankan schools',

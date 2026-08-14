@@ -12,7 +12,7 @@ const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRad
 const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight:'44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, textDecoration:'none', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, minHeight:'36px', padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:5, textDecoration:'none', ...x })
 const grass = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight:'44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, textDecoration:'none', ...x })
-const inp   = (x?:any):React.CSSProperties => ({ width:'100%', minHeight:'40px', padding:'8px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.textPrimary, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
+const inp   = (x?:any):React.CSSProperties => ({ width:'100%', minWidth:0, minHeight:'40px', padding:'8px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.textPrimary, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
 
 
 interface BreakItem { after_period: number; duration: number; label: string }
@@ -38,10 +38,9 @@ export default function NewTemplatePage() {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ name: '', start_time: '07:30', end_time: '14:00', period_duration: 40 })
+  const [form, setForm] = useState({ name: '', start_time: '07:50', end_time: '13:30', period_duration: 40 })
   const [breaks, setBreaks] = useState<BreakItem[]>([
-    { after_period: 3, duration: 20, label: 'Morning Recess' },
-    { after_period: 6, duration: 40, label: 'Lunch Break' },
+    { after_period: 4, duration: 20, label: 'Lunch Break' },
   ])
 
   const generatedPeriods: any[] = (() => {
@@ -80,7 +79,7 @@ export default function NewTemplatePage() {
     finally { setLoading(false) }
   }
 
-  const breakGridCols = '100px 120px 1fr 40px'
+  const breakGridCols = '80px 80px minmax(0, 1fr) 36px'
 
   return (
     <div style={{ minHeight: '100vh', background: H.bg }}>
@@ -176,7 +175,7 @@ export default function NewTemplatePage() {
                 <SectionHeader n={3} label="Breaks & Intervals" action={
                   <button type="button"
                     onClick={() => setBreaks(p => [...p, { after_period: 1, duration: 15, label: 'Break' }])}
-                    style={ghost({ padding:'6px 12px', fontSize:12 })}>
+                    style={ghost({ padding: '6px 12px' })}>
                     <Plus size={14} /> Add Break
                   </button>
                 } />
@@ -189,7 +188,7 @@ export default function NewTemplatePage() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {/* Grid Column Header Row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: breakGridCols, gap: '12px', padding: '0 4px', alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: breakGridCols, gap: '8px', padding: '0 12px', alignItems: 'center' }}>
                       <span style={{ fontFamily: H.font, fontSize: '11px', fontWeight: 800, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.07em' }}>After Period</span>
                       <span style={{ fontFamily: H.font, fontSize: '11px', fontWeight: 800, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Duration (min)</span>
                       <span style={{ fontFamily: H.font, fontSize: '11px', fontWeight: 800, color: H.sub, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Label</span>
@@ -198,7 +197,7 @@ export default function NewTemplatePage() {
 
                     {/* Aligned Grid Rows */}
                     {breaks.map((b, i) => (
-                      <div key={i} style={{ display: 'grid', gridTemplateColumns: breakGridCols, gap: '12px', alignItems: 'center', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${H.border}`, background: H.bg }}>
+                      <div key={i} style={{ display: 'grid', gridTemplateColumns: breakGridCols, gap: '8px', alignItems: 'center', padding: '10px 12px', borderRadius: '12px', border: `1px solid ${H.border}`, background: H.bg }}>
                         <input type="number" min="1" max={actualPeriods.length || 20}
                           value={b.after_period}
                           onChange={e => setBreaks(p => p.map((x, j) => j === i ? { ...x, after_period: Number(e.target.value) } : x))}
@@ -216,7 +215,7 @@ export default function NewTemplatePage() {
                         
                         <button type="button" onClick={() => setBreaks(p => p.filter((_, j) => j !== i))}
                           title="Remove Break"
-                          style={{ background: H.dangerLight, color: H.danger, border: `1px solid ${'#FECACA'}`, borderRadius: '8px', width: '36px', height: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                          style={{ background: H.dangerLight, color: H.danger, border: `1px solid ${'#FECACA'}`, borderRadius: '8px', width: '36px', height: '36px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, justifySelf: 'center' }}>
                           <Trash2 size={16} />
                         </button>
                       </div>

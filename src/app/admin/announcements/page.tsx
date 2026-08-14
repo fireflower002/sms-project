@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState, useCallback, Fragment } from 'react'
+import { useEffect, useState, useCallback, Fragment, Suspense } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, RefreshCw, Pin, Trash2, Eye, Megaphone, MessageSquare, Search } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
@@ -38,6 +39,8 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
   const pct = totalTeachers > 0 ? Math.round((readCount / totalTeachers) * 100) : 0;
   const priorityColor = (PRIORITY_COLORS as any)[item.priority] || H.textMuted;
   
+  const classNames = item.targets?.map((t: any) => t.class?.name).filter(Boolean) || [];
+  
   return (
     <div style={{ ...styles.card, borderLeft: `4px solid ${priorityColor}` }}>
       <div style={{ padding: '20px' }}>
@@ -48,6 +51,37 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
         </div>
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>{item.title}</h3>
         <p style={{ fontSize: '14px', color: H.textSec, lineHeight: 1.6, margin: '0 0 16px' }}>{item.body}</p>
+        
+        {/* Classes/Targeting */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginBottom: '12px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: H.textMuted }}>Audience:</span>
+          {classNames.length === 0 ? (
+            <Badge variant="category">All Teachers</Badge>
+          ) : (
+            classNames.map((name: string) => (
+              <Badge key={name} variant="pending">{name}</Badge>
+            ))
+          )}
+        </div>
+
+        {/* Relevant Dates & Expiry info */}
+        {(item.start_date || item.end_date || item.expiry_date) && (
+          <div style={{ fontSize: '12px', background: H.bg, padding: '8px 12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
+            {(item.start_date || item.end_date) && (
+              <div style={{ color: H.textSec }}>
+                <span style={{ fontWeight: 700 }}>Relevant:</span>{' '}
+                {item.start_date ? formatSLT(item.start_date, 'dd MMM yyyy') : 'Start'} to{' '}
+                {item.end_date ? formatSLT(item.end_date, 'dd MMM yyyy') : 'End'}
+              </div>
+            )}
+            {item.expiry_date && (
+              <div style={{ color: H.danger, fontWeight: 600 }}>
+                <span>Expires:</span> {formatSLT(item.expiry_date, 'dd MMM yyyy')}
+              </div>
+            )}
+          </div>
+        )}
+
         <div style={{ fontSize: '12px', color: H.textMuted }}>By {item.author?.full_name || 'Admin'}</div>
       </div>
       
@@ -75,8 +109,9 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
   );
 };
 
-// MAIN PAGE COMPONENT ========================================================
-export default function AnnouncementsPage() {
+function AnnouncementsContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
@@ -84,11 +119,29 @@ export default function AnnouncementsPage() {
   const [filter, setFilter] = useState<'all' | 'pinned' | 'urgent'>('all')
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
   const supabase = createClient();
+  const { showToast } = useToast()
+
+  useEffect(() => {
+    const posted = searchParams.get('posted')
+    const tg = searchParams.get('tg')
+    if (posted) {
+      if (tg === 'sent') {
+        showToast('Notice posted successfully! Telegram broadcast sent.', 'success')
+      } else if (tg === 'failed') {
+        showToast('Notice posted, but Telegram broadcast failed.', 'warning')
+      } else if (tg === 'not_configured') {
+        showToast('Notice posted. Telegram is not configured in settings.', 'info')
+      } else {
+        showToast('Notice posted successfully.', 'success')
+      }
+      router.replace('/admin/announcements')
+    }
+  }, [searchParams, router, showToast])
 
   const fetchItems = useCallback(async () => {
     setLoading(true)
     const [{ data }, { count: tc }] = await Promise.all([
-      supabase.from('announcements').select('*, reads:announcement_reads(count), author:profiles!created_by(full_name)').eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
+      supabase.from('announcements').select('*, reads:announcement_reads(count), author:profiles!created_by(full_name), targets:announcement_classes(class:classes(name))').eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
     ]);
     setItems(data || []);
@@ -99,12 +152,12 @@ export default function AnnouncementsPage() {
   useEffect(() => { fetchItems() }, [fetchItems]);
 
   const [search, setSearch] = useState('')
-  const { showToast } = useToast()
 
   const togglePin = async (id: string, pinned: boolean) => {
     const { error } = await supabase.from('announcements').update({ is_pinned: !pinned }).eq('id', id);
     if (error) {
-      showToast(`Error updating pin status: ${error.message}`, 'error')
+      console.error('Failed to update pin status:', error.message)
+      showToast('Could not update notice pin status. Please try again.', 'error')
       return;
     }
     showToast(pinned ? 'Announcement unpinned' : 'Announcement pinned', 'success')
@@ -134,13 +187,15 @@ export default function AnnouncementsPage() {
           const resData = await res.json();
 
           if (!res.ok || !resData.success) {
-            showToast(`Could not delete announcement: ${resData.error || 'Delete failed'}`, 'error')
+            console.error('Failed to delete announcement:', resData.error)
+            showToast('Could not delete announcement. Please check your connection.', 'error')
             fetchItems(); // Restore items on error
           } else {
             showToast(`Deleted notice "${title}"`, 'info')
           }
         } catch (err: any) {
-          showToast(`Could not delete announcement: ${err.message || 'Network error'}`, 'error')
+          console.error('Failed to delete announcement:', err)
+          showToast('Could not delete announcement. Please check your connection.', 'error')
           fetchItems(); // Restore items on error
         } finally {
           setDeleting(null);
@@ -251,5 +306,17 @@ export default function AnnouncementsPage() {
         onCancel={() => setModal(null)}
       />
     </div>
+  )
+}
+
+export default function AnnouncementsPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LoadingSpinner size={28} />
+      </div>
+    }>
+      <AnnouncementsContent />
+    </Suspense>
   )
 }

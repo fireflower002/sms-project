@@ -51,14 +51,25 @@ export default function TeacherStaffChatPage() {
     }
   }, [])
 
-  const paddingBottom = isMobile ? (isKeyboardOpen ? 4 : 76) : 16
+  // Header in layout = 52px. Bottom Nav in mobile sidebar = 64px.
+  const TOP_HEADER_HEIGHT = 52
+  const BOTTOM_NAV_HEIGHT = 64
+
+  const calcHeight = () => {
+    if (!isMobile) return '100%'
+    const navH = isKeyboardOpen ? 0 : BOTTOM_NAV_HEIGHT
+    if (viewportHeight) {
+      return `${Math.max(200, viewportHeight - TOP_HEADER_HEIGHT - navH - 12)}px`
+    }
+    return `calc(100dvh - ${TOP_HEADER_HEIGHT + navH + 12}px)`
+  }
 
   return (
     <div
       style={{
-        height: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
-        maxHeight: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
-        padding: isMobile ? `${H.spacing.sm} ${H.spacing.sm} ${paddingBottom}px ${H.spacing.sm}` : `${H.spacing.lg} ${H.spacing['2xl']}`,
+        height: calcHeight(),
+        maxHeight: calcHeight(),
+        padding: isMobile ? '6px 8px 6px 8px' : `${H.spacing.lg} ${H.spacing['2xl']}`,
         boxSizing: 'border-box',
         overflow: 'hidden',
         display: 'flex',

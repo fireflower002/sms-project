@@ -46,6 +46,8 @@ const DiffField = ({ label, oldValue, newValue }: { label: string; oldValue: any
     </div>
 );
 
+import { useToast } from '@/components/ui/Toast'
+
 // MAIN PAGE COMPONENT ========================================================
 export default function ProfileRequestsPage() {
   const [requests, setRequests] = useState<any[]>([])
@@ -55,6 +57,7 @@ export default function ProfileRequestsPage() {
   const [adminNote, setAdminNote] = useState<Record<string, string>>({})
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0 })
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -84,15 +87,29 @@ export default function ProfileRequestsPage() {
         if (req.new_full_name !== null) updates.full_name = req.new_full_name;
         if (req.new_phone !== null) updates.phone = req.new_phone;
         if (req.new_subjects !== null) updates.subjects = req.new_subjects;
-        await supabase.from('profiles').update(updates).eq('id', req.teacher_id);
+        
+        const { error: profError } = await supabase.from('profiles').update(updates).eq('id', req.teacher_id);
+        if (profError) {
+          console.error('Failed to update teacher profile:', profError.message);
+          showToast('Unable to save profile updates. Please try again.', 'error');
+          setProcessing(null);
+          return;
+        }
     }
     
-    await supabase.from('profile_change_requests').update({
+    const { error: reqError } = await supabase.from('profile_change_requests').update({
         status: approved ? 'approved' : 'rejected',
         reviewed_by: reviewerId,
         reviewed_at: new Date().toISOString(),
         admin_note: adminNote[req.id] || null
     }).eq('id', req.id);
+    
+    if (reqError) {
+      console.error('Failed to update change request status:', reqError.message);
+      showToast('Unable to update request status. Please try again.', 'error');
+    } else {
+      showToast(approved ? 'Profile change request approved!' : 'Profile change request rejected.', approved ? 'success' : 'info');
+    }
     
     setProcessing(null);
     fetchRequests();

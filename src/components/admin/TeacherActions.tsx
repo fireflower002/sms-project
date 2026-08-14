@@ -75,9 +75,10 @@ export default function TeacherActions({ teacherId, isActive, teacherName, onDon
             .eq('id', teacherId);
 
           if (error) {
+            console.error('Failed to update teacher status:', error.message);
             setModal({
               title: 'Error',
-              message: `Error: ${error.message}`,
+              message: 'Could not update teacher status. Please check your connection and try again.',
               variant: 'danger',
               confirmLabel: 'OK',
               cancelLabel: '',
@@ -87,9 +88,10 @@ export default function TeacherActions({ teacherId, isActive, teacherName, onDon
             onDone();
           }
         } catch (e: any) {
+          console.error('Unexpected error updating teacher status:', e.message);
           setModal({
             title: 'Unexpected Error',
-            message: `An unexpected error occurred: ${e.message}`,
+            message: 'An unexpected error occurred. Please refresh the page and try again.',
             variant: 'danger',
             confirmLabel: 'OK',
             cancelLabel: '',

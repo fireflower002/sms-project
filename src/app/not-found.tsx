@@ -1,3 +1,5 @@
+'use client'
+
 import { H } from '@/lib/honey'
 import { FileQuestion, Home } from 'lucide-react'
 

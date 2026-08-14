@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import {
   RefreshCw,
   Search,
@@ -13,11 +13,14 @@ import {
   ClipboardList,
   Plus,
   RotateCcw,
-  Download
+  Download,
+  Loader2,
+  Settings
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT, todaySLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
+import { SchoolSettings, DEFAULT_SCHOOL_SETTINGS } from '@/lib/calendarService'
 
 import StatCard from '@/components/ui/StatCard'
 import Badge from '@/components/ui/Badge'
@@ -75,6 +78,7 @@ const SWAP_STATUS_VARIANTS: Record<string, { label: string; variant: 'pending' |
 }
 
 function DisruptionsContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const initialTab = searchParams.get('tab') === 'swaps' ? 'swaps' : 'absences'
   const [activeTab, setActiveTab] = useState<'absences' | 'swaps'>(initialTab)
@@ -83,11 +87,19 @@ function DisruptionsContent() {
   const today = todaySLT()
   const { showToast } = useToast()
 
+  // Settings state
+  const [settings, setSettings] = useState<SchoolSettings>(DEFAULT_SCHOOL_SETTINGS)
+  const [settingsForm, setSettingsForm] = useState<SchoolSettings>(DEFAULT_SCHOOL_SETTINGS)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [savingSettings, setSavingSettings] = useState(false)
+
   // Absences state
   const [absences, setAbsences] = useState<any[]>([])
   const [absencesLoading, setAbsencesLoading] = useState(true)
   const [absenceSearch, setAbsenceSearch] = useState('')
-  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'all'>('today')
+  const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [processingAbsence, setProcessingAbsence] = useState<string | null>(null)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
 
   // Swaps state
@@ -101,26 +113,28 @@ function DisruptionsContent() {
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
 
   const handleExportAbsences = () => {
-    const filteredAbsences = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
+    const filtered = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
     const ok = exportToCSV(
       'absence_records',
       [
         { label: 'Teacher Name', key: 'teacher_name' },
         { label: 'Date', key: 'absence_date' },
         { label: 'Type', key: 'absence_type' },
+        { label: 'Status', key: 'status' },
         { label: 'Reason', key: 'reason' },
         { label: 'Coverage', key: 'cover_status' },
       ],
-      filteredAbsences.map(a => ({
+      filtered.map(a => ({
         teacher_name: a.teacher?.full_name || 'N/A',
         absence_date: a.absence_date,
         absence_type: ABSENCE_TYPE_VARIANTS[a.absence_type]?.label || a.absence_type,
+        status: a.status || 'pending',
         reason: a.reason || 'None provided',
         cover_status: a.substitutions?.length > 0 ? 'Covered' : 'Uncovered',
       }))
     )
     if (ok) {
-      showToast(`Exported ${filteredAbsences.length} absence records to CSV`, 'success')
+      showToast(`Exported ${filtered.length} absence records to CSV`, 'success')
     } else {
       showToast('No absence records available to export', 'warning')
     }
@@ -130,7 +144,8 @@ function DisruptionsContent() {
   const fetchAbsences = useCallback(async () => {
     setAbsencesLoading(true)
     let query = supabase.from('absences')
-      .select('*, teacher:profiles!teacher_id(id,full_name,subjects), substitutions(id,substitute_teacher_id,period_number)')
+      .select('*, teacher:profiles!teacher_id(id,full_name,subjects), substitutions(*, substitute:profiles!substitute_teacher_id(full_name))')
+      .not('template_id', 'is', null)
       .order('absence_date', { ascending: false })
 
     if (dateFilter === 'today') {
@@ -141,16 +156,59 @@ function DisruptionsContent() {
       query = query.gte('absence_date', d.toISOString().split('T')[0])
     }
 
-    const { data } = await query
+    let { data, error } = await query
+    if (error) {
+      // Fallback query if nested substitutions relation fails
+      const fallbackQuery = await supabase.from('absences')
+        .select('*, teacher:profiles!teacher_id(id,full_name,subjects), substitutions(*)')
+        .not('template_id', 'is', null)
+        .order('absence_date', { ascending: false })
+      data = fallbackQuery.data
+    }
     setAbsences(data || [])
     setAbsencesLoading(false)
   }, [supabase, dateFilter, today])
 
+  const handleApproveAbsence = async (absence: any) => {
+    setProcessingAbsence(absence.id)
+    const { error } = await supabase.from('absences').update({ status: 'approved' }).eq('id', absence.id)
+    if (error) {
+      console.error('Failed to approve absence:', error.message)
+      showToast('Could not approve cover request. Please verify cover teacher availability.', 'error')
+    } else {
+      showToast(`Absence approved! Redirecting to assign cover...`, 'success')
+      router.push(`/admin/absences/new?absence_id=${absence.id}`)
+    }
+    setProcessingAbsence(null)
+  }
+
+  const handleRejectAbsence = async (absence: any) => {
+    setModal({
+      title: 'Reject Absence Request?',
+      message: `Are you sure you want to reject ${absence.teacher?.full_name || 'this teacher'}'s absence request for ${absence.absence_date}?`,
+      variant: 'danger',
+      confirmLabel: 'Reject Request',
+      onConfirm: async () => {
+        setModal(null)
+        setProcessingAbsence(absence.id)
+        const { error } = await supabase.from('absences').update({ status: 'rejected' }).eq('id', absence.id)
+        if (error) {
+          console.error('Failed to reject absence:', error.message)
+          showToast('Could not decline cover request. Please try again.', 'error')
+        } else {
+          showToast(`Absence request rejected.`, 'info')
+          fetchAbsences()
+        }
+        setProcessingAbsence(null)
+      }
+    })
+  }
+
   // ── Fetch Swaps ──
   const fetchSwaps = useCallback(async () => {
     setSwapsLoading(true)
-    const { data } = await supabase.from('shift_swaps')
-      .select('*, requester:profiles!requester_id(full_name), target:profiles!target_teacher_id(full_name)')
+    const { data } = await supabase.from('swap_requests')
+      .select('*, requester:profiles!requester_id(full_name), target:profiles!target_teacher_id(full_name), requester_class:classes!requester_class_id(name), target_class:classes!target_class_id(name)')
       .order('created_at', { ascending: false })
 
     const list = data || []
@@ -168,12 +226,55 @@ function DisruptionsContent() {
     fetchSwaps()
   }, [fetchAbsences, fetchSwaps])
 
+  // Fetch school settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      const { data } = await supabase.from('school_settings').select('*').eq('school_id', 'default').maybeSingle()
+      if (data) {
+        setSettings(data)
+        setSettingsForm(data)
+      }
+    }
+    loadSettings()
+  }, [supabase])
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSavingSettings(true)
+    try {
+      const res = await fetch('/api/admin/calendar/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          absence_buffer_hours: settingsForm.absence_buffer_hours,
+          working_days: settingsForm.working_days,
+          allow_emergency_absence: settingsForm.allow_emergency_absence,
+          auto_sync_holidays: settingsForm.auto_sync_holidays,
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed saving school settings')
+      }
+
+      showToast('Absence settings updated successfully', 'success')
+      setSettings(json.settings)
+      setSettingsForm(json.settings)
+      setShowSettingsModal(false)
+    } catch (err: any) {
+      showToast(err.message || 'Error updating settings', 'error')
+    } finally {
+      setSavingSettings(false)
+    }
+  }
+
   // Handle Swap Decision (Approve/Reject)
   const handleSwapDecision = async (swap: any, approve: boolean) => {
     setSwapProcessing(swap.id)
     try {
       const newStatus = approve ? 'accepted' : 'rejected'
-      await supabase.from('shift_swaps').update({ status: newStatus }).eq('id', swap.id)
+      await supabase.from('swap_requests').update({ status: newStatus }).eq('id', swap.id)
       
       const notifBody = `Your swap request for ${swap.swap_date ? formatSLT(swap.swap_date, 'dd MMM yyyy') : 'the requested date'} has been ${approve ? 'approved' : 'rejected'} by the administration.`
       
@@ -193,7 +294,8 @@ function DisruptionsContent() {
       }
       showToast(`Class swap ${approve ? 'approved' : 'rejected'} successfully`, approve ? 'success' : 'info')
     } catch (err: any) {
-      showToast(err.message || 'Failed to update swap decision', 'error')
+      console.error('Failed to update swap decision:', err)
+      showToast(approve ? 'Could not approve class swap. Please try again.' : 'Could not decline class swap. Please try again.', 'error')
     } finally {
       setSwapProcessing(null)
       fetchSwaps()
@@ -250,11 +352,24 @@ function DisruptionsContent() {
   }
 
   // Absences calculations
-  const filteredAbsences = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
+  const pendingAbsenceCount = absences.filter(a => {
+    const curStatus = a.status || 'pending'
+    return curStatus === 'pending' || curStatus === 'late_submission'
+  }).length
+  const filteredAbsences = absences.filter(a => {
+    const matchesSearch = !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase())
+    const curStatus = a.status || 'pending'
+    const matchesStatus = statusFilter === 'all' || 
+      (statusFilter === 'pending' ? (curStatus === 'pending' || curStatus === 'late_submission') : curStatus === statusFilter)
+    return matchesSearch && matchesStatus
+  })
   const todayAbsences = absences.filter(a => a.absence_date === today)
   const todayCount = todayAbsences.length
   const coveredCount = todayAbsences.filter(a => a.substitutions?.length > 0).length
   const needsCover = todayCount - coveredCount
+
+  const urgentSwaps = absences.flatMap(a => (a.substitutions || []).map((s: any) => ({ ...s, absence: a })))
+    .filter((s: any) => s.status === 'swap_requested')
 
   return (
     <div style={styles.page}>
@@ -273,6 +388,14 @@ function DisruptionsContent() {
             </div>
           </div>
           <div style={styles.actionsWrapper}>
+            <button
+              onClick={() => setShowSettingsModal(true)}
+              style={{ ...styles.button, ...styles.buttonSecondary }}
+              title="Absence Settings"
+            >
+              <Settings size={14} />
+              <span>Cutoff Settings</span>
+            </button>
             <button
               onClick={activeTab === 'absences' ? fetchAbsences : fetchSwaps}
               style={{ ...styles.button, ...styles.buttonSecondary }}
@@ -301,7 +424,11 @@ function DisruptionsContent() {
           >
             <ClipboardList size={16} />
             <span>Absences & Cover</span>
-            {todayCount > 0 && <Badge variant="pending">{todayCount} Today</Badge>}
+            {pendingAbsenceCount > 0 ? (
+              <Badge variant="pending">{pendingAbsenceCount} Pending</Badge>
+            ) : todayCount > 0 ? (
+              <Badge variant="active">{todayCount} Today</Badge>
+            ) : null}
           </button>
           <button
             onClick={() => setActiveTab('swaps')}
@@ -341,15 +468,35 @@ function DisruptionsContent() {
                 </div>
               </div>
               <div style={{ ...styles.statCell, borderRight: 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: needsCover > 0 ? '#FFF7ED' : H.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AlertTriangle size={18} style={{ color: needsCover > 0 ? '#C2410C' : H.successGreen }} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: pendingAbsenceCount > 0 ? H.purpleLight : needsCover > 0 ? '#FFF7ED' : H.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertCircle size={18} style={{ color: pendingAbsenceCount > 0 ? H.purpleDark : needsCover > 0 ? '#C2410C' : H.successGreen }} />
                 </div>
                 <div>
-                  <div style={styles.statValue}>{needsCover}</div>
-                  <div style={styles.statLabel}>Needs Cover</div>
+                  <div style={styles.statValue}>{pendingAbsenceCount}</div>
+                  <div style={styles.statLabel}>Pending Approval</div>
                 </div>
               </div>
             </div>
+
+            {/* Urgent Swap Alert Banner */}
+            {urgentSwaps.length > 0 && (
+              <div style={{ margin: '16px 20px 0', padding: '14px 18px', borderRadius: '12px', background: H.softPinkLight, border: `1px solid ${H.softPinkDark}40`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <AlertTriangle size={20} style={{ color: H.softPinkDark }} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '13px', color: H.softPinkDark }}>
+                      URGENT: {urgentSwaps.length} Cover Swap Request(s) Pending Reassignment
+                    </div>
+                    <div style={{ fontSize: '12px', color: H.textPrimary, marginTop: '2px' }}>
+                      {urgentSwaps.map(s => `${s.substitute?.full_name || 'Cover teacher'} (P${s.period_number} for ${s.absence?.teacher?.full_name || 'absent teacher'})`).join(', ')}
+                    </div>
+                  </div>
+                </div>
+                <Link href={`/admin/absences/${urgentSwaps[0]?.absence_id}`} style={{ padding: '6px 14px', borderRadius: '8px', background: H.softPinkDark, color: '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}>
+                  Reassign Cover Now →
+                </Link>
+              </div>
+            )}
 
             {/* Integrated Toolbar */}
             <div style={styles.toolbar}>
@@ -374,7 +521,32 @@ function DisruptionsContent() {
                   }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* Status Filter */}
+                <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+                  {(['all', 'pending', 'approved', 'rejected'] as const).map(sf => (
+                    <button
+                      key={sf}
+                      onClick={() => setStatusFilter(sf)}
+                      style={{
+                        padding: '7px 12px',
+                        fontWeight: 600,
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        border: 'none',
+                        borderLeft: sf !== 'all' ? `1px solid ${H.border}` : 'none',
+                        background: statusFilter === sf ? H.surface : H.bg,
+                        color: statusFilter === sf ? H.purpleDark : H.textSec,
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {sf === 'pending' ? `Pending (${pendingAbsenceCount})` : sf}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Date Filter */}
                 <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden' }}>
                   {(['today', 'week', 'all'] as const).map(f => (
                     <button
@@ -435,16 +607,23 @@ function DisruptionsContent() {
                 <table style={styles.table}>
                   <thead>
                     <tr>
-                      {['Teacher', 'Date', 'Type', 'Reason', 'Cover Status', 'Actions'].map(h => (
+                      {['Teacher', 'Date', 'Type', 'Status', 'Reason', 'Cover Status', 'Actions'].map(h => (
                         <th key={h} style={styles.th}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {filteredAbsences.map(a => {
-                      const subCount = a.substitutions?.length || 0
+                      const subsList = a.substitutions || []
+                      const subCount = subsList.length
+                      const hasSwapRequest = subsList.some((s: any) => s.status === 'swap_requested')
                       const unassigned = subCount === 0
                       const typeConfig = ABSENCE_TYPE_VARIANTS[a.absence_type] || { label: a.absence_type, bg: '#F3F4F6', color: '#4B5563' }
+                      const currentStatus = a.status || 'pending'
+                      const isPending = currentStatus === 'pending'
+                      const isLateSubmission = currentStatus === 'late_submission'
+                      const isRejected = currentStatus === 'rejected'
+                      const isApprovedNeedsCover = currentStatus === 'approved' && unassigned
 
                       return (
                         <tr key={a.id}>
@@ -455,40 +634,109 @@ function DisruptionsContent() {
                               {typeConfig.label}
                             </Badge>
                           </td>
-                          <td style={{ ...styles.td, fontStyle: 'italic', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <td style={styles.td}>
+                            {isPending ? (
+                              <Badge variant="pending">Pending Review</Badge>
+                            ) : isLateSubmission ? (
+                              <Badge variant="danger" icon={<AlertCircle size={11} />}>Late Submission</Badge>
+                            ) : isRejected ? (
+                              <Badge variant="danger">Rejected</Badge>
+                            ) : isApprovedNeedsCover ? (
+                              <Badge variant="pending" icon={<AlertCircle size={11} />}>Approved — Needs Cover</Badge>
+                            ) : (
+                              <Badge variant="active">Approved</Badge>
+                            )}
+                          </td>
+                          <td style={{ ...styles.td, fontStyle: 'italic', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {a.reason || '-'}
                           </td>
                           <td style={styles.td}>
-                            <Link
-                              href={`/admin/absences/${a.id}`}
-                              style={{
-                                ...styles.button,
-                                textDecoration: 'none',
-                                minHeight: '32px',
-                                padding: '4px 12px',
-                                fontSize: '12px',
-                                ...(unassigned ? { background: H.skyLight, color: H.skyDark } : { background: H.successLight, color: '#065F46' })
-                              }}
-                            >
-                              {unassigned ? 'Assign Cover' : 'View Cover'}
-                            </Link>
+                            {hasSwapRequest ? (
+                              <Link
+                                href={`/admin/absences/${a.id}`}
+                                style={{
+                                  ...styles.button,
+                                  textDecoration: 'none',
+                                  minHeight: '32px',
+                                  padding: '4px 12px',
+                                  fontSize: '12px',
+                                  background: H.softPinkLight,
+                                  color: H.softPinkDark,
+                                  fontWeight: 700
+                                }}
+                              >
+                                Reassign Cover
+                              </Link>
+                            ) : (
+                              <Link
+                                href={`/admin/absences/new?absence_id=${a.id}`}
+                                style={{
+                                  ...styles.button,
+                                  textDecoration: 'none',
+                                  minHeight: '32px',
+                                  padding: '4px 12px',
+                                  fontSize: '12px',
+                                  ...(unassigned ? { background: H.skyLight, color: H.skyDark } : { background: H.successLight, color: '#065F46' })
+                                }}
+                              >
+                                {unassigned ? 'Assign Cover Now' : 'View Cover'}
+                              </Link>
+                            )}
                           </td>
                           <td style={styles.td}>
-                            <button
-                              onClick={() => triggerUndoAbsence(a)}
-                              style={{
-                                ...styles.button,
-                                ...styles.buttonDanger,
-                                minHeight: '32px',
-                                padding: '4px 10px',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                              }}
-                              title="Undo & cancel this absence record"
-                            >
-                              <RotateCcw size={13} />
-                              <span>Undo</span>
-                            </button>
+                            {(isPending || isLateSubmission) ? (
+                              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                <button
+                                  onClick={() => handleApproveAbsence(a)}
+                                  disabled={processingAbsence === a.id}
+                                  style={{
+                                    ...styles.button,
+                                    ...styles.buttonPrimary,
+                                    minHeight: '30px',
+                                    padding: '4px 10px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    backgroundColor: H.grass,
+                                  }}
+                                  title="Approve Absence"
+                                >
+                                  {processingAbsence === a.id ? <Loader2 size={12} style={{ animation: 'spin 0.7s linear infinite' }} /> : <CheckCircle2 size={12} />}
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleRejectAbsence(a)}
+                                  disabled={processingAbsence === a.id}
+                                  style={{
+                                    ...styles.button,
+                                    ...styles.buttonDanger,
+                                    minHeight: '30px',
+                                    padding: '4px 10px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                  }}
+                                  title="Reject Absence"
+                                >
+                                  <XCircle size={12} />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => triggerUndoAbsence(a)}
+                                style={{
+                                  ...styles.button,
+                                  ...styles.buttonDanger,
+                                  minHeight: '30px',
+                                  padding: '4px 10px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                }}
+                                title="Undo & cancel this absence record"
+                              >
+                                <RotateCcw size={13} />
+                                <span>Undo</span>
+                              </button>
+                            )}
                           </td>
                         </tr>
                       )
@@ -633,6 +881,67 @@ function DisruptionsContent() {
         {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
         onCancel={() => setModal(null)}
       />
+
+      {/* Absence Settings Modal */}
+      {showSettingsModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div style={{ width: '100%', maxWidth: '500px', backgroundColor: H.surface, borderRadius: '16px', boxShadow: H.cardShadow, padding: '24px', border: `1px solid ${H.border}` }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: H.textPrimary, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Settings size={20} style={{ color: H.purple }} />
+              Absence & Cutoff Settings
+            </h3>
+
+            <form onSubmit={handleSaveSettings} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: H.textMuted, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Absence Submission Buffer (Hours Before Start / After End)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={12}
+                  value={settingsForm.absence_buffer_hours ?? 2}
+                  onChange={e => setSettingsForm(f => ({ ...f, absence_buffer_hours: parseInt(e.target.value) || 0 }))}
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: `1px solid ${H.border}`, fontSize: '14px', boxSizing: 'border-box' }}
+                />
+                <div style={{ fontSize: '12px', color: H.textSec, marginTop: '4px' }}>
+                  Submissions within this buffer before school starts (or after school ends) require emergency approval or default to the next working day.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="checkbox"
+                  id="allowEmergencyCheck"
+                  checked={settingsForm.allow_emergency_absence}
+                  onChange={e => setSettingsForm(f => ({ ...f, allow_emergency_absence: e.target.checked }))}
+                />
+                <label htmlFor="allowEmergencyCheck" style={{ fontSize: '13px', fontWeight: 600, color: H.textPrimary }}>
+                  Allow Teachers to Check "Emergency Absence" After Cutoff
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSettingsModal(false)}
+                  style={{ padding: '10px 16px', borderRadius: '8px', border: `1px solid ${H.border}`, background: H.surface, color: H.textSec, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  style={{ padding: '10px 20px', borderRadius: '8px', background: H.purple, color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {savingSettings ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

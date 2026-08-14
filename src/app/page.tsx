@@ -21,6 +21,16 @@ export default function HomePage() {
           if (mounted) setLoading(false)
           return
         }
+
+        const res = await fetch('/api/auth/role')
+        if (res.ok) {
+          const roleData = await res.json()
+          if (roleData.role) {
+            router.push(roleData.role === 'admin' ? '/admin' : '/teacher')
+            return
+          }
+        }
+
         const { data: prof } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle()
         if (prof?.role) {
           router.push(prof.role === 'admin' ? '/admin' : '/teacher')

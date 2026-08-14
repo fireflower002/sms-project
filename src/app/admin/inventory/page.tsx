@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X, Upload, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getItemPublicUrl } from '@/lib/siteUrl'
@@ -201,7 +202,9 @@ const InventoryItemCard = ({ item, onDelete, onShowQr }: { item: any; onDelete: 
 }
 
 // MAIN PAGE COMPONENT ========================================================
-export default function InventoryPage() {
+function InventoryPageContent() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -213,6 +216,13 @@ export default function InventoryPage() {
   const [showBatchQrModal, setShowBatchQrModal] = useState(false)
   const supabase = createClient()
   const { showToast } = useToast()
+
+  useEffect(() => {
+    if (searchParams.get('created')) {
+      showToast('Inventory item saved successfully', 'success')
+      router.replace('/admin/inventory')
+    }
+  }, [searchParams, router, showToast])
 
   const handleExportCSV = () => {
     const ok = exportToCSV(
@@ -295,7 +305,8 @@ export default function InventoryPage() {
       showToast(`Deleted item "${itemToDelete.name}"`, 'info')
       fetchItems()
     } catch (err: any) {
-      showToast(err.message || 'Failed to delete item.', 'error')
+      console.error('Failed to delete inventory item:', err)
+      showToast('Could not delete inventory item. Please try again.', 'error')
     }
   }
 
@@ -534,5 +545,17 @@ export default function InventoryPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function InventoryPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <RefreshCw size={28} style={{ animation: 'spin 1s linear infinite', color: H.mintGreen }} />
+      </div>
+    }>
+      <InventoryPageContent />
+    </Suspense>
   )
 }
