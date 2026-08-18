@@ -317,6 +317,13 @@ function InventoryPageContent() {
     return () => clearTimeout(timer)
   }, [fetchItems, search])
 
+  const INVENTORY_PAGE_SIZE = 24
+  const [invPage, setInvPage] = useState(0)
+  const totalPages = Math.ceil(items.length / INVENTORY_PAGE_SIZE)
+  const displayedItems = items.slice(invPage * INVENTORY_PAGE_SIZE, (invPage + 1) * INVENTORY_PAGE_SIZE)
+
+  useEffect(() => { setInvPage(0) }, [search, category, showLowStock])
+
   return (
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
@@ -444,11 +451,29 @@ function InventoryPageContent() {
               <EmptyState title="No Items Found" description="No inventory items match the current filters." />
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full" style={{ width: '100%' }}>
-              {items.map(item => (
-                <InventoryItemCard key={item.id} item={item} onDelete={handleDeleteItem} onShowQr={setSingleQrItem} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full" style={{ width: '100%' }}>
+                {displayedItems.map(item => (
+                  <InventoryItemCard key={item.id} item={item} onDelete={handleDeleteItem} onShowQr={setSingleQrItem} />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderTop: `1px solid ${H.border}`, paddingTop: '16px' }}>
+                  <span style={{ fontSize: '13px', color: H.textSec }}>
+                    Showing {invPage * INVENTORY_PAGE_SIZE + 1}–{Math.min((invPage + 1) * INVENTORY_PAGE_SIZE, items.length)} of {items.length} items
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setInvPage(p => Math.max(0, p - 1))} disabled={invPage === 0} style={{ ...styles.button, ...styles.buttonSecondary, padding: '6px 14px', fontSize: '13px', opacity: invPage === 0 ? 0.5 : 1 }}>
+                      Previous
+                    </button>
+                    <button onClick={() => setInvPage(p => Math.min(totalPages - 1, p + 1))} disabled={invPage >= totalPages - 1} style={{ ...styles.button, ...styles.buttonSecondary, padding: '6px 14px', fontSize: '13px', opacity: invPage >= totalPages - 1 ? 0.5 : 1 }}>
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

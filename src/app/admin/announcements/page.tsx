@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, Fragment, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, RefreshCw, Pin, Trash2, Eye, Megaphone, MessageSquare, Search } from 'lucide-react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
@@ -23,7 +24,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
   mainGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' },
-  // Badges
   badge: { display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '9999px', fontSize: '12px', fontWeight: 600, textTransform: 'capitalize' },
 };
 
@@ -33,7 +33,6 @@ const PRIORITY_COLORS = {
   low: '#A8A29E'
 };
 
-// SUB-COMPONENTS ==============================================================
 const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting }: { item: any; totalTeachers: number; onTogglePin: (id: string, pinned: boolean) => void; onDelete: (id: string, title: string) => void; deleting: boolean }) => {
   const readCount = item.reads?.[0]?.count || 0;
   const pct = totalTeachers > 0 ? Math.round((readCount / totalTeachers) * 100) : 0;
@@ -52,7 +51,6 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: H.textPrimary, margin: '0 0 8px' }}>{item.title}</h3>
         <p style={{ fontSize: '14px', color: H.textSec, lineHeight: 1.6, margin: '0 0 16px' }}>{item.body}</p>
         
-        {/* Classes/Targeting */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginBottom: '12px' }}>
           <span style={{ fontSize: '12px', fontWeight: 700, color: H.textMuted }}>Audience:</span>
           {classNames.length === 0 ? (
@@ -64,7 +62,6 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
           )}
         </div>
 
-        {/* Relevant Dates & Expiry info */}
         {(item.start_date || item.end_date || item.expiry_date) && (
           <div style={{ fontSize: '12px', background: H.bg, padding: '8px 12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '12px' }}>
             {(item.start_date || item.end_date) && (
@@ -109,16 +106,36 @@ const AnnouncementCard = ({ item, totalTeachers, onTogglePin, onDelete, deleting
   );
 };
 
+const fetchAdminAnnouncementsData = async () => {
+  const supabase = createClient()
+  const [{ data }, { count: tc }] = await Promise.all([
+    supabase
+      .from('announcements')
+      .select('*, reads:announcement_reads(count), author:profiles!created_by(full_name), targets:announcement_classes(class:classes(name))')
+      .eq('is_active', true)
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
+  ])
+  return {
+    items: data || [],
+    totalTeachers: tc || 0,
+  }
+}
+
 function AnnouncementsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: swrData, isLoading: loading, mutate } = useSWR('admin-announcements-data', fetchAdminAnnouncementsData, { revalidateOnFocus: true })
+  
+  const items = swrData?.items || []
+  const totalTeachers = swrData?.totalTeachers || 0
+
   const [deleting, setDeleting] = useState<string | null>(null)
-  const [totalTeachers, setTotalTeachers] = useState(0)
   const [filter, setFilter] = useState<'all' | 'pinned' | 'urgent'>('all')
+  const [search, setSearch] = useState('')
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
-  const supabase = createClient();
+  const supabase = createClient()
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -138,21 +155,6 @@ function AnnouncementsContent() {
     }
   }, [searchParams, router, showToast])
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true)
-    const [{ data }, { count: tc }] = await Promise.all([
-      supabase.from('announcements').select('*, reads:announcement_reads(count), author:profiles!created_by(full_name), targets:announcement_classes(class:classes(name))').eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
-    ]);
-    setItems(data || []);
-    setTotalTeachers(tc || 0);
-    setLoading(false);
-  }, [supabase]);
-
-  useEffect(() => { fetchItems() }, [fetchItems]);
-
-  const [search, setSearch] = useState('')
-
   const togglePin = async (id: string, pinned: boolean) => {
     const { error } = await supabase.from('announcements').update({ is_pinned: !pinned }).eq('id', id);
     if (error) {
@@ -161,7 +163,7 @@ function AnnouncementsContent() {
       return;
     }
     showToast(pinned ? 'Announcement unpinned' : 'Announcement pinned', 'success')
-    fetchItems();
+    mutate();
   };
 
   const deleteItem = (id: string, title: string) => {
@@ -174,9 +176,6 @@ function AnnouncementsContent() {
         setModal(null);
         setDeleting(id);
         
-        // Optimistic UI update
-        setItems(prev => prev.filter(i => i.id !== id));
-
         try {
           const res = await fetch('/api/admin/announcements/delete', {
             method: 'DELETE',
@@ -189,14 +188,13 @@ function AnnouncementsContent() {
           if (!res.ok || !resData.success) {
             console.error('Failed to delete announcement:', resData.error)
             showToast('Could not delete announcement. Please check your connection.', 'error')
-            fetchItems(); // Restore items on error
           } else {
             showToast(`Deleted notice "${title}"`, 'info')
+            mutate();
           }
         } catch (err: any) {
           console.error('Failed to delete announcement:', err)
           showToast('Could not delete announcement. Please check your connection.', 'error')
-          fetchItems(); // Restore items on error
         } finally {
           setDeleting(null);
         }
@@ -232,7 +230,7 @@ function AnnouncementsContent() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button onClick={fetchItems} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px' }} title="Refresh">
+            <button onClick={() => mutate()} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px' }} title="Refresh">
               <RefreshCw size={14} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
             </button>
             <Link href="/admin/announcements/new" style={{ ...styles.button, ...styles.buttonPrimary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
@@ -277,7 +275,7 @@ function AnnouncementsContent() {
         </div>
 
         <div style={{ padding: '24px' }}>
-          {loading ? (
+          {loading && !swrData ? (
             <div style={{ padding: '48px', textAlign: 'center', color: H.textMuted }}>
               <LoadingSpinner size={28} />
             </div>
