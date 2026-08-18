@@ -103,31 +103,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Logged in — check role & password change requirement for protected sections
-  let role: string | undefined = undefined
-  let mustChangePassword = false
+  // Logged in — read role & password change requirement from secure app_metadata (server-managed claim)
+  let role = (user.app_metadata?.role as string) || (user.user_metadata?.role as string)
+  let mustChangePassword = Boolean(user.app_metadata?.must_change_password ?? user.user_metadata?.must_change_password)
 
-  const userEmail = user.email?.toLowerCase() || ''
+  // Fallback to database lookup only if claims are not populated in JWT token
+  if (!role) {
+    const userEmail = user.email?.toLowerCase() || ''
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, must_change_password')
+      .eq('id', user.id)
+      .maybeSingle()
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, must_change_password')
-    .eq('id', user.id)
-    .maybeSingle()
+    const { data: allowed } = await supabase
+      .from('allowed_users')
+      .select('role, must_change_password')
+      .eq('email', userEmail)
+      .maybeSingle()
 
-  const { data: allowed } = await supabase
-    .from('allowed_users')
-    .select('role, must_change_password')
-    .eq('email', userEmail)
-    .maybeSingle()
-
-  const isAdmin = profile?.role === 'admin' || allowed?.role === 'admin'
-
-  if (isAdmin) {
-    role = 'admin'
-    mustChangePassword = false
-  } else {
-    role = profile?.role || 'teacher'
+    role = profile?.role || allowed?.role || 'teacher'
     mustChangePassword = Boolean(profile?.must_change_password || allowed?.must_change_password)
   }
 

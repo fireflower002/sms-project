@@ -344,7 +344,10 @@ function NewAbsenceContent() {
     }
   }
 
-  const notifyAll = async () => { for (const pNum of Object.keys(assignedSubs).map(Number)) { if (!notified[pNum]) await notifySubstitute(pNum) } }
+  const notifyAll = async () => {
+    const unnotifiedPNums = Object.keys(assignedSubs).map(Number).filter(pNum => !notified[pNum])
+    await Promise.all(unnotifiedPNums.map(pNum => notifySubstitute(pNum)))
+  }
   const filteredTeachers = teachers.filter(t=>!search||t.full_name.toLowerCase().includes(search.toLowerCase())||t.email?.toLowerCase().includes(search.toLowerCase()))
 
   if (fetching) return <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}><Loader2 size={22} style={{ color:H.purple, animation:'spin 0.7s linear infinite' }}/></div>

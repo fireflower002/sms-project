@@ -89,7 +89,7 @@ export default function AdminTimetableImportPage() {
 
     try {
       const arrayBuffer = await selectedFile.arrayBuffer()
-      const parseRes = parseTimetableBuffer(Buffer.from(arrayBuffer))
+      const parseRes = await parseTimetableBuffer(Buffer.from(arrayBuffer))
 
       if (parseRes.parseError) {
         showToast(parseRes.parseError, 'error')

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
+import useSWR from 'swr'
+
 export interface NotificationItem {
   id: string
   user_id: string
@@ -17,42 +19,40 @@ export interface NotificationItem {
   created_at: string
 }
 
+// SWR fetcher with targeted column projection and limit(15)
+const notificationsFetcher = async () => {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return []
+
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, user_id, type, title, body, link, is_read, created_at')
+    .eq('user_id', session.user.id)
+    .order('created_at', { ascending: false })
+    .limit(15)
+
+  if (error) {
+    console.warn('[NotificationBell] error fetching notifications:', error.message)
+    return []
+  }
+  return data || []
+}
+
 export default function NotificationBell() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([])
-  const [unreadCount, setUnreadCount] = useState<number>(0)
+  const { data: swrData, mutate } = useSWR('user-notifications', notificationsFetcher, {
+    revalidateOnFocus: true,
+    refreshInterval: 30000,
+  })
+
+  const notifications = swrData || []
+  const unreadCount = notifications.filter(n => !n.is_read).length
   const [isOpen, setIsOpen] = useState<boolean>(false)
-  const [loading, setLoading] = useState<boolean>(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
-  const fetchNotifications = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(15)
-
-      if (error) {
-        console.warn('[NotificationBell] error fetching notifications:', error.message)
-        return
-      }
-
-      setNotifications(data || [])
-      setUnreadCount((data || []).filter(n => !n.is_read).length)
-    } catch (err) {
-      console.warn('[NotificationBell] error:', err)
-    }
-  }
-
   useEffect(() => {
-    fetchNotifications()
-
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false)
@@ -64,16 +64,16 @@ export default function NotificationBell() {
 
   const handleToggle = () => {
     if (!isOpen) {
-      fetchNotifications()
+      mutate()
     }
     setIsOpen(!isOpen)
   }
 
   const markAsRead = async (notif: NotificationItem) => {
     if (!notif.is_read) {
-      setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n))
-      setUnreadCount(prev => Math.max(0, prev - 1))
+      mutate((prev) => (prev || []).map(n => n.id === notif.id ? { ...n, is_read: true } : n), false)
       await supabase.from('notifications').update({ is_read: true }).eq('id', notif.id)
+      mutate()
     }
     if (notif.link) {
       setIsOpen(false)
@@ -82,11 +82,11 @@ export default function NotificationBell() {
   }
 
   const markAllAsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-    setUnreadCount(0)
+    mutate((prev) => (prev || []).map(n => ({ ...n, is_read: true })), false)
     const { data: { session } } = await supabase.auth.getSession()
     if (session?.user) {
       await supabase.from('notifications').update({ is_read: true }).eq('user_id', session.user.id).eq('is_read', false)
+      mutate()
     }
   }
 

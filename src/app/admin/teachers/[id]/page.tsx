@@ -116,21 +116,21 @@ export default function TeacherDetailPage() {
     // Fetch Available Subjects
     await fetchAvailableSubjects()
 
-    // 1. Fetch Profile
-    const { data: prof, error: profErr } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', teacherId)
-      .maybeSingle()
-
-    if (profErr || !prof) {
-      // Check if it's in allowed_users instead
-      const { data: allowed } = await supabase
-        .from('allowed_users')
-        .select('*')
+    // 1. Fetch Profile & Allowed Users concurrently with explicit projections
+    const [{ data: prof, error: profErr }, { data: allowed }] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('id, full_name, email, phone, role, subjects, is_active, must_change_password, created_at')
         .eq('id', teacherId)
-        .maybeSingle()
+        .maybeSingle(),
+      supabase
+        .from('allowed_users')
+        .select('id, full_name, email, phone, role, subjects, must_change_password, created_at')
+        .eq('id', teacherId)
+        .maybeSingle(),
+    ])
 
+    if (!prof) {
       if (allowed) {
         setTeacher({
           id: allowed.id,

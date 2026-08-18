@@ -26,57 +26,53 @@ const getPriorityBadgeVariant = (priority: string) => {
   }
 }
 
+import useSWR from 'swr'
+
+const fetchTeacherAnnouncements = async () => {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return { anns: [], readIds: new Set<string>() }
+
+  const [{ data: anns }, { data: reads }, { data: schedule }] = await Promise.all([
+    supabase
+      .from('announcements')
+      .select('id, title, body, priority, is_pinned, is_published, created_at, target_type, expires_at, start_date, end_date, targets:announcement_classes(class_id, class:classes(name))')
+      .eq('is_published', true)
+      .eq('is_active', true)
+      .order('is_pinned', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20),
+    supabase.from('announcement_reads').select('announcement_id').eq('user_id', session.user.id),
+    supabase.from('schedule_assignments').select('class_id').eq('teacher_id', session.user.id),
+  ])
+
+  const myClassIds = Array.from(new Set((schedule || []).map((s: any) => s.class_id)))
+  const now = new Date()
+
+  const validAnns = (anns || []).filter((a: any) => {
+    if (a.expires_at && new Date(a.expires_at) < now) return false
+    if (a.target_type === 'all') return true
+    if (a.target_type === 'role_teachers') return true
+    if (a.target_type === 'specific_classes') {
+      const targetClassIds = (a.targets || []).map((t: any) => t.class_id)
+      return targetClassIds.some((id: string) => myClassIds.includes(id))
+    }
+    return true
+  })
+
+  return {
+    anns: validAnns,
+    readIds: new Set<string>((reads || []).map((r: any) => r.announcement_id))
+  }
+}
+
 export default function TeacherAnnouncementsPage() {
-  const [items, setItems] = useState<any[]>([])
-  const [readIds, setReadIds] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
+  const { data: swrData, isLoading: loading } = useSWR('teacher-announcements-feed', fetchTeacherAnnouncements, { revalidateOnFocus: true })
+  const items = swrData?.anns || []
+  const readIds = swrData?.readIds || new Set<string>()
   const [filter, setFilter] = useState<'unread' | 'all'>('unread')
   const supabase = createClient()
   const router = useRouter()
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) { router.push('/teacher/login'); return }
-
-      const [{ data: anns }, { data: reads }, { data: schedule }] = await Promise.all([
-        supabase.from('announcements').select('*, targets:announcement_classes(class_id, class:classes(name))').eq('is_published', true).eq('is_active', true).order('is_pinned', { ascending: false }).order('created_at', { ascending: false }),
-        supabase.from('announcement_reads').select('announcement_id').eq('user_id', session.user.id),
-        supabase.from('schedule_assignments').select('class_id').eq('teacher_id', session.user.id),
-      ])
-
-      const myClassIds = Array.from(new Set((schedule || []).map((s: any) => s.class_id)))
-      const now = new Date()
-
-      // Filter by expiry and targeting
-      const filteredAnns = (anns || []).filter((ann: any) => {
-        // Expiry check
-        if (ann.expiry_date && new Date(ann.expiry_date) < now) return false;
-
-        // Class targeting check
-        const classTargets = ann.targets || [];
-        if (classTargets.length === 0) return true; // public
-        return classTargets.some((t: any) => myClassIds.includes(t.class_id));
-      });
-
-      const initialReadIds = new Set((reads || []).map((r: any) => r.announcement_id))
-      setItems(filteredAnns)
-      setReadIds(initialReadIds)
-      setLoading(false)
-
-      // Auto-mark as read after a short delay
-      setTimeout(async () => {
-        const unreadItems = filteredAnns.filter((a: any) => !initialReadIds.has(a.id))
-        if (unreadItems.length > 0) {
-          const newReads = unreadItems.map(item => ({ announcement_id: item.id, user_id: session.user.id }))
-          await supabase.from('announcement_reads').upsert(newReads)
-          const updatedReadIds = new Set([...Array.from(initialReadIds), ...unreadItems.map(i => i.id)])
-          setReadIds(updatedReadIds)
-        }
-      }, 2500)
-    }
-    fetchData()
-  }, [router, supabase])
 
   const unreadCount = items.filter(i => !readIds.has(i.id)).length
   const filteredItems = filter === 'unread' ? items.filter(i => !readIds.has(i.id)) : items

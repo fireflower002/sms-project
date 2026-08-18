@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { RefreshCw, Search, AlertTriangle, Plus, Package, SlidersHorizontal, Laptop, FlaskConical, Trophy, BookOpen, Music, TestTube, ShieldAlert, Pencil, Trash2, QrCode, Printer, X, Upload, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -255,16 +256,15 @@ function InventoryPageContent() {
       const { data } = await query
       let list = data || []
 
-      // Auto-backfill missing public_token for legacy items
+      // Auto-backfill missing public_token for legacy items using single bulk upsert
       const unbackfilled = list.filter(i => !i.public_token)
       if (unbackfilled.length > 0) {
-        await Promise.all(
-          unbackfilled.map(async (itemToBackfill) => {
-            const newToken = crypto.randomUUID()
-            itemToBackfill.public_token = newToken
-            return supabase.from('inventory').update({ public_token: newToken }).eq('id', itemToBackfill.id)
-          })
-        )
+        const updates = unbackfilled.map(itemToBackfill => {
+          const newToken = crypto.randomUUID()
+          itemToBackfill.public_token = newToken
+          return { id: itemToBackfill.id, public_token: newToken }
+        })
+        await supabase.from('inventory').upsert(updates, { onConflict: 'id' })
       }
 
       if (showLowStock) list = list.filter(i => i.quantity_available <= i.low_stock_threshold)
@@ -471,10 +471,13 @@ function InventoryPageContent() {
               <p style={{ margin: '0 0 12px 0', fontSize: 12, color: H.textSec, fontFamily: 'DM Mono, monospace' }}>
                 {singleQrItem.category} | {singleQrItem.barcode || `INV-2026-${singleQrItem.id.slice(0, 5)}`}
               </p>
-              <img
+              <Image
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(getItemPublicUrl(singleQrItem.public_token || singleQrItem.id))}`}
                 alt="QR Code"
-                style={{ width: 140, height: 140, margin: '0 auto', display: 'block', borderRadius: 8, border: `1px solid ${H.border}`, padding: 6, background: '#fff' }}
+                width={140}
+                height={140}
+                unoptimized
+                style={{ margin: '0 auto', display: 'block', borderRadius: 8, border: `1px solid ${H.border}`, padding: 6, background: '#fff' }}
               />
               <p style={{ margin: '10px 0 0 0', fontSize: 11, color: H.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Scan to verify item

@@ -106,11 +106,12 @@ export async function POST(request: Request) {
     const { error: allowedErr } = await adminSupabase.from('allowed_users').upsert(allowedPayload, { onConflict: 'email' })
     if (allowedErr) console.warn('[API create-teacher] allowed_users upsert warning:', allowedErr.message)
 
-    // 5. Create Supabase Auth user server-side with email pre-confirmed
+    // 5. Create Supabase Auth user server-side with email pre-confirmed and app_metadata claims
     const { data: authData, error: createAuthError } = await adminSupabase.auth.admin.createUser({
       email: normalizedEmail,
       password: tempPassword,
       email_confirm: true,
+      app_metadata: { role: 'teacher', must_change_password: true },
       user_metadata: { full_name: normalizedName, must_change_password: true, role: 'teacher' },
     })
 

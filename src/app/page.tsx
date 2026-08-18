@@ -1,56 +1,34 @@
-'use client'
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { redirect } from 'next/navigation'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import LoginForm from '@/components/auth/LoginForm'
-import { H } from '@/lib/honey'
 
-export default function HomePage() {
-  const [supabase] = useState(() => createClient())
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
+export const dynamic = 'force-dynamic'
 
-  useEffect(() => {
-    let mounted = true
+export default async function HomePage() {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session?.user) {
-          if (mounted) setLoading(false)
-          return
-        }
-
-        const res = await fetch('/api/auth/role')
-        if (res.ok) {
-          const roleData = await res.json()
-          if (roleData.role) {
-            router.push(roleData.role === 'admin' ? '/admin' : '/teacher')
-            return
-          }
-        }
-
-        const { data: prof } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle()
-        if (prof?.role) {
-          router.push(prof.role === 'admin' ? '/admin' : '/teacher')
-        } else {
-          if (mounted) setLoading(false)
-        }
-      } catch {
-        if (mounted) setLoading(false)
-      }
+  if (user) {
+    // Read secure app_metadata claim first
+    const role = (user.app_metadata?.role as string) || (user.user_metadata?.role as string)
+    if (role === 'admin') {
+      redirect('/admin')
+    } else if (role === 'teacher') {
+      redirect('/teacher')
     }
 
-    checkAuth()
-  }, [router, supabase])
+    // Database fallback if claims not populated
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: H.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Loader2 size={32} style={{ color: H.skyBlue, animation: 'spin 0.7s linear infinite' }} />
-      </div>
-    )
+    if (prof?.role === 'admin') {
+      redirect('/admin')
+    } else {
+      redirect('/teacher')
+    }
   }
 
   return <LoginForm role="teacher" homePath="/teacher" title="School Management Portal" />

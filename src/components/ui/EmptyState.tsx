@@ -1,82 +1,113 @@
+import React from 'react'
+import { Package, type LucideIcon } from 'lucide-react'
 import { H } from '@/lib/honey'
 
 interface EmptyStateProps {
-  /** Main heading text */
+  icon?: any
   title: string
-  /** Secondary body text */
+  message?: string
   description?: string
-  /**
-   * Optional Lucide (or any) icon node rendered above the title.
-   * Sized / coloured by the caller, e.g. <GraduationCap size={48} />.
-   */
-  icon?: React.ReactNode
-  /** Optional CTA button / link node rendered below the description */
+  actionLabel?: string
+  onAction?: () => void
   action?: React.ReactNode
-  /** Extra styles forwarded to the outer wrapper div */
   style?: React.CSSProperties
 }
 
-/**
- * Empty-state placeholder component.
- *
- * Covers all variants found in the project:
- *   – with icon + title + description + CTA button (admin/classes)
- *   – with title + description only (admin/announcements, admin/inventory,
- *     admin/profile-requests, teacher/swaps, teacher/announcements,
- *     admin/timetable)
- *
- * Renders a centred card-like block. The caller decides whether to nest it
- * inside an existing card div or let EmptyState render standalone with a
- * built-in card surface (pass a `style` with the card look if needed).
- *
- * Examples:
- *   <EmptyState title="No Announcements Found" description="There are no announcements for the selected filter." />
- *
- *   <EmptyState
- *     icon={<GraduationCap size={48} style={{ color: H.sub }} />}
- *     title="No grades yet"
- *     description="Add a grade to create classes for your school"
- *     action={<button onClick={...} style={...}>Add First Grade</button>}
- *   />
- */
-export default function EmptyState({
+export function EmptyState({
+  icon: IconProp = Package,
   title,
+  message,
   description,
-  icon,
+  actionLabel,
+  onAction,
   action,
   style,
 }: EmptyStateProps) {
+  const displayMessage = message || description || ''
+
+  const renderIcon = () => {
+    if (!IconProp) return <Package size={28} />
+    if (React.isValidElement(IconProp)) return IconProp
+    const IconComponent = IconProp as React.ElementType
+    return <IconComponent size={28} />
+  }
+
   return (
     <div
       style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '48px 24px',
         textAlign: 'center',
-        padding: '56px 24px',
-        color: H.textMuted,
-        animation: 'slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        backgroundColor: H.surface,
+        border: `1px dashed ${H.border}`,
+        borderRadius: H.radius.xl,
+        margin: '16px 0',
         ...style,
       }}
     >
-      {icon && (
-        <div style={{ marginBottom: H.spacing.lg, display: 'flex', justifyContent: 'center' }}>
-          {icon}
-        </div>
-      )}
-      <h3
+      <div
         style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: H.radius.full,
+          backgroundColor: '#F4F4F5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: H.muted,
+          marginBottom: '16px',
+        }}
+      >
+        {renderIcon()}
+      </div>
+      <h4
+        style={{
+          fontFamily: H.font,
           fontSize: H.fontSize.lg,
           fontWeight: H.fontWeight.bold,
           color: H.textPrimary,
-          margin: `0 0 ${H.spacing.sm}`,
+          margin: '0 0 6px 0',
         }}
       >
         {title}
-      </h3>
-      {description && (
-        <p style={{ margin: `0 0 ${H.spacing['2xl']}`, fontSize: H.fontSize.base, color: H.textMuted, lineHeight: 1.5 }}>
-          {description}
-        </p>
-      )}
-      {action && <div>{action}</div>}
+      </h4>
+      <p
+        style={{
+          fontFamily: H.font,
+          fontSize: H.fontSize.sm,
+          color: H.textMuted,
+          maxWidth: '380px',
+          margin: '0 0 20px 0',
+          lineHeight: 1.5,
+        }}
+      >
+        {displayMessage}
+      </p>
+      {action ? action : (actionLabel && onAction && (
+        <button
+          type="button"
+          onClick={onAction}
+          style={{
+            backgroundColor: '#18181B',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: H.radius.lg,
+            padding: '10px 18px',
+            fontFamily: H.font,
+            fontWeight: H.fontWeight.bold,
+            fontSize: H.fontSize.sm,
+            cursor: 'pointer',
+            transition: H.motion.transitionFast,
+          }}
+        >
+          {actionLabel}
+        </button>
+      ))}
     </div>
   )
 }
+
+export default EmptyState

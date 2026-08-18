@@ -293,7 +293,7 @@ export default function TeacherDashboard() {
     } catch (e) {}
 
     let prof: any = null
-    const { data: fetchProf } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle()
+    const { data: fetchProf } = await supabase.from('profiles').select('id, full_name, email, phone, role, subjects, is_active, must_change_password').eq('id', session.user.id).maybeSingle()
     prof = fetchProf
 
     if (!prof) {
@@ -303,7 +303,7 @@ export default function TeacherDashboard() {
       let mustChangePassword = false
 
       if (userEmail) {
-        const { data: allowed } = await supabase.from('allowed_users').select('*').eq('email', userEmail).maybeSingle()
+        const { data: allowed } = await supabase.from('allowed_users').select('id, full_name, email, phone, role, subjects, is_registered').eq('email', userEmail).maybeSingle()
         if (allowed) {
           fullName = allowed.full_name || fullName
           subjects = allowed.subjects || []

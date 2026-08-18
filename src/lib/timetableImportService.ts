@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx'
 
 export interface TimetableRowRaw {
   rowNumber: number
@@ -43,8 +42,9 @@ const DAY_MAP: Record<string, number> = {
  * Parses an Excel / CSV buffer into structured raw timetable rows.
  * Enforces file size (max 5MB) and row count (max 1000 rows) limits.
  */
-export function parseTimetableBuffer(buffer: ArrayBuffer | Buffer): { rows: TimetableRowRaw[]; parseError?: string } {
+export async function parseTimetableBuffer(buffer: ArrayBuffer | Buffer): Promise<{ rows: TimetableRowRaw[]; parseError?: string }> {
   try {
+    const XLSX = await import('xlsx')
     const workbook = XLSX.read(buffer, { type: 'buffer' })
     const firstSheetName = workbook.SheetNames[0]
     if (!firstSheetName) {

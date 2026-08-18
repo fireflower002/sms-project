@@ -6,53 +6,8 @@ import { H } from '@/lib/honey'
 import { getSubjectSuggestion, formatSubjectName } from '@/lib/subjectUtils'
 import { useFocusTrap } from '@/lib/useFocusTrap'
 
-export const CURATED_PALETTE = [
-  '#F59E0B', // Warm Amber (38°)
-  '#8B5CF6', // Purple (258°)
-  '#EAB308', // Golden Yellow (48°)
-  '#EF4444', // Red (0°)
-  '#06B6D4', // Cyan (189°)
-  '#EC4899', // Pink (330°)
-  '#10B981', // Emerald Green (160°)
-  '#F97316', // Orange (24°)
-  '#3B82F6', // Blue (217°)
-  '#84CC16', // Lime Green (84°)
-  '#D946EF', // Fuchsia (292°)
-  '#059669', // Mint Green (160°)
-  '#7C3AED', // Deep Purple (263°)
-  '#F43F5E', // Rose (349°)
-  '#14B8A6', // Teal (173°)
-  '#6366F1', // Indigo (239°)
-  '#B45309', // Bronze (28°)
-  '#0EA5E9', // Sky Blue (199°)
-  '#E11D48', // Crimson (348°)
-  '#1D4ED8', // Deep Blue (224°)
-  '#15803D', // Forest Green (142°)
-  '#0284C7', // Ocean Blue (201°)
-  '#4338CA', // Iris (244°)
-]
-
-export const DEFAULT_SUBJECT_COLORS: Record<string, string> = {
-  English: '#3B82F6',   // Blue
-  Maths: '#6366F1',     // Indigo
-  Mathematics: '#6366F1',// Indigo
-  Science: '#10B981',   // Emerald Green
-  History: '#F59E0B',   // Warm Amber
-  Music: '#EAB308',     // Golden Yellow
-  Sinhala: '#F97316',   // Orange
-  Tamil: '#8B5CF6',     // Purple
-  Geography: '#0284C7', // Ocean Blue
-  ICT: '#84CC16',       // Lime Green
-  Art: '#EC4899',       // Pink
-  PE: '#059669',        // Mint Green
-  Religion: '#7C3AED',  // Deep Violet
-  Commerce: '#D946EF',  // Fuchsia
-  Biology: '#14B8A6',   // Teal
-  Chemistry: '#4338CA', // Deep Iris
-  Physics: '#0EA5E9',   // Sky Blue
-  Economics: '#B45309', // Bronze
-  'Combined Maths': '#E11D48',// Crimson
-}
+import { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/lib/subjectConstants'
+export { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS }
 
 export const PREDEFINED_SUBJECTS = [
   'Maths','Science','English','Sinhala','Tamil','History',

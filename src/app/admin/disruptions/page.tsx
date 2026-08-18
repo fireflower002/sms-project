@@ -30,8 +30,10 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import { SkeletonBlock, TableSkeleton } from '@/components/ui/Skeleton'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 import { exportToCSV } from '@/lib/csvExport'
+import dynamic from 'next/dynamic'
 import { useToast } from '@/components/ui/Toast'
-import DirectCoverDrawer from '@/components/admin/DirectCoverDrawer'
+
+const DirectCoverDrawer = dynamic(() => import('@/components/admin/DirectCoverDrawer'), { ssr: false })
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' },

@@ -113,14 +113,22 @@ export async function POST(request: Request) {
     // 4. Generate random temporary password
     const tempPassword = generateTempPassword()
 
-    // 5. Update Auth user's password using Supabase Admin API
+    // 5. Update Auth user's password and app_metadata claims using Supabase Admin API
     const { error: updateAuthError } = await adminSupabase.auth.admin.updateUserById(targetUserId, {
       password: tempPassword,
+      app_metadata: { role: 'teacher', must_change_password: true },
     })
 
     if (updateAuthError) {
       console.error('[API reset-teacher-password] Auth updateUserById error:', updateAuthError)
       return NextResponse.json({ error: updateAuthError.message || 'Failed to reset teacher password in Auth.' }, { status: 400 })
+    }
+
+    // Force server-side session invalidation so target user's stale JWT is revoked immediately
+    try {
+      await adminSupabase.auth.admin.signOut(targetUserId, 'global')
+    } catch (signOutErr) {
+      console.warn('[API reset-teacher-password] Target user sign-out warning:', signOutErr)
     }
 
     // 6. Set must_change_password = true in profiles & allowed_users

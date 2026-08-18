@@ -51,54 +51,48 @@ const SWAP_STATUS_VARIANTS: Record<
   cancelled: { label: 'Cancelled', bg: '#F3F4F6', color: '#4B5563', border: '#D1D5DB' },
 }
 
+import useSWR from 'swr'
+
+const fetchSwapsData = async () => {
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { user: null, swaps: [] }
+
+  const { data, error } = await supabase
+    .from('swap_requests')
+    .select(`
+      id, requester_id, target_teacher_id, requester_period, target_period, requester_class_id, target_class_id, swap_date, status, note, created_at, peer_responded_at,
+      requester:profiles!requester_id(full_name),
+      target:profiles!target_teacher_id(full_name),
+      requester_class:classes!requester_class_id(name),
+      target_class:classes!target_class_id(name)
+    `)
+    .or(`requester_id.eq.${user.id},target_teacher_id.eq.${user.id}`)
+    .order('created_at', { ascending: false })
+    .range(0, 19)
+
+  if (error) console.error('[TeacherSwapsPage] fetch error:', error)
+  return { user, swaps: (data || []) as unknown as SwapRecord[] }
+}
+
 function TeacherSwapsContent() {
   const searchParams = useSearchParams()
   const justCreated = searchParams.get('created') === 'true'
 
-  const supabase = createClient()
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const { data: swrRes, isLoading: loading, mutate } = useSWR('teacher-swaps-feed', fetchSwapsData, { revalidateOnFocus: true })
+  const currentUser = swrRes?.user
+  const swaps = swrRes?.swaps || []
+
   const [activeTab, setActiveTab] = useState<'incoming' | 'outgoing'>('incoming')
-  const [swaps, setSwaps] = useState<SwapRecord[]>([])
-  const [loading, setLoading] = useState(true)
   const [actionProcessing, setActionProcessing] = useState<string | null>(null)
   const [toastMessage, setToastMessage] = useState<string | null>(justCreated ? 'Swap request submitted successfully!' : null)
+  const supabase = createClient()
 
-  // Fetch Swaps
-  const fetchSwaps = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
 
-      setCurrentUser(user)
-
-      const { data, error } = await supabase
-        .from('swap_requests')
-        .select(`
-          *,
-          requester:profiles!requester_id(full_name),
-          target:profiles!target_teacher_id(full_name),
-          requester_class:classes!requester_class_id(name),
-          target_class:classes!target_class_id(name)
-        `)
-        .or(`requester_id.eq.${user.id},target_teacher_id.eq.${user.id}`)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setSwaps(data || [])
-    } catch (err: any) {
-      console.error('[TeacherSwapsPage] fetch error:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [supabase])
-
-  useEffect(() => {
-    fetchSwaps()
-  }, [fetchSwaps])
 
   // Handle Peer Decision (Accept / Reject)
   const handlePeerDecision = async (swap: SwapRecord, accept: boolean) => {
+    if (!currentUser?.id) return
     setActionProcessing(swap.id)
     try {
       const newStatus = accept ? 'peer_accepted' : 'peer_rejected'
@@ -128,7 +122,7 @@ function TeacherSwapsContent() {
       })
 
       setToastMessage(accept ? 'Swap request accepted! Sent to Admin for final approval.' : 'Swap request declined.')
-      fetchSwaps()
+      mutate()
     } catch (err: any) {
       console.error('Error updating swap request:', err)
       setToastMessage('Could not update swap request. Please try again.')
@@ -139,6 +133,7 @@ function TeacherSwapsContent() {
 
   // Handle Requester Cancel
   const handleCancelRequest = async (swap: SwapRecord) => {
+    if (!currentUser?.id) return
     setActionProcessing(swap.id)
     try {
       const { error: updateErr } = await supabase
@@ -150,7 +145,7 @@ function TeacherSwapsContent() {
       if (updateErr) throw updateErr
 
       setToastMessage('Swap request cancelled.')
-      fetchSwaps()
+      mutate()
     } catch (err: any) {
       console.error('Error cancelling swap request:', err)
       setToastMessage('Could not cancel swap request. Please try again.')

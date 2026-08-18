@@ -6,8 +6,11 @@ import { ArrowLeft, Loader2, X, AlertTriangle, RefreshCw, Wand2, CheckCircle2, C
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime } from '@/lib/utils'
 
+import dynamic from 'next/dynamic'
+import { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/lib/subjectConstants'
 import { H } from '@/lib/honey'
-import SubjectModal, { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
+
+const SubjectModal = dynamic(() => import('@/components/admin/SubjectModal'), { ssr: false })
 
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
 

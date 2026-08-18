@@ -3,8 +3,10 @@ import { useEffect, useState, useCallback, Fragment } from 'react'
 import Link from 'next/link'
 import { Loader2, RefreshCw, Search, Upload, Plus, ChevronRight, CheckCircle2, XCircle, AlertTriangle, Trash2, Users, Mail, Calendar, Download } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import AddTeacherModal from '@/components/admin/AddTeacherModal'
+import dynamic from 'next/dynamic'
 import TeacherActions from '@/components/admin/TeacherActions'
+
+const AddTeacherModal = dynamic(() => import('@/components/admin/AddTeacherModal'), { ssr: false })
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
