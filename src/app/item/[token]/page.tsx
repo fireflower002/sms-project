@@ -48,7 +48,7 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
       const cleanToken = (token || '').trim()
 
       try {
-        const fields = 'id, name, description, category, condition, condition_notes, notes, quantity_total, quantity_available, location, assigned_to, assigned_at, public_token, barcode, is_active'
+        const fields = 'id, name, description, category, condition, condition_notes, quantity_total, quantity_available, location, assigned_role, assigned_at, public_token, barcode, is_active'
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanToken)
 
         let targetData: any = null
@@ -57,7 +57,7 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
         // 1. Try public_token lookup if UUID
         if (isUuid) {
           const { data, error } = await supabase
-            .from('inventory')
+            .from('public_inventory_verification')
             .select(fields)
             .eq('public_token', cleanToken)
             .maybeSingle()
@@ -69,7 +69,7 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
         // 2. Fallback to id lookup if UUID
         if (!targetData && isUuid) {
           const { data, error } = await supabase
-            .from('inventory')
+            .from('public_inventory_verification')
             .select(fields)
             .eq('id', cleanToken)
             .maybeSingle()
@@ -81,7 +81,7 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
         // 3. Fallback to barcode lookup if not UUID or missing
         if (!targetData) {
           const { data, error } = await supabase
-            .from('inventory')
+            .from('public_inventory_verification')
             .select(fields)
             .eq('barcode', cleanToken)
             .maybeSingle()
@@ -108,23 +108,8 @@ export default function PublicItemDetailPage({ params }: { params: Promise<{ tok
         }
 
         setItem(targetData)
-
-        // Anonymized assignment role lookup (never expose personal names)
-        if (targetData.assigned_to) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', targetData.assigned_to)
-            .maybeSingle()
-
-          if (profile?.role) {
-            const roleFormatted = profile.role === 'teacher'
-              ? 'Assigned to a Teacher'
-              : `Assigned to ${profile.role.charAt(0).toUpperCase() + profile.role.slice(1)} Staff`
-            setAssigneeRole(roleFormatted)
-          } else {
-            setAssigneeRole('Assigned to Staff Member')
-          }
+        if (targetData.assigned_role) {
+          setAssigneeRole(targetData.assigned_role)
         }
       } catch (err: any) {
         setErrorState('permission_error')

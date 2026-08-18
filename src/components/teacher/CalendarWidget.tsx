@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { H } from '@/lib/honey'
 import { createStyles } from '@/lib/styles'
+import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
 export default function CalendarWidget() {
   const now   = new Date()
@@ -37,47 +38,49 @@ export default function CalendarWidget() {
   });
 
   return (
-    <div style={{ ...styles.card, ...styles.container }}>
-      <div style={styles.header}>
-        <h3 style={styles.title}>School Calendar</h3>
-        <div style={styles.buttonContainer}>
-          {[['←', prev],['→', next]].map(([lbl, fn]:any) => (
-            <button key={lbl} onClick={fn}
-              style={{...styles.button, background: hoveredButton === lbl ? H.accentLight : 'transparent'}}
-              onMouseEnter={() => setHoveredButton(lbl)}
-              onMouseLeave={() => setHoveredButton(null)}>
-              {lbl}
-            </button>
-          ))}
+    <ComponentErrorBoundary sectionName="Calendar Widget">
+      <div style={{ ...styles.card, ...styles.container }}>
+        <div style={styles.header}>
+          <h3 style={styles.title}>School Calendar</h3>
+          <div style={styles.buttonContainer}>
+            {[['←', prev],['→', next]].map(([lbl, fn]:any) => (
+              <button key={lbl} onClick={fn}
+                style={{...styles.button, background: hoveredButton === lbl ? H.accentLight : 'transparent'}}
+                onMouseEnter={() => setHoveredButton(lbl)}
+                onMouseLeave={() => setHoveredButton(null)}>
+                {lbl}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={styles.content}>
+          <div style={styles.month}>
+            {monthNames[mo]} {yr}
+          </div>
+          <div style={styles.grid}>
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
+              <div key={d} style={styles.day}>{d}</div>
+            ))}
+            {days.map((d, i) => {
+              const isToday = d === today && mo === now.getMonth() && yr === now.getFullYear()
+              const isEmpty = d === null
+              return (
+                <div key={i} style={{
+                  ...styles.date,
+                  fontWeight: isEmpty?400:700, fontSize: isEmpty?13:14,
+                  color: isEmpty ? 'transparent' : isToday ? '#FFFFFF' : H.text,
+                  background: isToday ? H.honey : (hoveredDay === d ? H.accentLight : 'transparent'),
+                  cursor: d ? 'pointer' : 'default',
+                }}
+                  onMouseEnter={()=>{ if(d&&!isToday) setHoveredDay(d) }}
+                  onMouseLeave={()=>{ if(d&&!isToday) setHoveredDay(null) }}>
+                  {d || ''}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
-      <div style={styles.content}>
-        <div style={styles.month}>
-          {monthNames[mo]} {yr}
-        </div>
-        <div style={styles.grid}>
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} style={styles.day}>{d}</div>
-          ))}
-          {days.map((d, i) => {
-            const isToday = d === today && mo === now.getMonth() && yr === now.getFullYear()
-            const isEmpty = d === null
-            return (
-              <div key={i} style={{
-                ...styles.date,
-                fontWeight: isEmpty?400:700, fontSize: isEmpty?13:14,
-                color: isEmpty ? 'transparent' : isToday ? '#FFFFFF' : H.text,
-                background: isToday ? H.honey : (hoveredDay === d ? H.accentLight : 'transparent'),
-                cursor: d ? 'pointer' : 'default',
-              }}
-                onMouseEnter={()=>{ if(d&&!isToday) setHoveredDay(d) }}
-                onMouseLeave={()=>{ if(d&&!isToday) setHoveredDay(null) }}>
-                {d || ''}
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
+    </ComponentErrorBoundary>
   )
 }

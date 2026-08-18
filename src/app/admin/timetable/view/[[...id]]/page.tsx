@@ -8,10 +8,11 @@ import { generatePeriods, formatTime } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import { TimetableSkeleton } from '@/components/ui/Skeleton'
 import SubjectModal, { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
+import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:'#1E3A8A', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri']
@@ -168,8 +169,8 @@ export default function AdminTimetableViewPage() {
         {/* Contiguous Header — Back arrow removed (navigation in sidebar) */}
         <header style={{ borderBottom: `1px solid ${H.border}`, background: H.surface, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -177,8 +178,8 @@ export default function AdminTimetableViewPage() {
                   Full School Timetable
                 </h1>
                 {template?.is_active && (
-                  <span style={{ background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40`, borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    <Star size={10} fill={H.purple} /> Active
+                  <span style={{ background: '#F4F4F5', color: '#18181B', border: `1px solid ${H.border}`, borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Star size={10} fill="#18181B" /> Active
                   </span>
                 )}
               </div>
@@ -204,7 +205,7 @@ export default function AdminTimetableViewPage() {
                 <ChevronDown size={12} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: H.sub }} />
               </div>
             )}
-            <button onClick={() => setShowSubjectModal(true)} style={ghost({ background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40` })}>
+            <button onClick={() => setShowSubjectModal(true)} style={ghost({ background: '#F4F4F5', color: '#18181B', border: `1px solid ${H.border}` })}>
               <Palette size={13} /> Manage Subjects
             </button>
             {template && (
@@ -312,9 +313,10 @@ export default function AdminTimetableViewPage() {
                   const dayName = DAYS[idx]
                   const dayNum = idx + 1; if (dayNum !== selectedDay) return null
                   return (
-                    <div key={dayNum} style={card()}>
+                    <ComponentErrorBoundary key={dayNum} sectionName="Admin Timetable Matrix">
+                      <div style={card()}>
                       <div style={{ padding: '12px 18px', background: '#F5F5F4', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `3px solid ${H.border}` }}>
-                        <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 16, color: H.purpleDark }}>{dayName}</span>
+                        <span style={{ fontFamily: H.font, fontWeight: 900, fontSize: 16, color: '#18181B' }}>{dayName}</span>
                         <span style={{ fontFamily: H.font, fontSize: 11, color: H.sub, marginLeft: 'auto' }}>{filteredClasses.length} classes displayed</span>
                       </div>
 
@@ -380,7 +382,8 @@ export default function AdminTimetableViewPage() {
                         </table>
                       </div>
                     </div>
-                  )
+                  </ComponentErrorBoundary>
+                )
                 })}
               </div>
             )}

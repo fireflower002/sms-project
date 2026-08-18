@@ -24,23 +24,24 @@ interface BadgeProps {
   style?: React.CSSProperties
 }
 
-const VARIANTS: Record<Exclude<BadgeVariant, 'custom'>, { bg: string; color: string }> = {
-  pending:  { bg: H.accentLight,     color: H.accentDark      },
-  active:   { bg: H.successLight,    color: '#065F46'          },
-  inactive: { bg: '#F5F5F4',         color: H.textSec          },
-  danger:   { bg: H.dangerLight,     color: H.danger           },
-  sky:      { bg: H.skyLight,        color: '#1E40AF'          },
-  category: { bg: '#F3F4F6',         color: '#4B5563'          },
+const VARIANTS: Record<Exclude<BadgeVariant, 'custom'>, { bg: string; color: string; border: string }> = {
+  pending:  { bg: '#FEFCE8', color: '#854D0E', border: '1px solid #FEF08A' },
+  active:   { bg: '#F0FDF4', color: '#166534', border: '1px solid #BBF7D0' },
+  inactive: { bg: '#F4F4F5', color: '#52525B', border: '1px solid #E4E4E7' },
+  danger:   { bg: '#FEF2F2', color: '#991B1B', border: '1px solid #FECACA' },
+  sky:      { bg: '#EFF6FF', color: '#1E40AF', border: '1px solid #BFDBFE' },
+  category: { bg: '#F4F4F5', color: '#52525B', border: '1px solid #E4E4E7' },
 }
 
 const BASE: React.CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   gap: '6px',
-  padding: '4px 10px',
+  padding: '3px 9px',
   borderRadius: '9999px',
-  fontSize: '12px',
-  fontWeight: 600,
+  fontSize: '11.5px',
+  fontWeight: 500,
+  lineHeight: 1.3,
 }
 
 /**
@@ -79,6 +80,7 @@ export default function Badge({
         ...BASE,
         backgroundColor: resolved.bg,
         color: resolved.color,
+        border: (resolved as any).border || `1px solid ${H.border}`,
         ...style,
       }}
     >

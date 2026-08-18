@@ -217,15 +217,15 @@ export default function AdminTimetableImportPage() {
       {/* Progress Wizard Header */}
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: H.radius.xl, padding: '16px 24px', marginBottom: '24px', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: step >= 1 ? 1 : 0.4 }}>
-          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: step >= 1 ? H.purple : H.border, color: '#FFF', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>1</div>
+          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: step >= 1 ? '#18181B' : H.border, color: '#FFF', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>1</div>
           <span style={{ fontSize: '14px', fontWeight: 700, color: H.textPrimary }}>Upload & Settings</span>
         </div>
-        <div style={{ width: '60px', height: '2px', background: step >= 2 ? H.purple : H.border }} />
+        <div style={{ width: '60px', height: '2px', background: step >= 2 ? '#18181B' : H.border }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: step >= 2 ? 1 : 0.4 }}>
-          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: step >= 2 ? H.purple : H.border, color: '#FFF', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>2</div>
+          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: step >= 2 ? '#18181B' : H.border, color: '#FFF', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>2</div>
           <span style={{ fontSize: '14px', fontWeight: 700, color: H.textPrimary }}>Validation & Conflict Preview</span>
         </div>
-        <div style={{ width: '60px', height: '2px', background: step >= 3 ? H.purple : H.border }} />
+        <div style={{ width: '60px', height: '2px', background: step >= 3 ? '#18181B' : H.border }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: step >= 3 ? 1 : 0.4 }}>
           <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: step === 3 ? H.grass : H.border, color: '#FFF', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>3</div>
           <span style={{ fontSize: '14px', fontWeight: 700, color: H.textPrimary }}>Import Complete</span>
@@ -255,9 +255,9 @@ export default function AdminTimetableImportPage() {
             {/* Drag & Drop Area */}
             <div
               style={{
-                border: `2px dashed ${H.purple}`,
+                border: `2px dashed ${H.border}`,
                 borderRadius: H.radius.xl,
-                backgroundColor: H.purpleLight,
+                backgroundColor: '#F4F4F5',
                 padding: '40px 20px',
                 textAlign: 'center',
                 cursor: 'pointer',
@@ -272,7 +272,7 @@ export default function AdminTimetableImportPage() {
                 style={{ display: 'none' }}
                 onChange={e => e.target.files?.[0] && handleFileSelected(e.target.files[0])}
               />
-              <Upload size={38} style={{ color: H.purpleDark, margin: '0 auto 12px' }} />
+              <Upload size={38} style={{ color: '#18181B', margin: '0 auto 12px' }} />
               <div style={{ fontSize: '15px', fontWeight: 700, color: H.textPrimary }}>
                 {parsing ? 'Parsing & Validating File...' : 'Click to Upload or Drag Excel / CSV File'}
               </div>
@@ -434,7 +434,7 @@ export default function AdminTimetableImportPage() {
             <button
               onClick={handleConfirmImport}
               disabled={importing || validationResult.validRows.length === 0}
-              style={{ padding: '12px 24px', borderRadius: H.radius.md, background: H.purple, color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              style={{ padding: '12px 24px', borderRadius: H.radius.md, background: '#18181B', color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               {importing ? (
                 <>
@@ -464,7 +464,7 @@ export default function AdminTimetableImportPage() {
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
             <Link
               href="/admin/timetable"
-              style={{ padding: '12px 24px', borderRadius: H.radius.md, background: H.purple, color: '#FFFFFF', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
+              style={{ padding: '12px 24px', borderRadius: H.radius.md, background: '#18181B', color: '#FFFFFF', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
             >
               View Active Timetable
             </Link>

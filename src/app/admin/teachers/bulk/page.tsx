@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 
 import { H } from '@/lib/honey'
 
-const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.skyBlue, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
-const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
-const grass = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
-const inp   = (x?:any):React.CSSProperties => ({ width:'100%', padding:'10px 14px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
+const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:12, border:`1px solid ${H.border}`, boxShadow:H.shadows.card, overflow:'hidden', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:'#18181B', color:'#FFFFFF', border:'none', borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:13, padding:'8px 14px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const ghost = (x?:any):React.CSSProperties => ({ background:'#F4F4F5', color:H.textSec, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
+const grass = (x?:any):React.CSSProperties => ({ background:'#18181B', color:'#FFFFFF', border:'none', borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:13, padding:'8px 14px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const inp   = (x?:any):React.CSSProperties => ({ width:'100%', padding:'8px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:500, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
 
 interface ParsedRow {
   index: number

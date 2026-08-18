@@ -37,7 +37,7 @@ export const ADMIN_NAV_SECTIONS: NavSectionDef[] = [
   {
     title: null,
     items: [
-      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, color: H.accent },
+      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, color: '#18181B' },
     ],
   },
   {
@@ -111,23 +111,23 @@ export default function AdminSidebar() {
     display: 'flex',
     alignItems: 'center',
     gap: H.spacing.md,
-    padding: '9px 14px',
-    borderRadius: H.radius.xl,
+    padding: '8px 12px',
+    borderRadius: '8px',
     textDecoration: 'none',
-    fontSize: H.fontSize.base,
-    fontWeight: H.fontWeight.semibold,
+    fontSize: '13.5px',
+    fontWeight: 500,
     transition: H.motion.transitionFast,
   }
 
-  const NavItem = ({ href, label, icon: Icon, color }: NavItemDef) => {
+  const NavItem = ({ href, label, icon: Icon }: NavItemDef) => {
     const active = pathname === href || (href !== '/admin' && pathname.startsWith(href))
     const isHovered = hovered === href
 
     const style: React.CSSProperties = {
       ...baseNavItemStyle,
-      backgroundColor: active ? H.accentLight : isHovered ? H.bg : 'transparent',
-      color: active ? H.accentDark : H.textSec,
-      transform: isHovered && !active ? H.motion.hoverLift : 'none',
+      backgroundColor: active ? '#F4F4F5' : isHovered ? '#FAFAFA' : 'transparent',
+      color: active ? '#09090B' : isHovered ? '#09090B' : H.textSec,
+      fontWeight: active ? 600 : 500,
     }
 
     return (
@@ -138,7 +138,7 @@ export default function AdminSidebar() {
         onMouseLeave={() => setHovered(null)}
         onClick={() => setMobileMenuOpen(false)}
       >
-        <Icon size={18} color={active || isHovered ? color : H.textMuted} />
+        <Icon size={18} color={active ? '#09090B' : isHovered ? '#09090B' : '#71717A'} />
         <span>{label}</span>
       </Link>
     )
@@ -147,7 +147,7 @@ export default function AdminSidebar() {
   // ── Mobile Bottom Navigation Bar & Drawer ──
   if (isMobile) {
     const mobilePrimaryItems: NavItemDef[] = [
-      { href: '/admin', label: 'Home', icon: LayoutDashboard, color: H.accent },
+      { href: '/admin', label: 'Home', icon: LayoutDashboard, color: '#18181B' },
       { href: '/admin/teachers', label: 'Teachers', icon: Users, color: H.successGreen },
       { href: '/admin/timetable', label: 'Timetable', icon: Calendar, color: H.purple },
       { href: '/admin/chat', label: 'Staff Chat', icon: MessageSquare, color: H.skyBlue },
@@ -193,7 +193,7 @@ export default function AdminSidebar() {
                   flex: 1,
                   position: 'relative',
                   borderRadius: H.radius.md,
-                  backgroundColor: active ? H.accentLight : 'transparent',
+                  backgroundColor: active ? '#F4F4F5' : 'transparent',
                   transition: H.motion.transitionFast,
                   boxSizing: 'border-box',
                 }}
@@ -224,7 +224,7 @@ export default function AdminSidebar() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: '2px',
-              color: isMobileMenuOpen ? H.accent : H.textMuted,
+              color: isMobileMenuOpen ? '#18181B' : H.textMuted,
               fontSize: '11px',
               fontWeight: isMobileMenuOpen ? '700' : '600',
               padding: '6px 4px',
@@ -233,7 +233,7 @@ export default function AdminSidebar() {
               flex: 1,
               position: 'relative',
               borderRadius: H.radius.md,
-              backgroundColor: isMobileMenuOpen ? H.accentLight : 'transparent',
+              backgroundColor: isMobileMenuOpen ? '#F4F4F5' : 'transparent',
               transition: H.motion.transitionFast,
               boxSizing: 'border-box',
             }}
@@ -245,10 +245,10 @@ export default function AdminSidebar() {
                 width: '18px',
                 height: '3px',
                 borderRadius: H.radius.full,
-                backgroundColor: H.accent,
+                backgroundColor: '#18181B',
               }} />
             )}
-            <Menu size={19} color={isMobileMenuOpen ? H.accent : H.textMuted} />
+            <Menu size={19} color={isMobileMenuOpen ? '#18181B' : H.textMuted} />
             <span>More</span>
           </button>
         </nav>
@@ -309,8 +309,8 @@ export default function AdminSidebar() {
                   width: 38,
                   height: 38,
                   borderRadius: '50%',
-                  background: H.accentLight,
-                  color: H.accentDark,
+                  background: '#F4F4F5',
+                  color: '#18181B',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -328,9 +328,23 @@ export default function AdminSidebar() {
               <button
                 onClick={handleLogout}
                 title="Sign Out"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8 }}
+                aria-label="Sign Out"
+                style={{
+                  background: '#F4F4F5',
+                  border: `1px solid ${H.border}`,
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  padding: '6px 12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: H.textSec,
+                }}
               >
-                <LogOut size={20} color={H.textMuted} />
+                <LogOut size={16} color={H.textMuted} />
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
@@ -355,27 +369,27 @@ export default function AdminSidebar() {
     }}>
       {/* Brand Header */}
       <div style={{
-        padding: '20px 18px',
+        padding: '16px 18px',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        background: `linear-gradient(145deg, ${H.accentLight}33, transparent)`,
+        backgroundColor: H.surface,
         borderBottom: `1px solid ${H.border}`,
       }}>
         <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 12,
-          background: H.accent,
+          width: 32,
+          height: 32,
+          borderRadius: 8,
+          background: '#18181B',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          <GraduationCap size={20} color="#FFFFFF" />
+          <GraduationCap size={18} color="#FFFFFF" />
         </div>
         <div>
-          <div style={{ fontWeight: 800, fontSize: '15px', color: H.textPrimary }}>Hive SMS</div>
-          <div style={{ fontSize: '12px', color: H.textSec, fontWeight: 500 }}>Admin Portal</div>
+          <div style={{ fontWeight: 600, fontSize: '14px', color: H.textPrimary }}>Hive SMS</div>
+          <div style={{ fontSize: '11px', color: H.textMuted, fontWeight: 500 }}>Admin Portal</div>
         </div>
       </div>
 
@@ -386,10 +400,10 @@ export default function AdminSidebar() {
             {section.title && (
               <div style={{
                 fontSize: '11px',
-                fontWeight: 700,
+                fontWeight: 600,
                 color: H.textMuted,
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.05em',
                 padding: '0 10px 6px 10px',
               }}>
                 {section.title}
@@ -404,23 +418,25 @@ export default function AdminSidebar() {
 
       {/* User Footer with Single Logout Button */}
       <div style={{
-        padding: '16px 18px',
+        padding: '14px 16px',
         borderTop: `1px solid ${H.border}`,
         display: 'flex',
         alignItems: 'center',
-        gap: 12,
+        gap: 10,
+        backgroundColor: H.surface,
       }}>
         <div style={{
-          width: 36,
-          height: 36,
+          width: 32,
+          height: 32,
           borderRadius: '50%',
-          background: H.accentLight,
-          color: H.accentDark,
+          background: '#F4F4F5',
+          color: '#09090B',
+          border: `1px solid ${H.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontWeight: 700,
-          fontSize: '15px'
+          fontWeight: 600,
+          fontSize: '13px'
         }}>
           {profile?.full_name?.charAt(0) || 'A'}
         </div>
@@ -443,6 +459,7 @@ export default function AdminSidebar() {
         <button
           onClick={handleLogout}
           title="Sign Out"
+          aria-label="Sign Out"
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
         >
           <LogOut size={18} color={H.textMuted} />

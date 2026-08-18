@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { getSiteUrl } from '@/lib/siteUrl'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit'
 
 const teacherRegisterSchema = z.object({
   email: z.string().trim().toLowerCase().email('Invalid email address format'),
@@ -10,6 +11,16 @@ const teacherRegisterSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    // IP-Based Rate Limit: max 3 registration attempts per 15 minutes per IP address
+    const clientIp = getClientIp(request)
+    const rateLimit = checkRateLimit(clientIp, '/api/teacher-register', {
+      windowMs: 15 * 60 * 1000,
+      maxRequests: 3,
+    })
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetInMs)
+    }
+
     const body = await request.json().catch(() => ({}))
     const parseResult = teacherRegisterSchema.safeParse(body)
 

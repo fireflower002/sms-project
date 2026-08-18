@@ -34,9 +34,9 @@ const styles: { [key: string]: React.CSSProperties } = {
   badgeInactive: { backgroundColor: '#F5F5F4', color: H.textSec },
   badgePending: { backgroundColor: H.accentLight, color: H.accentDark },
   // Buttons
-  button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '44px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.successGreen, color: '#FFFFFF' },
-  buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
+  button: { border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', minHeight: '36px', padding: '7px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s ease', textDecoration: 'none', boxSizing: 'border-box' },
+  buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
+  buttonSecondary: { background: '#F4F4F5', color: H.textSec, border: `1px solid ${H.border}` },
   // Filters
   filterContainer: { display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' },
   // Pagination
@@ -49,8 +49,8 @@ const styles: { [key: string]: React.CSSProperties } = {
 const PageHeader = ({ stats, onRefresh, onAddSuccess }: { stats: any; onRefresh: () => void; onAddSuccess: () => void }) => (
   <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Users size={20} style={{ color: '#0E7490' }} />
+      <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Users size={20} style={{ color: '#18181B' }} />
       </div>
       <div>
         <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Teacher Management</h1>
@@ -63,7 +63,7 @@ const PageHeader = ({ stats, onRefresh, onAddSuccess }: { stats: any; onRefresh:
       <button onClick={onRefresh} title="Refresh" style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px', minHeight: '38px' }}>
         <RefreshCw size={14} />
       </button>
-      <Link href="/admin/teachers/bulk" style={{ ...styles.button, ...styles.buttonSecondary, borderRadius: '10px', minHeight: '38px', fontSize: '13px' }}>
+      <Link href="/admin/teachers/bulk" style={{ ...styles.button, ...styles.buttonSecondary, borderRadius: '8px', minHeight: '36px', fontSize: '13px' }}>
         <Upload size={14} /> Bulk Import
       </Link>
       <AddTeacherModal onSuccess={onAddSuccess} />
@@ -74,13 +74,13 @@ const PageHeader = ({ stats, onRefresh, onAddSuccess }: { stats: any; onRefresh:
 const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter, onExport }: { search: string; setSearch: (s: string) => void; statusFilter: string; setStatusFilter: (s: any) => void; onExport: () => void }) => {
   const [isFocused, setIsFocused] = useState(false);
   return (
-    <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+    <div style={{ padding: '12px 24px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAFAFA' }}>
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', flex: '1 1 300px' }}>
         <div style={{ position: 'relative', flex: '1 1 200px', display: 'flex', alignItems: 'center' }}>
           <Search size={15} style={{ position: 'absolute', left: 12, color: H.textMuted, pointerEvents: 'none' }} />
-          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by teacher name..." style={{ width: '100%', minHeight: '38px', padding: '8px 14px 8px 36px', borderRadius: '8px', border: `1px solid ${isFocused ? H.successGreen : H.border}`, background: H.surface, color: H.textPrimary, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} />
+          <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by teacher name..." style={{ width: '100%', minHeight: '36px', padding: '7px 14px 7px 36px', borderRadius: '8px', border: `1px solid ${isFocused ? H.accent : H.border}`, background: H.surface, color: H.textPrimary, fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} onFocus={() => setIsFocused(true)} onBlur={() => setIsFocused(false)} />
         </div>
-        <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden', minHeight: '38px' }}>
+        <div style={{ display: 'flex', border: `1px solid ${H.border}`, borderRadius: '8px', overflow: 'hidden', minHeight: '36px' }}>
           {(['all', 'active', 'inactive'] as const).map(s => (
             <button key={s} onClick={() => setStatusFilter(s)} style={{
               padding: '7px 16px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',
@@ -95,7 +95,7 @@ const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter, onEx
       <button
         onClick={onExport}
         style={{
-          padding: '8px 14px',
+          padding: '7px 14px',
           fontWeight: 600,
           fontSize: '13px',
           cursor: 'pointer',
@@ -106,7 +106,7 @@ const FilterControls = ({ search, setSearch, statusFilter, setStatusFilter, onEx
           display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
-          minHeight: '38px',
+          minHeight: '36px',
         }}
         title="Export CSV"
       >

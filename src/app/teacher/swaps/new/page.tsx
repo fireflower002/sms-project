@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -13,7 +13,9 @@ import {
   FileText,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Search,
+  X
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
@@ -45,6 +47,19 @@ export default function NewTeacherSwapPage() {
 
   const [teachers, setTeachers] = useState<TeacherProfile[]>([])
   const [classes, setClasses] = useState<ClassItem[]>([])
+  const [teacherSearch, setTeacherSearch] = useState('')
+  const [isTeacherDropdownOpen, setIsTeacherDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsTeacherDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Form State
   const [form, setForm] = useState({
@@ -166,10 +181,19 @@ export default function NewTeacherSwapPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
-        <LoadingSpinner centered size={32} color={H.purple} />
+        <LoadingSpinner centered size={32} color="#18181B" />
       </div>
     )
   }
+
+  const selectedTargetTeacher = teachers.find(t => t.id === form.target_teacher_id)
+  const filteredTeachers = teachers.filter(t => {
+    if (!teacherSearch.trim()) return true
+    const q = teacherSearch.toLowerCase()
+    const nameMatch = t.full_name?.toLowerCase().includes(q)
+    const subjMatch = t.subjects?.some(s => s.toLowerCase().includes(q))
+    return nameMatch || subjMatch
+  })
 
   return (
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font }}>
@@ -195,7 +219,7 @@ export default function NewTeacherSwapPage() {
         {/* Header */}
         <div style={{ marginBottom: '24px' }}>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ArrowRightLeft size={24} style={{ color: H.purple }} />
+            <ArrowRightLeft size={24} style={{ color: '#18181B' }} />
             Request Period / Class Swap
           </h1>
           <p style={{ fontSize: '14px', color: H.textSec, margin: '4px 0 0' }}>
@@ -218,7 +242,7 @@ export default function NewTeacherSwapPage() {
             {/* 1. Date of Swap */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                Date of Swap
+                Date of Swap <span style={{ color: '#DC2626' }}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -244,14 +268,14 @@ export default function NewTeacherSwapPage() {
 
             {/* 2. My Period & Class */}
             <div style={{ backgroundColor: H.bg, border: `1px solid ${H.border}`, borderRadius: H.radius.lg, padding: '16px' }}>
-              <span style={{ fontSize: '12px', fontWeight: 800, color: H.purple, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: '#18181B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '12px' }}>
                 Your Assigned Period (To Give Away)
               </span>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, marginBottom: '4px' }}>
-                    My Period
+                    My Period <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <select
                     value={form.requester_period}
@@ -277,7 +301,7 @@ export default function NewTeacherSwapPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, marginBottom: '4px' }}>
-                    My Class (Optional)
+                    My Class <span style={{ color: H.textMuted, fontWeight: 400 }}>(optional)</span>
                   </label>
                   <select
                     value={form.requester_class_id}
@@ -307,32 +331,118 @@ export default function NewTeacherSwapPage() {
             {/* 3. Target Teacher */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                Select Target Teacher to Swap With
+                Select Target Teacher to Swap With <span style={{ color: '#DC2626' }}>*</span>
               </label>
-              <select
-                value={form.target_teacher_id}
-                onChange={e => setForm(f => ({ ...f, target_teacher_id: e.target.value }))}
-                required
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
+
+              {selectedTargetTeacher ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
                   borderRadius: H.radius.md,
                   border: `1px solid ${H.border}`,
                   backgroundColor: H.bg,
-                  color: H.textPrimary,
-                  fontSize: '14px',
-                  fontFamily: H.font,
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <option value="">Choose a teacher...</option>
-                {teachers.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.full_name} {t.subjects && t.subjects.length > 0 ? `(${t.subjects.join(', ')})` : ''}
-                  </option>
-                ))}
-              </select>
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <User size={16} style={{ color: '#18181B' }} />
+                    <div>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: H.textPrimary }}>{selectedTargetTeacher.full_name}</span>
+                      {selectedTargetTeacher.subjects && selectedTargetTeacher.subjects.length > 0 && (
+                        <span style={{ fontSize: '12px', color: H.textSec, marginLeft: '6px' }}>({selectedTargetTeacher.subjects.join(', ')})</span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm(f => ({ ...f, target_teacher_id: '' }))
+                      setTeacherSearch('')
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: H.textMuted, padding: '4px', display: 'flex', alignItems: 'center' }}
+                    title="Change teacher"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <div ref={dropdownRef} style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: H.textMuted }} />
+                    <input
+                      type="text"
+                      value={teacherSearch}
+                      onChange={e => {
+                        setTeacherSearch(e.target.value)
+                        setIsTeacherDropdownOpen(true)
+                      }}
+                      onFocus={() => setIsTeacherDropdownOpen(true)}
+                      placeholder="Search teacher by name or subject..."
+                      style={{
+                        width: '100%',
+                        padding: '12px 14px 12px 36px',
+                        borderRadius: H.radius.md,
+                        border: `1px solid ${H.border}`,
+                        backgroundColor: H.bg,
+                        color: H.textPrimary,
+                        fontSize: '14px',
+                        fontFamily: H.font,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+
+                  {isTeacherDropdownOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      maxHeight: '220px',
+                      overflowY: 'auto',
+                      backgroundColor: H.surface,
+                      border: `1px solid ${H.border}`,
+                      borderRadius: H.radius.md,
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                      zIndex: 50,
+                    }}>
+                      {filteredTeachers.length === 0 ? (
+                        <div style={{ padding: '12px', fontSize: '13px', color: H.textMuted, textAlign: 'center' }}>
+                          No matching teachers found
+                        </div>
+                      ) : (
+                        filteredTeachers.map(t => (
+                          <div
+                            key={t.id}
+                            onClick={() => {
+                              setForm(f => ({ ...f, target_teacher_id: t.id }))
+                              setIsTeacherDropdownOpen(false)
+                            }}
+                            style={{
+                              padding: '10px 14px',
+                              cursor: 'pointer',
+                              fontSize: '13.5px',
+                              color: H.textPrimary,
+                              borderBottom: `1px solid ${H.border}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              backgroundColor: form.target_teacher_id === t.id ? '#F4F4F5' : 'transparent',
+                            }}
+                          >
+                            <span style={{ fontWeight: 600 }}>{t.full_name}</span>
+                            {t.subjects && t.subjects.length > 0 && (
+                              <span style={{ fontSize: '11.5px', color: H.textMuted }}>{t.subjects.join(', ')}</span>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* 4. Target Teacher's Period & Class */}
@@ -344,7 +454,7 @@ export default function NewTeacherSwapPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, marginBottom: '4px' }}>
-                    Target Period
+                    Target Period <span style={{ color: '#DC2626' }}>*</span>
                   </label>
                   <select
                     value={form.target_period}
@@ -370,7 +480,7 @@ export default function NewTeacherSwapPage() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: H.textMuted, marginBottom: '4px' }}>
-                    Target Class (Optional)
+                    Target Class <span style={{ color: H.textMuted, fontWeight: 400 }}>(optional)</span>
                   </label>
                   <select
                     value={form.target_class_id}
@@ -400,7 +510,7 @@ export default function NewTeacherSwapPage() {
             {/* 5. Note / Reason */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
-                Reason / Note for Teacher & Admin (Optional)
+                Reason / Note for Teacher & Admin <span style={{ color: H.textMuted, fontWeight: 400 }}>(optional)</span>
               </label>
               <textarea
                 placeholder="Explain the reason for this period swap request..."
@@ -448,7 +558,7 @@ export default function NewTeacherSwapPage() {
                 style={{
                   padding: '10px 24px',
                   borderRadius: H.radius.md,
-                  backgroundColor: H.purple,
+                  backgroundColor: '#18181B',
                   color: '#FFFFFF',
                   border: 'none',
                   fontWeight: 700,

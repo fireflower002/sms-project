@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Coffee, Info, Calendar, ShieldAlert, UserCheck, Clock, ArrowRightLeft, Sparkles, AlertCircle } from 'lucide-react'
+import { Coffee, Info, Calendar, ShieldAlert, UserCheck, Clock, ArrowRightLeft, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { generatePeriods, formatTime, todayDayOfWeek, todaySLT, formatSLT, dateToDayOfWeek } from '@/lib/utils'
 import { H } from '@/lib/honey'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
 import Badge from '@/components/ui/Badge'
+import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 32px)', fontFamily: H.font },
@@ -143,17 +144,17 @@ export default function TeacherTimetablePage() {
       <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
         <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
           <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: H.surface }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>My Weekly Timetable</h1>
             </div>
           </div>
-          <div style={{ padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: H.purpleLight, margin: '24px', borderRadius: '14px', border: `1px solid ${H.purple}40` }}>
-            <Info size={24} style={{ color: H.purple, flexShrink: 0 }} />
+          <div style={{ padding: '32px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: '#F4F4F5', margin: '24px', borderRadius: '14px', border: `1px solid ${H.border}` }}>
+            <Info size={24} style={{ color: '#18181B', flexShrink: 0 }} />
             <div>
-              <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: H.purpleDark }}>No Active Timetable</h3>
+              <h3 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#18181B' }}>No Active Timetable</h3>
               <p style={{ margin: 0, fontSize: '13px', color: H.textSec }}>No active timetable template has been published by the administration yet.</p>
             </div>
           </div>
@@ -168,63 +169,67 @@ export default function TeacherTimetablePage() {
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(12px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box', paddingBottom: '96px' }}>
       
       {/* ── Separate Dedicated Relief & Cover Duties Section ── */}
-      {reliefDuties.length > 0 && (
+      <div style={{
+        backgroundColor: H.surface,
+        border: `1px solid ${H.border}`,
+        borderRadius: '16px',
+        boxShadow: H.cardShadow,
+        overflow: 'hidden',
+        marginBottom: '24px',
+      }}>
+        {/* Header */}
         <div style={{
-          backgroundColor: H.surface,
-          border: `1.5px solid ${H.honey}`,
-          borderRadius: '16px',
-          boxShadow: '0 4px 16px rgba(245, 158, 11, 0.12)',
-          overflow: 'hidden',
-          marginBottom: '24px',
+          padding: '16px 20px',
+          backgroundColor: '#FAFAFA',
+          borderBottom: `1px solid ${H.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
         }}>
-          {/* Header */}
-          <div style={{
-            padding: '16px 20px',
-            backgroundColor: 'rgba(254, 243, 199, 0.5)',
-            borderBottom: `1px solid rgba(245, 158, 11, 0.25)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: 36,
-                height: 36,
-                borderRadius: 10,
-                backgroundColor: '#FEF3C7',
-                border: '1px solid #FCD34D',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                <ShieldAlert size={20} style={{ color: '#D97706' }} />
-              </div>
-              <div>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  Relief & Cover Duty Assignments
-                </h2>
-                <p style={{ fontSize: '12.5px', color: H.textSec, margin: '2px 0 0' }}>
-                  You have been assigned to cover classes on specific dates below.
-                </p>
-              </div>
-            </div>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 700,
-              padding: '4px 12px',
-              borderRadius: '20px',
-              backgroundColor: '#FEF3C7',
-              color: '#92400E',
-              border: '1px solid #FCD34D',
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              backgroundColor: '#F4F4F5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
             }}>
-              {reliefDuties.length} Active Duty {reliefDuties.length > 1 ? 'Assignments' : 'Assignment'}
-            </span>
+              <ShieldAlert size={20} style={{ color: '#18181B' }} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '16px', fontWeight: 600, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Relief & Cover Duty Assignments
+              </h2>
+              <p style={{ fontSize: '12.5px', color: H.textSec, margin: '2px 0 0' }}>
+                You have been assigned to cover classes on specific dates below.
+              </p>
+            </div>
           </div>
+          <span style={{
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '3px 10px',
+            borderRadius: '20px',
+            backgroundColor: '#F4F4F5',
+            color: H.textSec,
+            border: `1px solid ${H.border}`,
+          }}>
+            {reliefDuties.length} {reliefDuties.length === 1 ? 'Assignment' : 'Assignments'}
+          </span>
+        </div>
 
-          {/* Duties Cards List */}
+        {/* Duties Cards List or Empty State */}
+        {reliefDuties.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: H.textMuted, fontSize: '13.5px' }}>
+            <CheckCircle2 size={22} style={{ margin: '0 auto 6px', color: '#166534', opacity: 0.8, display: 'block' }} />
+            No cover duties assigned for this week
+          </div>
+        ) : (
           <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
             {reliefDuties.map((sub: any) => {
               const isToday = sub.absence?.absence_date === todayStr
@@ -247,7 +252,7 @@ export default function TeacherTimetablePage() {
                   {/* Card Header: Date & Status */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Calendar size={14} style={{ color: '#D97706' }} />
+                      <Calendar size={14} style={{ color: '#18181B' }} />
                       <span style={{ fontSize: '13px', fontWeight: 700, color: H.textPrimary }}>
                         {formattedDate}
                       </span>
@@ -270,9 +275,9 @@ export default function TeacherTimetablePage() {
                         fontWeight: 700,
                         padding: '2px 8px',
                         borderRadius: '6px',
-                        backgroundColor: '#EFF6FF',
-                        color: '#1D4ED8',
-                        border: '1px solid #BFDBFE',
+                        backgroundColor: '#F4F4F5',
+                        color: '#18181B',
+                        border: `1px solid ${H.border}`,
                       }}>
                         SWAP PENDING
                       </span>
@@ -282,9 +287,9 @@ export default function TeacherTimetablePage() {
                         fontWeight: 700,
                         padding: '2px 8px',
                         borderRadius: '6px',
-                        backgroundColor: '#FEF3C7',
-                        color: '#92400E',
-                        border: '1px solid #FCD34D',
+                        backgroundColor: '#F4F4F5',
+                        color: '#18181B',
+                        border: `1px solid ${H.border}`,
                       }}>
                         RELIEF
                       </span>
@@ -345,11 +350,12 @@ export default function TeacherTimetablePage() {
               )
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* ── Main Timetable Shell ── */}
-      <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
+      <ComponentErrorBoundary sectionName="Timetable Grid">
+        <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
 
         {/* Contiguous Header Bar */}
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
@@ -392,9 +398,9 @@ export default function TeacherTimetablePage() {
                 style={{
                   padding: '6px 14px',
                   borderRadius: '10px',
-                  border: `1px solid ${isSelected ? H.purple : H.border}`,
-                  backgroundColor: isSelected ? H.purple : H.surface,
-                  color: isSelected ? '#FFFFFF' : isToday ? H.purpleDark : H.textPrimary,
+                  border: `1px solid ${isSelected ? '#18181B' : H.border}`,
+                  backgroundColor: isSelected ? '#18181B' : H.surface,
+                  color: isSelected ? '#FFFFFF' : isToday ? '#18181B' : H.textPrimary,
                   fontWeight: isSelected || isToday ? 700 : 500,
                   fontSize: '13px',
                   cursor: 'pointer',
@@ -402,7 +408,7 @@ export default function TeacherTimetablePage() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  boxShadow: isSelected ? '0 2px 6px rgba(124, 58, 237, 0.25)' : 'none',
+                  boxShadow: isSelected ? '0 2px 6px rgba(24, 24, 27, 0.15)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -413,8 +419,8 @@ export default function TeacherTimetablePage() {
                     fontWeight: 700,
                     padding: '1px 5px',
                     borderRadius: '6px',
-                    backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : H.purpleLight,
-                    color: isSelected ? '#FFFFFF' : H.purpleDark,
+                    backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : '#F4F4F5',
+                    color: isSelected ? '#FFFFFF' : '#18181B',
                   }}>
                     Today
                   </span>
@@ -542,156 +548,254 @@ export default function TeacherTimetablePage() {
           </div>
         ) : (
           /* Full Weekly Grid with Sticky Left-0 Period Column for Desktop / Tablet */
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
-            <table style={{ width: '100%', minWidth: '750px', borderCollapse: 'separate', borderSpacing: '6px' }}>
-              <thead>
-                <tr>
-                  <th style={{
-                    position: 'sticky', left: 0, zIndex: 20,
-                    backgroundColor: H.surface,
-                    padding: '12px 14px',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    color: H.textSec,
-                    textAlign: 'center',
-                    width: '100px',
-                    minWidth: '100px',
-                    borderRight: `2px solid ${H.border}`,
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
-                  }}>
-                    Period
-                  </th>
-                  {DAYS.map((day, i) => (
-                    <th key={day} style={{
+          <>
+            {/* Desktop / Large Screen Table (>= 900px) */}
+            <div className="desktop-timetable-table" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
+              <table style={{ width: '100%', minWidth: '750px', borderCollapse: 'separate', borderSpacing: '6px' }}>
+                <thead>
+                  <tr>
+                    <th style={{
+                      position: 'sticky', left: 0, zIndex: 20,
+                      backgroundColor: H.surface,
                       padding: '12px 14px',
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: 700,
-                      color: i + 1 === today ? H.purpleDark : H.textSec,
+                      color: H.textSec,
                       textAlign: 'center',
-                      backgroundColor: i + 1 === today ? H.purpleLight : 'transparent',
-                      borderRadius: '10px',
+                      width: '100px',
+                      minWidth: '100px',
+                      borderRight: `2px solid ${H.border}`,
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
                     }}>
-                      {day} {i + 1 === today && '(Today)'}
+                      Period
                     </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {periods.map((p, i) => {
-                  if (p.is_break) {
+                    {DAYS.map((day, i) => (
+                      <th key={day} style={{
+                        padding: '12px 14px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: i + 1 === today ? '#18181B' : H.textSec,
+                        textAlign: 'center',
+                        backgroundColor: i + 1 === today ? '#F4F4F5' : 'transparent',
+                        borderRadius: '10px',
+                      }}>
+                        {day} {i + 1 === today && '(Today)'}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods.map((p, i) => {
+                    if (p.is_break) {
+                      return (
+                        <tr key={`break-${i}`}>
+                          <td style={{
+                            position: 'sticky', left: 0, zIndex: 10,
+                            backgroundColor: H.bg,
+                            padding: '8px 12px',
+                            verticalAlign: 'middle',
+                            borderRight: `2px solid ${H.border}`,
+                            boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                              <Coffee size={14} style={{ color: H.textMuted }} />
+                              <div style={{ textAlign: 'center' }}>
+                                <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: H.textSec }}>{(p as any).label || 'Break'}</p>
+                                <p style={{ margin: 0, fontSize: '10px', color: H.textMuted }}>{formatTime(p.start_time)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td colSpan={5} style={{ padding: 0 }}>
+                            <div style={{ height: '50px', background: H.bg, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ fontSize: '12px', color: H.textMuted, fontWeight: 500 }}>— {(p as any).label || 'Break'} ({formatTime(p.start_time)} - {formatTime(p.end_time)}) —</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    }
+
                     return (
-                      <tr key={`break-${i}`}>
+                      <tr key={p.period_number}>
                         <td style={{
                           position: 'sticky', left: 0, zIndex: 10,
-                          backgroundColor: H.bg,
+                          backgroundColor: H.surface,
                           padding: '8px 12px',
                           verticalAlign: 'middle',
                           borderRight: `2px solid ${H.border}`,
                           boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
-                            <Coffee size={14} style={{ color: H.textMuted }} />
-                            <div style={{ textAlign: 'center' }}>
-                              <p style={{ margin: 0, fontSize: '11px', fontWeight: 700, color: H.textSec }}>{(p as any).label || 'Break'}</p>
-                              <p style={{ margin: 0, fontSize: '10px', color: H.textMuted }}>{formatTime(p.start_time)}</p>
-                            </div>
+                          <div style={{ textAlign: 'center' }}>
+                            <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: H.textPrimary }}>P{p.period_number}</p>
+                            <p style={{ margin: 0, fontSize: '10.5px', color: H.textMuted, fontVariantNumeric: 'tabular-nums' }}>{formatTime(p.start_time)}</p>
                           </div>
                         </td>
-                        <td colSpan={5} style={{ padding: 0 }}>
-                          <div style={{ height: '50px', background: H.bg, borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: '12px', color: H.textMuted, fontWeight: 500 }}>— {(p as any).label || 'Break'} ({formatTime(p.start_time)} - {formatTime(p.end_time)}) —</span>
-                          </div>
-                        </td>
+                        {DAYS.map((_, dayIndex) => {
+                          const dayNum = dayIndex + 1
+                          const slot = schedule.find((s: any) => s.day_of_week === dayNum && s.period_number === p.period_number)
+                          const cellStyle = slot ? getSubjectStyle(slot.subject, slot.subject_color) : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec, border: `1px solid ${H.border}` }
+
+                          const reliefToday = reliefDuties.find((r: any) => {
+                            if (r.period_number !== p.period_number) return false
+                            const rDay = r.absence?.absence_date ? dateToDayOfWeek(r.absence.absence_date) : 0
+                            return rDay === dayNum
+                          })
+
+                          return (
+                            <td key={dayIndex} style={{ padding: '0', verticalAlign: 'top' }}>
+                              <div style={{
+                                minHeight: '80px',
+                                height: '100%',
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                background: cellStyle.background,
+                                border: cellStyle.border,
+                                borderLeft: (cellStyle as any).borderLeft || cellStyle.border,
+                                boxSizing: 'border-box',
+                              }}>
+                                {slot ? (
+                                  <>
+                                    <p style={{ color: cellStyle.color, fontWeight: 800, fontSize: '13.5px', margin: 0 }}>{slot.subject}</p>
+                                    <p style={{ color: cellStyle.color, opacity: 0.8, fontSize: '11.5px', fontWeight: 600, margin: '3px 0 0' }}>{slot.class?.name}</p>
+                                  </>
+                                ) : (
+                                  <p style={{ margin: 0, fontSize: '13px', color: H.textMuted, textAlign: 'center' }}>—</p>
+                                )}
+
+                                {reliefToday && (
+                                  <div style={{
+                                    marginTop: '6px',
+                                    padding: '4px 6px',
+                                    borderRadius: '6px',
+                                    backgroundColor: '#FEF3C7',
+                                    border: '1px solid #FCD34D',
+                                    fontSize: '10.5px',
+                                    fontWeight: 700,
+                                    color: '#B45309',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                  }}>
+                                    <ShieldAlert size={10} style={{ flexShrink: 0 }} />
+                                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                      Relief: {reliefToday.class?.name || ''} {reliefToday.absence?.absence_date ? `(${formatSLT(reliefToday.absence.absence_date, 'd MMM')})` : ''}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          )
+                        })}
                       </tr>
                     )
-                  }
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                  return (
-                    <tr key={p.period_number}>
-                      <td style={{
-                        position: 'sticky', left: 0, zIndex: 10,
-                        backgroundColor: H.surface,
-                        padding: '8px 12px',
-                        verticalAlign: 'middle',
-                        borderRight: `2px solid ${H.border}`,
-                        boxShadow: '2px 0 5px rgba(0,0,0,0.04)',
-                      }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <p style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: H.textPrimary }}>P{p.period_number}</p>
-                          <p style={{ margin: 0, fontSize: '10.5px', color: H.textMuted, fontVariantNumeric: 'tabular-nums' }}>{formatTime(p.start_time)}</p>
-                        </div>
-                      </td>
-                      {DAYS.map((_, dayIndex) => {
-                        const dayNum = dayIndex + 1
+            {/* Mobile Stacked Card-Per-Day Layout (< 900px) */}
+            <div className="mobile-timetable-stacked" style={{ display: 'none', flexDirection: 'column', gap: '16px', padding: '16px' }}>
+              {DAYS.map((dayName, dayIndex) => {
+                const dayNum = dayIndex + 1
+                const isDayToday = dayNum === today
+
+                return (
+                  <div key={dayName} style={{
+                    backgroundColor: H.surface,
+                    border: `1px solid ${isDayToday ? '#FCD34D' : H.border}`,
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: isDayToday ? '0 2px 8px rgba(245,158,11,0.1)' : 'none',
+                  }}>
+                    <div style={{
+                      padding: '10px 14px',
+                      backgroundColor: isDayToday ? '#FEF3C7' : '#F4F4F5',
+                      borderBottom: `1px solid ${H.border}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: isDayToday ? '#92400E' : H.textPrimary }}>
+                        {dayName}
+                      </span>
+                      {isDayToday && (
+                        <span style={{ fontSize: '10.5px', fontWeight: 800, padding: '2px 6px', borderRadius: '4px', backgroundColor: '#DC2626', color: '#FFF' }}>
+                          TODAY
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {periods.map(p => {
+                        if (p.is_break) {
+                          return (
+                            <div key={`break-${p.period_number}`} style={{ padding: '6px 10px', backgroundColor: H.bg, borderRadius: '6px', fontSize: '11px', color: H.textMuted, textAlign: 'center' }}>
+                              — {(p as any).label || 'Break'} ({formatTime(p.start_time)}) —
+                            </div>
+                          )
+                        }
                         const slot = schedule.find((s: any) => s.day_of_week === dayNum && s.period_number === p.period_number)
-                        const cellStyle = slot ? getSubjectStyle(slot.subject, slot.subject_color) : { background: dayNum === today ? H.skyLight + '40' : H.bg, color: H.textSec, border: `1px solid ${H.border}` }
-
-                        // Check if dayNum matches relief duty day of week
-                        const reliefToday = reliefDuties.find((r: any) => {
+                        const reliefForSlot = reliefDuties.find((r: any) => {
                           if (r.period_number !== p.period_number) return false
                           const rDay = r.absence?.absence_date ? dateToDayOfWeek(r.absence.absence_date) : 0
                           return rDay === dayNum
                         })
+                        const cellStyle = slot ? getSubjectStyle(slot.subject, slot.subject_color) : null
 
                         return (
-                          <td key={dayIndex} style={{ padding: '0', verticalAlign: 'top' }}>
-                            <div style={{
-                              minHeight: '80px',
-                              height: '100%',
-                              padding: '10px 12px',
-                              borderRadius: '10px',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'center',
-                              background: cellStyle.background,
-                              border: cellStyle.border,
-                              borderLeft: (cellStyle as any).borderLeft || cellStyle.border,
-                              boxSizing: 'border-box',
-                            }}>
+                          <div key={p.period_number} style={{
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: cellStyle ? cellStyle.background : H.bg,
+                            border: `1px solid ${cellStyle ? cellStyle.border : H.border}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '11px', fontWeight: 700, color: H.textMuted }}>
+                                P{p.period_number} • {formatTime(p.start_time)}
+                              </div>
                               {slot ? (
-                                <>
-                                  <p style={{ color: cellStyle.color, fontWeight: 800, fontSize: '13.5px', margin: 0 }}>{slot.subject}</p>
-                                  <p style={{ color: cellStyle.color, opacity: 0.8, fontSize: '11.5px', fontWeight: 600, margin: '3px 0 0' }}>{slot.class?.name}</p>
-                                </>
+                                <div style={{ marginTop: '2px' }}>
+                                  <span style={{ fontSize: '13.5px', fontWeight: 700, color: cellStyle?.color }}>{slot.subject}</span>
+                                  <span style={{ fontSize: '12px', color: H.textSec, marginLeft: '6px' }}>({slot.class?.name})</span>
+                                </div>
                               ) : (
-                                <p style={{ margin: 0, fontSize: '13px', color: H.textMuted, textAlign: 'center' }}>—</p>
+                                <div style={{ fontSize: '12px', color: H.textMuted, fontStyle: 'italic', marginTop: '2px' }}>Free Period</div>
                               )}
-
-                              {reliefToday && (
-                                <div style={{
-                                  marginTop: '6px',
-                                  padding: '4px 6px',
-                                  borderRadius: '6px',
-                                  backgroundColor: '#FEF3C7',
-                                  border: '1px solid #FCD34D',
-                                  fontSize: '10.5px',
-                                  fontWeight: 700,
-                                  color: '#B45309',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                }}>
-                                  <ShieldAlert size={10} style={{ flexShrink: 0 }} />
-                                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                    Relief: {reliefToday.class?.name || ''} {reliefToday.absence?.absence_date ? `(${formatSLT(reliefToday.absence.absence_date, 'd MMM')})` : ''}
-                                  </span>
+                              {reliefForSlot && (
+                                <div style={{ marginTop: '4px', fontSize: '11px', fontWeight: 700, color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <ShieldAlert size={11} /> Relief: {reliefForSlot.class?.name || ''} ({reliefForSlot.subject || ''})
                                 </div>
                               )}
                             </div>
-                          </td>
+                          </div>
                         )
                       })}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <style>{`
+              @media (max-width: 899px) {
+                .desktop-timetable-table { display: none !important; }
+                .mobile-timetable-stacked { display: flex !important; }
+              }
+              @media (min-width: 900px) {
+                .desktop-timetable-table { display: block !important; }
+                .mobile-timetable-stacked { display: none !important; }
+              }
+            `}</style>
+          </>
         )}
-      </div>
+        </div>
+      </ComponentErrorBoundary>
     </div>
   )
 }
-
 
 

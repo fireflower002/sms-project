@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit'
 
 const clearChatSchema = z.object({
   mode: z.enum(['my_messages', 'all_messages', 'single'], {
@@ -17,6 +18,15 @@ const clearChatSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request)
+    const rateLimit = checkRateLimit(clientIp, '/api/chat/clear', {
+      windowMs: 60 * 1000,
+      maxRequests: 5,
+    })
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetInMs)
+    }
+
     const body = await request.json().catch(() => ({}))
     const parseResult = clearChatSchema.safeParse(body)
 

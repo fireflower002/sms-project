@@ -80,9 +80,9 @@ const NotificationCard = ({ icon, color, bg, border, title, children, onDismiss 
 
 const QuickActionGrid = () => {
   const actions = [
-    { label: 'Report Absence', desc: 'Notify admin of upcoming leave', href: '/teacher/report-absence', icon: ClipboardList, color: '#0284C7', bg: '#E0F2FE' },
-    { label: 'Weekly Timetable', desc: 'View complete teaching schedule', href: '/teacher/timetable', icon: Calendar, color: '#D97706', bg: '#FEF3C7' },
-    { label: 'Staff Notices', desc: 'Read school announcements', href: '/teacher/announcements', icon: Megaphone, color: '#9D174D', bg: '#FCE7F3' },
+    { label: 'Report Absence', desc: 'Notify admin of upcoming leave', href: '/teacher/report-absence', icon: ClipboardList, color: '#18181B', bg: '#F4F4F5' },
+    { label: 'Weekly Timetable', desc: 'View complete teaching schedule', href: '/teacher/timetable', icon: Calendar, color: '#18181B', bg: '#F4F4F5' },
+    { label: 'Staff Notices', desc: 'Read school announcements', href: '/teacher/announcements', icon: Megaphone, color: '#18181B', bg: '#F4F4F5' },
   ]
 
   return (
@@ -313,18 +313,21 @@ export default function TeacherDashboard() {
 
       if (!fullName) fullName = userEmail.split('@')[0] || 'User'
 
-      const isAdminByMetaOrEmail =
-        session.user.user_metadata?.role === 'admin' ||
-        userEmail.startsWith('admin') ||
-        userEmail.includes('admin@')
+      const { data: allowedAdmin } = await supabase
+        .from('allowed_users')
+        .select('role')
+        .eq('email', userEmail)
+        .maybeSingle()
+
+      const isAdmin = allowedAdmin?.role === 'admin'
 
       const newProfile = {
         id: session.user.id,
         email: userEmail,
         full_name: fullName,
-        role: isAdminByMetaOrEmail ? 'admin' : 'teacher',
+        role: isAdmin ? 'admin' : 'teacher',
         subjects,
-        must_change_password: isAdminByMetaOrEmail ? false : mustChangePassword,
+        must_change_password: isAdmin ? false : mustChangePassword,
         is_active: true
       }
 
@@ -437,8 +440,8 @@ export default function TeacherDashboard() {
         {/* Contiguous Greeting Header */}
         <div style={{ padding: '18px 20px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <LayoutDashboard size={20} style={{ color: '#0284C7' }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <LayoutDashboard size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>
@@ -512,7 +515,7 @@ export default function TeacherDashboard() {
           <div style={{ position: 'relative', width: '100%', maxWidth: '440px', borderRadius: '16px', backgroundColor: H.surface, border: `1px solid ${H.border}`, boxShadow: H.cardShadow, padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <RotateCcw size={18} style={{ color: H.purple }} /> Request Cover Swap
+                <RotateCcw size={18} style={{ color: '#18181B' }} /> Request Cover Swap
               </h3>
               <button onClick={() => setSwapSub(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: H.textMuted }}>
                 <X size={18} />
@@ -568,7 +571,7 @@ export default function TeacherDashboard() {
                   <button type="button" onClick={() => setSwapSub(null)} style={{ border: `1px solid ${H.border}`, background: H.bg, color: H.textSec, padding: '8px 16px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>
                     Cancel
                   </button>
-                  <button type="submit" disabled={submittingSwap} style={{ border: 'none', background: H.purple, color: '#fff', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submittingSwap ? 0.7 : 1 }}>
+                  <button type="submit" disabled={submittingSwap} style={{ border: 'none', background: '#18181B', color: '#fff', padding: '8px 16px', borderRadius: '8px', fontWeight: 700, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', opacity: submittingSwap ? 0.7 : 1 }}>
                     {submittingSwap ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : 'Submit Request'}
                   </button>
                 </div>

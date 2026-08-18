@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit'
 
 const createTeacherSchema = z.object({
   full_name: z.string().trim().min(2, 'Full name must be at least 2 characters').max(100, 'Full name cannot exceed 100 characters'),
@@ -61,6 +62,15 @@ export async function POST(request: Request) {
     if (!callerUser) {
       console.warn('[API create-teacher] Unauthorized attempt: No active session or valid token')
       return NextResponse.json({ error: 'Unauthorized: No active admin session found. Please sign in again.' }, { status: 401 })
+    }
+
+    // Rate Limit Check: max 5 requests per 1 minute per caller user ID / IP
+    const rateLimit = checkRateLimit(callerUser.id || getClientIp(request), '/api/admin/create-teacher', {
+      windowMs: 60 * 1000,
+      maxRequests: 5,
+    })
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetInMs)
     }
 
     const { data: adminProfile } = await adminSupabase

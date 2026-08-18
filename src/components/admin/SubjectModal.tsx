@@ -4,6 +4,7 @@ import { X, Plus, Edit2, Check, Loader2, Sparkles, AlertCircle, Palette } from '
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 import { getSubjectSuggestion, formatSubjectName } from '@/lib/subjectUtils'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 export const CURATED_PALETTE = [
   '#F59E0B', // Warm Amber (38°)
@@ -79,6 +80,11 @@ export default function SubjectModal({ isOpen, onClose, onSuccess }: SubjectModa
   const [selectedColor, setSelectedColor] = useState(CURATED_PALETTE[0])
   const [editingSubject, setEditingSubject] = useState<string | null>(null)
   const [editColor, setEditColor] = useState('')
+
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose,
+  })
 
   useEffect(() => {
     if (!isOpen) return
@@ -266,10 +272,16 @@ export default function SubjectModal({ isOpen, onClose, onSuccess }: SubjectModa
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: 'rgba(28, 25, 23, 0.6)', backdropFilter: 'blur(4px)', padding: '16px'
-    }}>
+    <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="subject-modal-title"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: 'rgba(28, 25, 23, 0.6)', backdropFilter: 'blur(4px)', padding: '16px'
+      }}
+    >
       <div style={{
         position: 'relative', width: '100%', maxWidth: '640px', borderRadius: '16px', backgroundColor: H.surface,
         border: `1px solid ${H.border}`, boxShadow: H.shadows.modal, padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px',
@@ -278,7 +290,7 @@ export default function SubjectModal({ isOpen, onClose, onSuccess }: SubjectModa
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 id="subject-modal-title" style={{ fontSize: '20px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Palette size={20} style={{ color: H.purple }} /> Subject & Color Manager
             </h2>
             <p style={{ fontSize: '13px', color: H.textSec, margin: '4px 0 0' }}>

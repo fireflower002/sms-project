@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <style>{`
           @media (max-width: 767px) {
             .admin-main-content {
-              padding-bottom: 80px;
+              padding-bottom: calc(90px + env(safe-area-inset-bottom));
             }
             .admin-main-content:has(.staff-chat-header) {
               padding-bottom: 0 !important;

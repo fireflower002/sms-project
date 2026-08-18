@@ -519,7 +519,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       <div className="staff-chat-header" style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={styles.headerIconWrapper}>
-            <MessageSquare size={18} color={H.skyDark} />
+            <MessageSquare size={18} color="#18181B" />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -537,7 +537,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
         {/* Header Right Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={styles.retentionBanner}>
-            <Info size={13} color={H.skyDark} />
+            <Info size={13} color="#71717A" />
             <span>Messages kept <strong>30 days</strong></span>
           </div>
 
@@ -602,7 +602,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
         ) : messages.length === 0 ? (
           <div style={styles.emptyState}>
             <div style={styles.emptyIconCircle}>
-              <Sparkles size={24} color={H.skyDark} />
+              <Sparkles size={24} color="#18181B" />
             </div>
             <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 600, color: H.textPrimary }}>
               Welcome to Staff Channel!
@@ -639,8 +639,8 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                       <div
                         style={{
                           ...styles.avatar,
-                          backgroundColor: msg.author?.role === 'admin' ? '#FEF3C7' : '#E0F2FE',
-                          color: msg.author?.role === 'admin' ? '#92400E' : '#0369A1',
+                          backgroundColor: msg.author?.role === 'admin' ? '#18181B' : '#F4F4F5',
+                          color: msg.author?.role === 'admin' ? '#FFFFFF' : '#18181B',
                         }}
                       >
                         {msg.author?.full_name?.charAt(0).toUpperCase() || '?'}
@@ -665,8 +665,8 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                           <span
                             style={{
                               ...styles.roleBadge,
-                              backgroundColor: msg.author?.role === 'admin' ? '#FEF3C7' : '#F3F4F6',
-                              color: msg.author?.role === 'admin' ? '#92400E' : '#4B5563',
+                              backgroundColor: msg.author?.role === 'admin' ? '#18181B' : '#F4F4F5',
+                              color: msg.author?.role === 'admin' ? '#FFFFFF' : '#71717A',
                             }}
                           >
                             {msg.author?.role === 'admin' ? (
@@ -765,7 +765,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                                 disabled={deletingId === msg.id}
                                 style={{
                                   ...styles.actionIconBtnDelete,
-                                  color: isSelf ? 'rgba(255, 255, 255, 0.9)' : '#DC2626',
+                                  color: isSelf ? 'rgba(255, 255, 255, 0.9)' : '#7F1D1D',
                                 }}
                                 title={isAdmin && !isSelf ? "Delete message (Admin moderation)" : "Delete message"}
                                 type="button"
@@ -948,7 +948,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                     borderRadius: '10px',
                     border: '1px solid #FECACA',
                     backgroundColor: '#FEF2F2',
-                    color: '#DC2626',
+                    color: '#7F1D1D',
                     fontWeight: 700,
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -960,7 +960,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
                 >
                   <div>
                     <div>Clear Entire Channel (Admin)</div>
-                    <div style={{ fontSize: '11px', fontWeight: 400, color: '#B91C1C' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 400, color: '#7F1D1D' }}>
                       Deletes all staff messages for all accounts in the system
                     </div>
                   </div>
@@ -1015,7 +1015,7 @@ const styles = {
   header: {
     padding: `${H.spacing.md} ${H.spacing.xl}`,
     borderBottom: `1px solid ${H.border}`,
-    backgroundColor: '#FAFAF8',
+    backgroundColor: '#FFFFFF',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1028,7 +1028,7 @@ const styles = {
     width: H.targetSizes.buttonSm,
     height: H.targetSizes.buttonSm,
     borderRadius: H.radius.lg,
-    backgroundColor: H.skyLight,
+    backgroundColor: '#F4F4F5',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1072,9 +1072,9 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: H.skyLight,
-    border: `1px solid ${H.skyBlue}40`,
-    color: H.skyDark,
+    backgroundColor: '#F4F4F5',
+    border: `1px solid ${H.border}`,
+    color: '#71717A',
     padding: '6px 12px',
     borderRadius: '20px',
     fontSize: '12px',
@@ -1088,7 +1088,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: '12px',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#FAFAFA',
   },
 
   loaderTop: {
@@ -1149,7 +1149,7 @@ const styles = {
     width: '48px',
     height: '48px',
     borderRadius: '50%',
-    backgroundColor: H.skyLight,
+    backgroundColor: '#F4F4F5',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1166,8 +1166,8 @@ const styles = {
   dateBadge: {
     fontSize: '11px',
     fontWeight: 600,
-    color: H.textMuted,
-    backgroundColor: '#EAE8E3',
+    color: '#71717A',
+    backgroundColor: '#E4E4E7',
     padding: '3px 12px',
     borderRadius: '12px',
     textTransform: 'uppercase' as const,
@@ -1204,7 +1204,7 @@ const styles = {
   },
 
   bubbleSelf: {
-    backgroundColor: H.skyBlue,
+    backgroundColor: '#18181B',
     color: '#FFFFFF',
     borderBottomRightRadius: '2px',
   },
@@ -1262,7 +1262,7 @@ const styles = {
   editTextarea: {
     width: '100%',
     borderRadius: '8px',
-    border: `1px solid ${H.skyBlue}`,
+    border: `1px solid ${H.border}`,
     padding: '6px 10px',
     fontSize: '13px',
     fontFamily: 'inherit',
@@ -1290,7 +1290,7 @@ const styles = {
   },
 
   editSaveBtn: {
-    backgroundColor: H.skyBlue,
+    backgroundColor: '#18181B',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
@@ -1404,7 +1404,7 @@ const styles = {
     minWidth: '42px',
     minHeight: '42px',
     borderRadius: '12px',
-    backgroundColor: H.skyBlue,
+    backgroundColor: '#18181B',
     color: '#FFFFFF',
     border: 'none',
     fontWeight: '700',

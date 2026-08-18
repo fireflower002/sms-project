@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { Loader2, CheckCircle2, Eye, EyeOff, Lock, AlertTriangle, X, KeyRound } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 interface ChangePasswordModalProps {
   isOpen: boolean
@@ -93,8 +94,17 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
     transition: 'border-color 0.2s ease',
   })
 
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose: isForced ? undefined : onClose,
+  })
+
   return (
     <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="change-password-modal-title"
       style={{
         position: 'fixed',
         inset: 0,

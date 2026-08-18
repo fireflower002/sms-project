@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 import { getSubjectSuggestion, formatSubjectName } from '@/lib/subjectUtils'
 import SubjectModal from './SubjectModal'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 // Predefined fallback subjects & curated color palette
 const PREDEFINED_SUBJECTS = [
@@ -199,6 +200,11 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
   const [copied, setCopied] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: open,
+    onClose: () => setOpen(false),
+  })
+
   // Fetch subjects list when modal opens from profiles & schedule_assignments
   useEffect(() => {
     if (!open) return
@@ -356,11 +362,17 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
       </button>
 
       {open && (
-        <div style={{ ...styles.modalOverlay, animation: 'fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+        <div
+          ref={containerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-teacher-title"
+          style={{ ...styles.modalOverlay, animation: 'fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+        >
           <div style={{ ...styles.modalContent, animation: 'modalScale 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}>
             <div style={styles.header}>
               <div>
-                <h2 style={styles.headerTitle}>{createdPassword ? 'Teacher Account Created' : 'Register New Teacher'}</h2>
+                <h2 id="add-teacher-title" style={styles.headerTitle}>{createdPassword ? 'Teacher Account Created' : 'Register New Teacher'}</h2>
                 <p style={styles.headerSubtitle}>
                   {createdPassword
                     ? 'Share the temporary password below with the teacher.'

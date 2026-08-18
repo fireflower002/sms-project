@@ -712,7 +712,7 @@ function NewAbsenceContent() {
                   </button>
                 )}
                 <button onClick={()=>router.push('/admin/disruptions?tab=absences')} style={gBtn()}>
-                  <CheckCircle2 size={16}/> Done — Return to Disruptions Dashboard
+                  <CheckCircle2 size={16}/> Done — Return to Attendance & Coverage
                 </button>
               </div>
             )}

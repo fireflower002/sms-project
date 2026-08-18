@@ -15,7 +15,8 @@ import {
   RotateCcw,
   Download,
   Loader2,
-  Settings
+  Settings,
+  Zap
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT, todaySLT } from '@/lib/utils'
@@ -30,6 +31,7 @@ import { SkeletonBlock, TableSkeleton } from '@/components/ui/Skeleton'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 import { exportToCSV } from '@/lib/csvExport'
 import { useToast } from '@/components/ui/Toast'
+import DirectCoverDrawer from '@/components/admin/DirectCoverDrawer'
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' },
@@ -38,20 +40,20 @@ const styles: { [key: string]: React.CSSProperties } = {
   pageTitle: { fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 },
   pageSubtitle: { fontSize: '13px', fontWeight: 400, color: H.textSec, margin: '4px 0 0 0' },
   actionsWrapper: { display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' },
-  button: { border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', minHeight: '38px', padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.15s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.purple, color: '#FFFFFF' },
-  buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
-  buttonSuccess: { background: H.successGreen, color: '#FFFFFF' },
-  buttonDanger: { background: H.dangerLight, color: H.danger },
+  button: { border: 'none', borderRadius: '8px', fontWeight: 600, fontSize: '13px', minHeight: '36px', padding: '7px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s ease', textDecoration: 'none', boxSizing: 'border-box' },
+  buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
+  buttonSecondary: { background: '#F4F4F5', color: H.textSec, border: `1px solid ${H.border}` },
+  buttonSuccess: { background: '#14532D', color: '#FFFFFF' },
+  buttonDanger: { background: '#7F1D1D', color: '#FFFFFF' },
   
   // Contiguous Tab Bar
-  tabContainer: { display: 'flex', gap: '8px', padding: '0 24px', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' },
-  tabButton: { padding: '12px 16px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s ease' },
+  tabContainer: { display: 'flex', gap: '8px', padding: '0 24px', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAFAFA' },
+  tabButton: { padding: '12px 16px', fontSize: '13.5px', fontWeight: 600, cursor: 'pointer', background: 'none', border: 'none', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.15s ease' },
   
   // Contiguous Stat Strip
   statStrip: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', borderBottom: `1px solid ${H.border}`, backgroundColor: H.surface },
   statCell: { padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px', borderRight: `1px solid ${H.border}` },
-  statValue: { fontSize: '24px', fontWeight: 700, color: H.textPrimary, fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"tnum"', lineHeight: 1 },
+  statValue: { fontSize: '24px', fontWeight: 600, color: H.textPrimary, fontVariantNumeric: 'tabular-nums', fontFeatureSettings: '"tnum"', lineHeight: 1 },
   statLabel: { fontSize: '11px', fontWeight: 600, color: H.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '4px' },
   
   // Integrated Toolbar & Table
@@ -70,10 +72,10 @@ const ABSENCE_TYPE_VARIANTS: Record<string, { label: string; bg: string; color: 
 }
 
 const SWAP_STATUS_VARIANTS: Record<string, { label: string; variant: 'pending' | 'active' | 'danger' | 'inactive' | 'custom'; bg?: string; color?: string }> = {
-  peer_accepted: { label: 'Needs Approval', variant: 'custom', bg: H.softPinkLight, color: H.softPinkDark },
-  accepted: { label: 'Approved', variant: 'active' },
+  peer_accepted: { label: 'Pending Admin Approval', variant: 'custom', bg: '#E0F2FE', color: '#0369A1' },
+  accepted: { label: 'Swap Finalized', variant: 'active' },
   rejected: { label: 'Rejected', variant: 'danger' },
-  pending: { label: 'Awaiting Peer', variant: 'inactive' },
+  pending: { label: 'Waiting for Teacher Response', variant: 'inactive' },
   cancelled: { label: 'Cancelled', variant: 'inactive' },
 }
 
@@ -111,6 +113,19 @@ function DisruptionsContent() {
 
   // Modal state
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
+
+  // Direct Cover Drawer state
+  const [directCoverOpen, setDirectCoverOpen] = useState(false)
+  const [directCoverAbsenceId, setDirectCoverAbsenceId] = useState<string | null>(null)
+  const [directCoverTeacherId, setDirectCoverTeacherId] = useState<string | null>(null)
+  const [directCoverDate, setDirectCoverDate] = useState<string | null>(null)
+
+  const handleOpenDirectCover = (absenceId?: string | null, teacherId?: string | null, dateStr?: string | null) => {
+    setDirectCoverAbsenceId(absenceId || null)
+    setDirectCoverTeacherId(teacherId || null)
+    setDirectCoverDate(dateStr || today)
+    setDirectCoverOpen(true)
+  }
 
   const handleExportAbsences = () => {
     const filtered = absences.filter(a => !absenceSearch || a.teacher?.full_name?.toLowerCase().includes(absenceSearch.toLowerCase()))
@@ -176,8 +191,9 @@ function DisruptionsContent() {
       console.error('Failed to approve absence:', error.message)
       showToast('Could not approve cover request. Please verify cover teacher availability.', 'error')
     } else {
-      showToast(`Absence approved! Redirecting to assign cover...`, 'success')
-      router.push(`/admin/absences/new?absence_id=${absence.id}`)
+      showToast(`Absence approved! Assigning cover...`, 'success')
+      fetchAbsences()
+      handleOpenDirectCover(absence.id, absence.teacher_id, absence.absence_date)
     }
     setProcessingAbsence(null)
   }
@@ -377,11 +393,11 @@ function DisruptionsContent() {
         {/* Contiguous Header Bar */}
         <div style={styles.headerBar}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertTriangle size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertTriangle size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
-              <h1 style={styles.pageTitle}>Disruptions & Coverage</h1>
+              <h1 style={styles.pageTitle}>Attendance & Coverage</h1>
               <p style={styles.pageSubtitle}>
                 Manage teacher absences, cover duty assignments, and class swap requests.
               </p>
@@ -390,24 +406,61 @@ function DisruptionsContent() {
           <div style={styles.actionsWrapper}>
             <button
               onClick={() => setShowSettingsModal(true)}
-              style={{ ...styles.button, ...styles.buttonSecondary }}
-              title="Absence Settings"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: `1px solid ${H.border}`,
+                backgroundColor: H.surface,
+                color: H.textSec,
+                fontSize: '12.5px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+              title="Absence Cutoff Settings"
             >
-              <Settings size={14} />
+              <Settings size={14} style={{ color: H.textMuted }} />
               <span>Cutoff Settings</span>
             </button>
             <button
               onClick={activeTab === 'absences' ? fetchAbsences : fetchSwaps}
-              style={{ ...styles.button, ...styles.buttonSecondary }}
-              title="Refresh"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                border: `1px solid ${H.border}`,
+                backgroundColor: H.surface,
+                color: H.textMuted,
+                cursor: 'pointer',
+              }}
+              title="Refresh Data"
+              aria-label="Refresh Data"
             >
               <RefreshCw size={14} style={(activeTab === 'absences' ? absencesLoading : swapsLoading) ? { animation: 'spin 1s linear infinite' } : {}} />
-              <span>Refresh</span>
             </button>
             {activeTab === 'absences' && (
-              <Link href="/admin/absences/new" style={{ ...styles.button, ...styles.buttonPrimary }}>
-                <Plus size={14} /> Mark Absent
-              </Link>
+              <>
+                <button
+                  onClick={() => handleOpenDirectCover()}
+                  style={{
+                    ...styles.button,
+                    backgroundColor: '#7F1D1D',
+                    color: '#FFFFFF',
+                    fontWeight: 700
+                  }}
+                  title="Emergency Direct Cover Override"
+                >
+                  <Zap size={14} style={{ color: '#FFFFFF' }} /> Direct Cover
+                </button>
+                <Link href="/admin/absences/new" style={{ ...styles.button, ...styles.buttonPrimary }}>
+                  <Plus size={14} /> Mark Absent
+                </Link>
+              </>
             )}
           </div>
         </div>
@@ -418,8 +471,8 @@ function DisruptionsContent() {
             onClick={() => setActiveTab('absences')}
             style={{
               ...styles.tabButton,
-              color: activeTab === 'absences' ? H.purple : H.textSec,
-              borderBottom: activeTab === 'absences' ? `3px solid ${H.purple}` : '3px solid transparent',
+              color: activeTab === 'absences' ? '#18181B' : H.textSec,
+              borderBottom: activeTab === 'absences' ? '3px solid #18181B' : '3px solid transparent',
             }}
           >
             <ClipboardList size={16} />
@@ -434,13 +487,13 @@ function DisruptionsContent() {
             onClick={() => setActiveTab('swaps')}
             style={{
               ...styles.tabButton,
-              color: activeTab === 'swaps' ? H.softPink : H.textSec,
-              borderBottom: activeTab === 'swaps' ? `3px solid ${H.softPink}` : '3px solid transparent',
+              color: activeTab === 'swaps' ? '#18181B' : H.textSec,
+              borderBottom: activeTab === 'swaps' ? '3px solid #18181B' : '3px solid transparent',
             }}
           >
             <ArrowRightLeft size={16} />
             <span>Cover Swap Requests</span>
-            {swapStats.pending > 0 && <Badge variant="custom" bg={H.softPinkLight} color={H.softPinkDark}>{swapStats.pending} Pending</Badge>}
+            {swapStats.pending > 0 && <Badge variant="custom" bg="#F4F4F5" color="#18181B">{swapStats.pending} Pending</Badge>}
           </button>
         </div>
 
@@ -450,8 +503,8 @@ function DisruptionsContent() {
             {/* Contiguous Metric Strip */}
             <div style={styles.statStrip}>
               <div style={styles.statCell}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.accentLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AlertTriangle size={18} style={{ color: H.accentDark }} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.dangerLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={18} style={{ color: H.danger }} />
                 </div>
                 <div>
                   <div style={styles.statValue}>{todayCount}</div>
@@ -468,8 +521,8 @@ function DisruptionsContent() {
                 </div>
               </div>
               <div style={{ ...styles.statCell, borderRight: 'none' }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: pendingAbsenceCount > 0 ? H.purpleLight : needsCover > 0 ? '#FFF7ED' : H.successLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <AlertCircle size={18} style={{ color: pendingAbsenceCount > 0 ? H.purpleDark : needsCover > 0 ? '#C2410C' : H.successGreen }} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertCircle size={18} style={{ color: '#18181B' }} />
                 </div>
                 <div>
                   <div style={styles.statValue}>{pendingAbsenceCount}</div>
@@ -480,11 +533,11 @@ function DisruptionsContent() {
 
             {/* Urgent Swap Alert Banner */}
             {urgentSwaps.length > 0 && (
-              <div style={{ margin: '16px 20px 0', padding: '14px 18px', borderRadius: '12px', background: H.softPinkLight, border: `1px solid ${H.softPinkDark}40`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ margin: '16px 20px 0', padding: '14px 18px', borderRadius: '12px', background: H.dangerLight, border: '1px solid #FECACA', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <AlertTriangle size={20} style={{ color: H.softPinkDark }} />
+                  <AlertTriangle size={20} style={{ color: H.danger }} />
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: '13px', color: H.softPinkDark }}>
+                    <div style={{ fontWeight: 800, fontSize: '13px', color: H.danger }}>
                       URGENT: {urgentSwaps.length} Cover Swap Request(s) Pending Reassignment
                     </div>
                     <div style={{ fontSize: '12px', color: H.textPrimary, marginTop: '2px' }}>
@@ -492,7 +545,7 @@ function DisruptionsContent() {
                     </div>
                   </div>
                 </div>
-                <Link href={`/admin/absences/${urgentSwaps[0]?.absence_id}`} style={{ padding: '6px 14px', borderRadius: '8px', background: H.softPinkDark, color: '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}>
+                <Link href={`/admin/absences/${urgentSwaps[0]?.absence_id}`} style={{ padding: '6px 14px', borderRadius: '8px', background: '#7F1D1D', color: '#fff', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}>
                   Reassign Cover Now →
                 </Link>
               </div>
@@ -660,27 +713,27 @@ function DisruptionsContent() {
                                   minHeight: '32px',
                                   padding: '4px 12px',
                                   fontSize: '12px',
-                                  background: H.softPinkLight,
-                                  color: H.softPinkDark,
+                                  background: '#1E3A8A',
+                                  color: '#FFFFFF',
                                   fontWeight: 700
                                 }}
                               >
                                 Reassign Cover
                               </Link>
                             ) : (
-                              <Link
-                                href={`/admin/absences/new?absence_id=${a.id}`}
+                              <button
+                                onClick={() => handleOpenDirectCover(a.id, a.teacher_id, a.absence_date)}
                                 style={{
                                   ...styles.button,
-                                  textDecoration: 'none',
                                   minHeight: '32px',
                                   padding: '4px 12px',
                                   fontSize: '12px',
-                                  ...(unassigned ? { background: H.skyLight, color: H.skyDark } : { background: H.successLight, color: '#065F46' })
+                                  cursor: 'pointer',
+                                  ...(unassigned ? { background: '#1E3A8A', color: '#FFFFFF' } : { background: '#F4F4F5', color: '#18181B', border: `1px solid ${H.border}` })
                                 }}
                               >
                                 {unassigned ? 'Assign Cover Now' : 'View Cover'}
-                              </Link>
+                              </button>
                             )}
                           </td>
                           <td style={styles.td}>
@@ -696,7 +749,7 @@ function DisruptionsContent() {
                                     padding: '4px 10px',
                                     fontSize: '12px',
                                     cursor: 'pointer',
-                                    backgroundColor: H.grass,
+                                    backgroundColor: '#14532D',
                                   }}
                                   title="Approve Absence"
                                 >
@@ -887,7 +940,7 @@ function DisruptionsContent() {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
           <div style={{ width: '100%', maxWidth: '500px', backgroundColor: H.surface, borderRadius: '16px', boxShadow: H.cardShadow, padding: '24px', border: `1px solid ${H.border}` }}>
             <h3 style={{ fontSize: '18px', fontWeight: 800, color: H.textPrimary, margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Settings size={20} style={{ color: H.purple }} />
+              <Settings size={20} style={{ color: '#18181B' }} />
               Absence & Cutoff Settings
             </h3>
 
@@ -933,7 +986,7 @@ function DisruptionsContent() {
                 <button
                   type="submit"
                   disabled={savingSettings}
-                  style={{ padding: '10px 20px', borderRadius: '8px', background: H.purple, color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                  style={{ padding: '10px 20px', borderRadius: '8px', background: '#18181B', color: '#FFFFFF', border: 'none', fontWeight: 700, cursor: 'pointer' }}
                 >
                   {savingSettings ? 'Saving...' : 'Save Settings'}
                 </button>
@@ -942,6 +995,19 @@ function DisruptionsContent() {
           </div>
         </div>
       )}
+
+      {/* Direct Cover Drawer */}
+      <DirectCoverDrawer
+        isOpen={directCoverOpen}
+        onClose={() => setDirectCoverOpen(false)}
+        absenceId={directCoverAbsenceId}
+        initialTeacherId={directCoverTeacherId}
+        initialDate={directCoverDate}
+        onSuccess={() => {
+          fetchAbsences()
+          fetchSwaps()
+        }}
+      />
     </div>
   )
 }

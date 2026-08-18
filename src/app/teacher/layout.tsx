@@ -34,7 +34,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       <div className="teacher-main-content" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
         {/* Persistent Top Header Bar with Notification Bell */}
         <header style={{
-          height: '52px',
+          height: '48px',
           padding: '0 20px',
           backgroundColor: H.surface,
           borderBottom: `1px solid ${H.border}`,
@@ -56,7 +56,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
         <style>{`
           @media (max-width: 767px) {
             .teacher-main-content {
-              padding-bottom: 80px;
+              padding-bottom: calc(90px + env(safe-area-inset-bottom));
             }
             .teacher-main-content:has(.staff-chat-header) {
               padding-bottom: 0 !important;

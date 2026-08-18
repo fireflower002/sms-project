@@ -20,7 +20,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   actionsWrapper: { display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' },
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
   button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '44px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.skyBlue, color: '#FFFFFF' },
+  buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
   mainGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', alignItems: 'start' },
   // Badges
@@ -221,8 +221,8 @@ function AnnouncementsContent() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Megaphone size={20} style={{ color: H.skyDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Megaphone size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>School Announcements</h1>

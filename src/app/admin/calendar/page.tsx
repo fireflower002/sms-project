@@ -249,7 +249,7 @@ export default function AdminCalendarPage() {
 
   if (loading) {
     return (
-      <LoadingSpinner centered size={36} color={H.purple} />
+      <LoadingSpinner centered size={36} color="#18181B" />
     )
   }
 
@@ -259,7 +259,7 @@ export default function AdminCalendarPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <CalendarIcon size={26} style={{ color: H.purple }} />
+            <CalendarIcon size={26} style={{ color: '#18181B' }} />
             School Calendar Management
           </h1>
           <p style={{ fontSize: '14px', color: H.textSec, margin: '4px 0 0' }}>
@@ -275,9 +275,9 @@ export default function AdminCalendarPage() {
               height: H.targetSizes.buttonMd,
               padding: '0 14px',
               borderRadius: H.radius.lg,
-              border: `1px solid ${H.skyBlue}`,
-              backgroundColor: H.skyLight,
-              color: H.skyDark,
+              border: `1px solid ${H.border}`,
+              backgroundColor: '#F4F4F5',
+              color: '#18181B',
               fontWeight: 600,
               fontSize: '13px',
               display: 'inline-flex',
@@ -296,7 +296,7 @@ export default function AdminCalendarPage() {
               height: H.targetSizes.buttonMd,
               padding: '0 16px',
               borderRadius: H.radius.lg,
-              backgroundColor: H.purple,
+              backgroundColor: '#18181B',
               color: '#FFFFFF',
               border: 'none',
               fontWeight: 700,

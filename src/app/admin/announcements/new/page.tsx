@@ -127,7 +127,19 @@ export default function NewAnnouncementPage() {
 
         if (linksErr) {
           console.error('Failed to link targeted classes for announcement:', linksErr.message)
-          setError('Announcement posted, but target classes could not be attached. You can edit the notice to retry.')
+          // Attempt rollback deletion of main announcement row so it does not default to public
+          const { error: rollbackErr } = await supabase
+            .from('announcements')
+            .delete()
+            .eq('id', data.id)
+
+          if (rollbackErr) {
+            console.error('[Rollback Failed] Could not delete orphaned announcement record:', rollbackErr.message)
+            setError(`Announcement could not attach target classes and automatic cleanup failed. Please check the announcements list and remove notice "${form.title.trim()}" if it appears.`)
+          } else {
+            console.info('[Rollback Succeeded] Cleanly deleted orphaned announcement ID:', data.id)
+            setError('Failed to attach target classes. Announcement post cancelled — please try again.')
+          }
           setLoading(false)
           return
         }
@@ -172,8 +184,8 @@ export default function NewAnnouncementPage() {
       {/* Header */}
       <header style={{ height: 68, padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, background: H.surface, backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 30 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(59,130,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Megaphone size={20} style={{ color: H.skyBlue }} />
+          <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Megaphone size={20} style={{ color: '#18181B' }} />
           </div>
           <div>
             <h1 style={{ fontFamily: H.font, fontSize: 17, fontWeight: 800, color: H.text, margin: 0 }}>New Announcement</h1>
@@ -193,8 +205,8 @@ export default function NewAnnouncementPage() {
 
           {/* Content card */}
           <div style={card({ display: 'flex', flexDirection: 'column', gap: 16 })}>
-            <h2 style={{ fontFamily: H.font, fontSize: 15, fontWeight: 900, color: H.skyBlue, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Megaphone size={16} color={H.skyBlue}/> Announcement Details
+            <h2 style={{ fontFamily: H.font, fontSize: 15, fontWeight: 900, color: '#18181B', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Megaphone size={16} color="#18181B"/> Announcement Details
             </h2>
 
             <div>
@@ -468,7 +480,7 @@ export default function NewAnnouncementPage() {
 
           {/* Submit */}
           <button type="submit" disabled={loading}
-            style={{ background: H.skyBlue, color: '#fff', border: `2px solid ${H.border}`, borderRadius: 14, fontFamily: H.font, fontWeight: 900, fontSize: 15, padding: '14px 24px', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: `0 4px 12px rgba(59, 130, 246, 0.25)`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, minHeight: 48, width: '100%', boxSizing: 'border-box' as const }}>
+            style={{ background: '#18181B', color: '#fff', border: `2px solid ${H.border}`, borderRadius: 14, fontFamily: H.font, fontWeight: 900, fontSize: 15, padding: '14px 24px', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: `0 4px 12px rgba(24, 24, 27, 0.15)`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: loading ? 0.7 : 1, minHeight: 48, width: '100%', boxSizing: 'border-box' as const }}>
             {loading
               ? <><Loader2 size={18} style={{ animation: 'spin 0.7s linear infinite' }}/> Posting…</>
               : <><Megaphone size={18}/> Post Announcement{form.send_telegram ? ' + Notify Telegram' : ''}</>

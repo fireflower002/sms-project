@@ -46,6 +46,19 @@
 
 ---
 
+### Deprecated & Removed Legacy Schema Artifacts
+
+The following 7 table names from early design documents or initial migrations are unused by application code and have been documented/removed:
+1. **`subjects`**: Dropped via migration `20260818000001_drop_unused_subjects_table.sql`. Subject lists/colors are stored directly on `profiles` (`subjects` text array, `subject_colors` jsonb) and `schedule_assignments.subject`.
+2. **`notices`**: Non-existent in live database (`0` references in code). Replaced by `announcements`.
+3. **`staff_chat`**: Non-existent in live database (`0` references in code). Replaced by `hive_messages`.
+4. **`inventory_items`**: Non-existent in live database (`0` references in code). Replaced by `inventory`.
+5. **`inventory_logs`**: Non-existent in live database (`0` references in code). Replaced by `inventory_assignments`.
+6. **`school_calendar`**: Non-existent in live database (`0` references in code). Replaced by `school_calendar_events`.
+7. **`class_subjects`**: Non-existent in live database (`0` references in code). Replaced by `schedule_assignments`.
+
+---
+
 ## 3. Business Process & Database Entity Data Flow
 
 ```mermaid

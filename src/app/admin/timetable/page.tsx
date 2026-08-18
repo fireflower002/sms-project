@@ -14,7 +14,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   shell: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
   // Buttons
   button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '38px', padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.purple, color: '#FFFFFF' },
+  buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
   buttonDanger: { background: H.dangerLight, color: H.danger, border: `1px solid ${'#FECACA'}` },
   // Template card (within the shell body)
@@ -66,7 +66,7 @@ const TemplateCard = ({ template, totalCount, onSetActive, onConfirmDelete, acti
           <Eye size={15} /> View Schedule
         </Link>
         {!template.is_active && (
-          <button onClick={() => onSetActive(template.id)} disabled={activating} style={{ ...styles.button, background: H.purpleLight, color: H.purpleDark }}>
+          <button onClick={() => onSetActive(template.id)} disabled={activating} style={{ ...styles.button, background: '#14532D', color: '#FFFFFF' }}>
             {activating ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Star size={15} />} Set Active
           </button>
         )}
@@ -99,7 +99,7 @@ const DeleteModal = ({ template, totalCount, onCancel, onDelete, deleting, error
       {error && <p style={{ color: H.danger, fontSize: '13px' }}>{error}</p>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px' }}>
         <button onClick={onCancel} style={{ ...styles.button, ...styles.buttonSecondary }}>Cancel</button>
-        <button onClick={() => onDelete(template)} disabled={deleting || totalCount <= 1} style={{ ...styles.button, background: H.danger, color: '#FFFFFF', opacity: (deleting || totalCount <= 1) ? 0.7 : 1 }}>
+        <button onClick={() => onDelete(template)} disabled={deleting || totalCount <= 1} style={{ ...styles.button, background: '#7F1D1D', color: '#FFFFFF', opacity: (deleting || totalCount <= 1) ? 0.7 : 1 }}>
           {deleting ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Yes, Delete Template'}
         </button>
       </div>
@@ -168,8 +168,8 @@ export default function TimetablePage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Timetable Templates</h1>
@@ -180,7 +180,7 @@ export default function TimetablePage() {
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <Link href="/admin/classes" style={{ ...styles.button, ...styles.buttonSecondary }}>Manage Classes</Link>
-            <Link href="/admin/timetable/import" style={{ ...styles.button, ...styles.buttonSecondary, color: H.purple, borderColor: H.purple }}>
+            <Link href="/admin/timetable/import" style={{ ...styles.button, ...styles.buttonSecondary, color: H.textSec, borderColor: H.border }}>
               <FileSpreadsheet size={16} /> Import Yearly Timetable
             </Link>
             <Link href="/admin/timetable/new" style={{ ...styles.button, ...styles.buttonPrimary }}>+ New Template</Link>
@@ -191,7 +191,7 @@ export default function TimetablePage() {
         <div style={{ padding: '24px' }}>
           {loading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '64px' }}>
-              <LoadingSpinner size={32} color={H.skyBlue} />
+              <LoadingSpinner size={32} color="#18181B" />
             </div>
           ) : templates.length === 0 ? (
             <div style={{ padding: '40px 20px', textAlign: 'center' }}>

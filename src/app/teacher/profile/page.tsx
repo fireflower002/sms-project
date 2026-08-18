@@ -112,16 +112,13 @@ export default function TeacherProfilePage() {
       const [{ data: prof }, { data: pending }, { data: allowed }, { data: schedData }] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', session.user.id).single(),
         supabase.from('profile_change_requests').select('*').eq('teacher_id', session.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        userEmail ? supabase.from('allowed_users').select('subjects').eq('email', userEmail).maybeSingle() : Promise.resolve({ data: null }),
+        userEmail ? supabase.from('allowed_users').select('subjects, role').eq('email', userEmail).maybeSingle() : Promise.resolve({ data: null }),
         supabase.from('schedule_assignments').select('subject').eq('teacher_id', session.user.id),
       ])
 
       let profileData = prof
       if (!profileData && userEmail) {
-        const isAdmin =
-          session.user.user_metadata?.role === 'admin' ||
-          userEmail.startsWith('admin') ||
-          userEmail.includes('admin@')
+        const isAdmin = allowed?.role === 'admin'
 
         profileData = {
           id: session.user.id,

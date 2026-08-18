@@ -53,10 +53,6 @@ export default function LoginForm({
         let mustChange = false
 
         const userEmail = (user.email || email).trim().toLowerCase()
-        const isAdminByMetaOrEmail =
-          user.user_metadata?.role === 'admin' ||
-          userEmail.startsWith('admin') ||
-          userEmail.includes('admin@')
 
         try {
           const res = await fetch('/api/auth/role')
@@ -81,13 +77,13 @@ export default function LoginForm({
           if (profile?.role) {
             userRole = profile.role
           } else {
-            userRole = isAdminByMetaOrEmail ? 'admin' : (role || 'teacher')
+            const { data: allowed } = await supabase
+              .from('allowed_users')
+              .select('role')
+              .eq('email', userEmail)
+              .maybeSingle()
+            userRole = allowed?.role || 'teacher'
           }
-        }
-
-        if (isAdminByMetaOrEmail && userRole !== 'admin') {
-          userRole = 'admin'
-          mustChange = false
         }
 
         // Verify forced password change for teachers
@@ -256,10 +252,10 @@ export default function LoginForm({
     header: { textAlign: 'center', marginBottom: 28 },
     logo: {
       width: 60, height: 60, borderRadius: 16,
-      background: H.accentLight, border: `1px solid ${H.border}`,
+      background: '#F4F4F5', border: `1px solid ${H.border}`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: 30, margin: '0 auto 12px',
-      color: H.chocolate,
+      color: '#18181B',
     },
     h1: { fontWeight: H.fontWeight.extrabold, fontSize: H.fontSize['3xl'], color: H.textPrimary, margin: '0 0 4px' },
     sub: { fontSize: H.fontSize.md, color: H.muted, margin: 0 },
@@ -273,7 +269,7 @@ export default function LoginForm({
       fontSize: H.fontSize.md, borderTop: 'none', borderLeft: 'none', borderRight: 'none',
       borderBottom: '2px solid transparent', cursor: 'pointer', transition: H.motion.transitionFast,
     },
-    tabOn: { background: H.accentLight, color: H.chocolate, borderBottomColor: H.honey },
+    tabOn: { background: '#F4F4F5', color: '#18181B', borderBottomColor: '#18181B' },
     tabOff: { background: H.bg, color: H.muted, borderBottomColor: 'transparent' },
     body: { padding: H.spacing['2xl'] },
     errBox: {
@@ -299,7 +295,7 @@ export default function LoginForm({
       fontWeight: H.fontWeight.semibold, fontSize: H.fontSize.base, outline: 'none', transition: H.motion.transitionFast, boxSizing: 'border-box' as const,
     },
     btn: {
-      width: '100%', minHeight: H.targetSizes.touchTarget, padding: H.spacing.md, background: H.honey, color: '#FFFFFF',
+      width: '100%', minHeight: H.targetSizes.touchTarget, padding: H.spacing.md, background: '#18181B', color: '#FFFFFF',
       border: 'none', borderRadius: H.radius.lg, fontFamily: H.font,
       fontWeight: H.fontWeight.bold, fontSize: H.fontSize.medium, cursor: 'pointer',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: H.spacing.sm, marginTop: 4, boxSizing: 'border-box' as const,
@@ -307,7 +303,7 @@ export default function LoginForm({
     },
     infoNotice: {
       padding: `${H.spacing.xl} ${H.spacing.lg}`, borderRadius: H.radius.xl,
-      background: H.purpleLight, border: `1px solid ${H.purple}40`,
+      background: '#F4F4F5', border: `1px solid ${H.border}`,
       textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: H.spacing.md,
     },
     footer: { fontSize: H.fontSize.sm, color: H.sub, textAlign: 'center', marginTop: H.spacing.xl },
@@ -320,7 +316,7 @@ export default function LoginForm({
         {/* Header */}
         <div style={styles.header}>
           <div style={{ ...styles.logo, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <GraduationCap size={28} style={{ color: H.honey }} />
+            <GraduationCap size={28} style={{ color: '#18181B' }} />
           </div>
           <h1 style={styles.h1}>{title}</h1>
           <p style={styles.sub}>School Management System</p>
@@ -369,7 +365,7 @@ export default function LoginForm({
                     onFocus={() => setIsEmailFocused(true)}
                     onBlur={() => setIsEmailFocused(false)}
                     required placeholder="you@school.lk"
-                    style={{ ...styles.input, borderColor: isEmailFocused ? H.honey : H.border }}
+                    style={{ ...styles.input, borderColor: isEmailFocused ? '#18181B' : H.border }}
                   />
                 </div>
                 <div>
@@ -380,7 +376,7 @@ export default function LoginForm({
                     onFocus={() => setIsPassFocused(true)}
                     onBlur={() => setIsPassFocused(false)}
                     required placeholder="••••••••"
-                    style={{ ...styles.input, borderColor: isPassFocused ? H.honey : H.border }}
+                    style={{ ...styles.input, borderColor: isPassFocused ? '#18181B' : H.border }}
                   />
                 </div>
                 <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.7 : 1 }}>
@@ -392,9 +388,9 @@ export default function LoginForm({
             ) : role === 'teacher' ? (
               /* Teacher-side Password Reset Notice */
               <div style={styles.infoNotice}>
-                <ShieldAlert size={32} style={{ color: H.purpleDark }} />
+                <ShieldAlert size={32} style={{ color: '#18181B' }} />
                 <div>
-                  <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 700, color: H.purpleDark }}>
+                  <h3 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: 700, color: '#18181B' }}>
                     Admin-Managed Password Reset
                   </h3>
                   <p style={{ margin: 0, fontSize: '12.5px', color: H.textSec, lineHeight: 1.5 }}>
@@ -404,8 +400,8 @@ export default function LoginForm({
                 <button
                   onClick={() => setMode('login')}
                   style={{
-                    padding: '8px 16px', borderRadius: 8, border: `1px solid ${H.purple}`,
-                    backgroundColor: H.surface, color: H.purpleDark, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                    padding: '8px 16px', borderRadius: 8, border: `1px solid ${H.border}`,
+                    backgroundColor: H.surface, color: '#18181B', fontWeight: 600, fontSize: 13, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
                   }}
                 >
@@ -426,7 +422,7 @@ export default function LoginForm({
                     onFocus={() => setIsEmailFocused(true)}
                     onBlur={() => setIsEmailFocused(false)}
                     required placeholder="admin@school.lk"
-                    style={{ ...styles.input, borderColor: isEmailFocused ? H.honey : H.border }}
+                    style={{ ...styles.input, borderColor: isEmailFocused ? '#18181B' : H.border }}
                   />
                 </div>
                 <button type="submit" disabled={loading} style={{ ...styles.btn, opacity: loading ? 0.7 : 1 }}>
@@ -443,7 +439,7 @@ export default function LoginForm({
                   <button
                     type="button"
                     onClick={() => { setOtpStep('request'); setError('') }}
-                    style={{ background: 'none', border: 'none', color: H.purple, fontSize: 12, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: '#18181B', fontSize: 12, cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}
                   >
                     Change Email
                   </button>

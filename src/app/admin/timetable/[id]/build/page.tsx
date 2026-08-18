@@ -333,7 +333,7 @@ export default function TimetableBuildPage() {
 
   if (loading) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:H.bg }}>
-      <Loader2 size={24} style={{ color:H.purple, animation:'spin 0.7s linear infinite' }}/>
+      <Loader2 size={24} style={{ color:'#18181B', animation:'spin 0.7s linear infinite' }}/>
     </div>
   )
 
@@ -343,8 +343,8 @@ export default function TimetableBuildPage() {
       {/* HEADER — ArrowLeft back button removed to match app navigation pattern */}
       <header style={{ height:64, padding:'0 20px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30, flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Calendar size={18} style={{ color: H.purpleDark }} />
+          <div style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Calendar size={18} style={{ color: '#18181B' }} />
           </div>
           <div>
             <h1 style={{ fontFamily:H.font, fontSize:15, fontWeight:800, color:H.text, margin:0 }}>{template?.name}</h1>
@@ -354,12 +354,12 @@ export default function TimetableBuildPage() {
           </div>
         </div>
         <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-          <button onClick={() => setShowSubjectModal(true)} style={ghost({ padding: '6px 12px', fontSize: 13, background: H.purpleLight, color: H.purpleDark, border: `1px solid ${H.purple}40` })}>
+          <button onClick={() => setShowSubjectModal(true)} style={ghost({ padding: '6px 12px', fontSize: 13, background: '#F4F4F5', color: '#18181B', border: `1px solid ${H.border}` })}>
             <Palette size={14} /> Manage Subjects
           </button>
           <button onClick={fetchData} style={ghost({ padding:'6px 10px' })} title="Refresh"><RefreshCw size={13}/></button>
           <button onClick={autoFixConflicts} disabled={autoFixing}
-            style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:10, border:`1px solid ${H.border}`, cursor:autoFixing?'wait':'pointer', fontFamily:H.font, fontWeight:700, fontSize:13, background: conflictCount>0?H.accent:H.purple, color:'#fff', transition:'all 0.2s' }}>
+            style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 16px', borderRadius:10, border:`1px solid ${H.border}`, cursor:autoFixing?'wait':'pointer', fontFamily:H.font, fontWeight:700, fontSize:13, background: '#1E3A8A', color:'#fff', transition:'all 0.2s' }}>
             {autoFixing ? <><Loader2 size={14} style={{ animation:'spin 0.7s linear infinite' }}/> Auto-Fixing…</>
               : conflictCount>0 ? <><AlertTriangle size={14}/> {conflictCount} Conflict{conflictCount!==1?'s':''} · Auto-Fix</>
               : <><Wand2 size={14}/> Auto-Fix Conflicts</>}
@@ -497,7 +497,7 @@ export default function TimetableBuildPage() {
             <div style={{ display:'flex', border:`1px solid ${H.border}`, borderRadius:8, overflow:'hidden', backgroundColor:H.surface }}>
               {DAYS.map((d,i)=>(
                 <button key={d} onClick={()=>setSelectedDay(i+1)}
-                  style={{ padding:'7px 14px', fontFamily:H.font, fontWeight:600, fontSize:12, cursor:'pointer', borderTop:'none', borderBottom:'none', borderLeft:'none', borderRight:i<4?`1px solid ${H.border}`:'none', background:selectedDay===i+1?H.purple:H.surface, color:selectedDay===i+1?'#FFFFFF':H.textSec }}>
+                  style={{ padding:'7px 14px', fontFamily:H.font, fontWeight:600, fontSize:12, cursor:'pointer', borderTop:'none', borderBottom:'none', borderLeft:'none', borderRight:i<4?`1px solid ${H.border}`:'none', background:selectedDay===i+1?'#18181B':H.surface, color:selectedDay===i+1?'#FFFFFF':H.textSec }}>
                   {DAY_SHORT[i]}
                 </button>
               ))}
@@ -513,9 +513,9 @@ export default function TimetableBuildPage() {
                   gap: 6,
                   padding: '6px 12px',
                   borderRadius: 8,
-                  border: `1px solid ${H.purple}40`,
-                  background: `${H.purple}15`,
-                  color: H.purple,
+                  border: `1px solid ${H.border}`,
+                  background: '#F4F4F5',
+                  color: '#18181B',
                   fontFamily: H.font,
                   fontSize: 12,
                   fontWeight: 700,
@@ -546,13 +546,13 @@ export default function TimetableBuildPage() {
                 <p style={{ fontSize: 13, color: H.textSec, margin: '0 0 20px' }}>
                   You cannot add subjects to a timetable until classes are created.
                 </p>
-                <Link href="/admin/classes" style={{ padding: '10px 20px', borderRadius: 10, background: H.purple, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Link href="/admin/classes" style={{ padding: '10px 20px', borderRadius: 10, background: '#18181B', color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   Go to Grades & Classes →
                 </Link>
               </div>
             ) : !selectedClass ? (
               <div style={{ background: H.surface, border: `1px solid ${H.border}`, borderRadius: 16, padding: '48px 24px', textAlign: 'center', margin: '40px auto', maxWidth: 440 }}>
-                <Calendar size={32} style={{ color: H.purple, margin: '0 auto 12px' }} />
+                <Calendar size={32} style={{ color: '#18181B', margin: '0 auto 12px' }} />
                 <h3 style={{ fontSize: 16, fontWeight: 800, color: H.textPrimary, margin: '0 0 6px' }}>Select a Class</h3>
                 <p style={{ fontSize: 13, color: H.textSec, margin: '0 0 20px' }}>
                   Please select a class from the top dropdown to view and edit its timetable schedule.
@@ -576,17 +576,17 @@ export default function TimetableBuildPage() {
                     onDragLeave={e=>onDragLeave(slotKey,e)} onDrop={e=>onDrop(selectedClass,selectedDay,period.period_number,e)}
                     style={{
                       display:'flex', width:'100%', boxSizing:'border-box', borderRadius:12, border:`1px solid`, minHeight:68,
-                      borderColor:isConflict?'#f97316':isCTLocked?`${H.purple}80`:isOver?H.purple:asgn?slotColor:H.border,
-                      background:isConflict?hex2rgba('#f97316',0.07):isCTLocked?`${H.purple}08`:isOver?hex2rgba(H.purple,0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
+                      borderColor:isConflict?'#f97316':isCTLocked?'#18181B':isOver?'#18181B':asgn?slotColor:H.border,
+                      background:isConflict?hex2rgba('#f97316',0.07):isCTLocked?'rgba(24, 24, 27, 0.03)':isOver?hex2rgba('#18181B',0.06):asgn?hex2rgba(slotColor,0.06):H.surface,
                       transition:'all 0.12s', transform:isOver?'scale(1.005)':'scale(1)', overflow:'hidden', position:'relative'
                     }}>
 
                     {isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:'#f97316' }}/>}
-                    {isCTLocked && !isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:H.purple }}/>}
+                    {isCTLocked && !isConflict && <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4, background:'#18181B' }}/>}
 
                     {/* Period # + time */}
                     <div style={{ width:72, flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:8, borderRight:`1px solid ${asgn?hex2rgba(slotColor,0.3):H.border}`, background:asgn?hex2rgba(slotColor,0.1):'#F5F5F4' }}>
-                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:22, lineHeight:1, color:asgn?slotColor:isOver?H.purple:H.sub }}>P{period.period_number}</div>
+                      <div style={{ fontFamily:H.font, fontWeight:900, fontSize:22, lineHeight:1, color:asgn?slotColor:isOver?'#18181B':H.sub }}>P{period.period_number}</div>
                       <div style={{ fontFamily:'monospace', fontSize:9, color:H.sub, textAlign:'center', marginTop:3, lineHeight:1.3 }}>{formatTime(period.start_time)}<br/>{formatTime(period.end_time)}</div>
                     </div>
 
@@ -606,7 +606,7 @@ export default function TimetableBuildPage() {
                               {isConflict ? (
                                 <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.9)', fontWeight:700, whiteSpace:'nowrap', flexShrink:0 }}>Conflict</span>
                               ) : isCTLocked ? (
-                                <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.95)', fontWeight:800, whiteSpace:'nowrap', flexShrink:0, display:'inline-flex', alignItems:'center', gap:3, background:'rgba(0,0,0,0.25)', padding:'2px 6px', borderRadius:4 }}>
+                                <span style={{ marginLeft:'auto', fontFamily:H.font, fontSize:10, color:'rgba(255,255,255,0.95)', fontWeight:800, whiteSpace:'nowrap', flexShrink:0, display:'inline-flex', alignItems: 'center', gap:3, background:'rgba(0,0,0,0.25)', padding:'2px 6px', borderRadius:4 }}>
                                   <Lock size={10} /> Class Teacher Locked
                                 </span>
                               ) : null}
@@ -617,7 +617,7 @@ export default function TimetableBuildPage() {
                             </div>
                           </div>
                           {isCTLocked ? (
-                            <div title="Reserved and locked for Class Teacher" style={{ background:`${H.purple}15`, border:`1px solid ${H.purple}30`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', color:H.purple, flexShrink:0 }}>
+                            <div title="Reserved and locked for Class Teacher" style={{ background:'#F4F4F5', border:`1px solid ${H.border}`, borderRadius:6, width:28, height:28, display:'flex', alignItems:'center', justifyContent:'center', color:'#18181B', flexShrink:0 }}>
                               <Lock size={13}/>
                             </div>
                           ) : (
@@ -630,14 +630,14 @@ export default function TimetableBuildPage() {
                           <div style={{ padding:'3px 10px', background:hex2rgba(draggingCard.color,0.15) }}><span style={{ fontFamily:H.font, fontSize:11, color:H.muted }}>{draggingCard.teacherName}</span></div>
                         </div>
                       ) : isCTLocked ? (
-                        <div style={{ display:'flex', alignItems:'center', gap:6, color:H.purple }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:6, color:'#18181B' }}>
                           <Lock size={14}/>
                           <span style={{ fontFamily:H.font, fontSize:12, fontWeight:700 }}>
                             Locked for Class Teacher ({selectedClassData?.class_teacher?.full_name || 'Class Teacher'} - {selectedClassData?.class_teacher_subject})
                           </span>
                         </div>
                       ) : (
-                        <span style={{ fontFamily:H.font, fontSize:13, color:isOver?H.purple:H.sub, fontWeight:isOver?600:400 }}>
+                        <span style={{ fontFamily:H.font, fontSize:13, color:isOver?'#18181B':H.sub, fontWeight:isOver?600:400 }}>
                           {isOver?'Release to assign':'Drop a card here'}
                         </span>
                       )}

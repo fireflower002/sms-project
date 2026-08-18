@@ -9,7 +9,7 @@ import { generatePeriods, formatTime } from '@/lib/utils'
 import { H } from '@/lib/honey'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', padding:'24px', overflow:'hidden', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight:'44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, textDecoration:'none', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:'#18181B', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight:'44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, textDecoration:'none', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, minHeight:'36px', padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:5, textDecoration:'none', ...x })
 const grass = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight:'44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6, textDecoration:'none', ...x })
 const inp   = (x?:any):React.CSSProperties => ({ width:'100%', minWidth:0, minHeight:'40px', padding:'8px 12px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.textPrimary, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
@@ -22,7 +22,7 @@ const SectionHeader = ({ n, label, action }: { n: number; label: string; action?
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
       <div style={{
         width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
-        background: H.purple,
+        background: '#18181B',
         color: '#ffffff',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 800, fontSize: '13px', lineHeight: 1,
@@ -89,8 +89,8 @@ export default function NewTemplatePage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', maxWidth: '1400px', margin: '0 auto', padding: '0 28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Link href="/admin/timetable" style={ghost({ padding:'6px 10px', fontSize:12 })}><ArrowLeft size={16} /></Link>
-            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <GraduationCap size={16} style={{ color: H.purpleDark }} />
+            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GraduationCap size={16} style={{ color: '#18181B' }} />
             </div>
             <div>
               <div style={{ fontWeight: 800, fontSize: '14px', color: H.textPrimary }}>New Timetable Template</div>
@@ -225,7 +225,7 @@ export default function NewTemplatePage() {
               </div>
 
               <button type="submit" disabled={loading || actualPeriods.length === 0}
-                style={{ background: H.skyBlue, color: '#FFFFFF', border: 'none', borderRadius: 12, fontFamily: H.font, fontWeight: 800, fontSize: 14, minHeight: '48px', padding: '12px', cursor: loading || actualPeriods.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', opacity: (loading || actualPeriods.length === 0) ? 0.6 : 1 }}>
+                style={{ background: '#18181B', color: '#FFFFFF', border: 'none', borderRadius: 12, fontFamily: H.font, fontWeight: 800, fontSize: 14, minHeight: '48px', padding: '12px', cursor: loading || actualPeriods.length === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', opacity: (loading || actualPeriods.length === 0) ? 0.6 : 1 }}>
                 {loading
                   ? <Loader2 size={18} style={{ animation:'spin 0.7s linear infinite' }} />
                   : <><CheckCircle2 size={16} /> Create Template ({actualPeriods.length} periods)</>

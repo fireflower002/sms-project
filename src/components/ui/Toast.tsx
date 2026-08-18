@@ -135,31 +135,31 @@ function getToastConfig(type: ToastType) {
     case 'success':
       return {
         icon: CheckCircle2,
-        iconColor: '#10B981',
-        bgColor: '#D1FAE5',
-        borderColor: '#10B98140',
+        iconColor: '#166534',
+        bgColor: '#F0FDF4',
+        borderColor: '#BBF7D0',
       }
     case 'error':
       return {
         icon: AlertCircle,
-        iconColor: '#EF4444',
+        iconColor: '#991B1B',
         bgColor: '#FEF2F2',
-        borderColor: '#EF444440',
+        borderColor: '#FECACA',
       }
     case 'warning':
       return {
         icon: AlertTriangle,
-        iconColor: '#F59E0B',
-        bgColor: '#FEF3C7',
-        borderColor: '#F59E0B40',
+        iconColor: '#854D0E',
+        bgColor: '#FEFCE8',
+        borderColor: '#FEF08A',
       }
     case 'info':
     default:
       return {
         icon: Info,
-        iconColor: '#3B82F6',
+        iconColor: '#1E40AF',
         bgColor: '#EFF6FF',
-        borderColor: '#3B82F640',
+        borderColor: '#BFDBFE',
       }
   }
 }

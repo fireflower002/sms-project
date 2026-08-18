@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Bell, Check, CheckCheck, Clock, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
+import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
 export interface NotificationItem {
   id: string
@@ -149,134 +150,143 @@ export default function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 8px)',
-            right: 0,
-            width: '320px',
-            maxWidth: '90vw',
-            backgroundColor: H.surface,
-            border: `1px solid ${H.border}`,
-            borderRadius: '14px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
-            zIndex: 1100,
-            overflow: 'hidden',
-            fontFamily: H.font,
-          }}
-        >
-          {/* Header */}
+        <ComponentErrorBoundary sectionName="Notifications Menu">
           <div
             style={{
-              padding: '12px 16px',
-              borderBottom: `1px solid ${H.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: H.bg,
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: '320px',
+              maxWidth: '90vw',
+              backgroundColor: H.surface,
+              border: `1px solid ${H.border}`,
+              borderRadius: '14px',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+              zIndex: 1100,
+              overflow: 'hidden',
+              fontFamily: H.font,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: 800, fontSize: '14px', color: H.textPrimary }}>Notifications</span>
+            {/* Header */}
+            <div
+              style={{
+                padding: '12px 16px',
+                borderBottom: `1px solid ${H.border}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: H.bg,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: 800, fontSize: '14px', color: H.textPrimary }}>Notifications</span>
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      backgroundColor: '#F4F4F5',
+                      color: '#18181B',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                    }}
+                  >
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
               {unreadCount > 0 && (
-                <span
+                <button
+                  type="button"
+                  onClick={markAllAsRead}
                   style={{
-                    backgroundColor: H.purpleLight,
-                    color: H.purpleDark,
-                    fontSize: '11px',
+                    background: 'none',
+                    border: 'none',
+                    color: H.accent,
+                    fontSize: '12px',
                     fontWeight: 700,
-                    padding: '2px 7px',
-                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: 0,
                   }}
                 >
-                  {unreadCount} new
-                </span>
+                  <CheckCheck size={14} /> Mark all read
+                </button>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={markAllAsRead}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: H.accent,
-                  fontSize: '12px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: 0,
-                }}
-              >
-                <CheckCheck size={14} /> Mark all read
-              </button>
-            )}
-          </div>
 
-          {/* Body List */}
-          <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-            {notifications.length === 0 ? (
-              <div style={{ padding: '32px 16px', textAlign: 'center', color: H.textMuted, fontSize: '13px' }}>
-                <Bell size={24} style={{ opacity: 0.4, margin: '0 auto 8px', display: 'block' }} />
-                No notifications yet
-              </div>
-            ) : (
-              notifications.map(n => (
-                <div
-                  key={n.id}
-                  onClick={() => markAsRead(n)}
-                  style={{
-                    padding: '12px 16px',
-                    borderBottom: `1px solid ${H.border}`,
-                    backgroundColor: n.is_read ? H.surface : 'rgba(139, 92, 246, 0.05)',
-                    cursor: 'pointer',
-                    transition: 'background-color 0.15s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {!n.is_read && (
-                        <span
-                          style={{
-                            width: '7px',
-                            height: '7px',
-                            borderRadius: '50%',
-                            backgroundColor: H.purple,
-                            display: 'inline-block',
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                      <span style={{ fontWeight: n.is_read ? 600 : 800, fontSize: '13px', color: H.textPrimary }}>
-                        {n.title}
+            {/* Body List */}
+            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: H.textMuted, fontSize: '13px' }}>
+                  <Bell size={24} style={{ opacity: 0.4, margin: '0 auto 8px', display: 'block' }} />
+                  No notifications yet
+                </div>
+              ) : (
+                notifications.map(n => (
+                  <button
+                    key={n.id}
+                    type="button"
+                    onClick={() => markAsRead(n)}
+                    aria-label={`Notification: ${n.title}. ${n.is_read ? 'Read' : 'Unread'}. Click to mark as read.`}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: `1px solid ${H.border}`,
+                      backgroundColor: n.is_read ? H.surface : 'rgba(24, 24, 27, 0.04)',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      padding: '12px 16px',
+                      fontFamily: H.font,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {!n.is_read && (
+                          <span
+                            style={{
+                              width: '7px',
+                              height: '7px',
+                              borderRadius: '50%',
+                              backgroundColor: '#18181B',
+                              display: 'inline-block',
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <span style={{ fontWeight: n.is_read ? 600 : 800, fontSize: '13px', color: H.textPrimary }}>
+                          {n.title}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: H.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                        {formatTimeAgo(n.created_at)}
                       </span>
                     </div>
-                    <span style={{ fontSize: '11px', color: H.textMuted, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {formatTimeAgo(n.created_at)}
-                    </span>
-                  </div>
 
-                  {n.body && (
-                    <p style={{ margin: 0, fontSize: '12px', color: H.textSec, lineHeight: '1.4' }}>
-                      {n.body}
-                    </p>
-                  )}
+                    {n.body && (
+                      <p style={{ margin: 0, fontSize: '12px', color: H.textSec, lineHeight: '1.4' }}>
+                        {n.body}
+                      </p>
+                    )}
 
-                  {n.link && (
-                    <span style={{ fontSize: '11px', color: H.accent, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
-                      View details <ExternalLink size={10} />
-                    </span>
-                  )}
-                </div>
-              ))
-            )}
+                    {n.link && (
+                      <span style={{ fontSize: '11px', color: H.accent, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px', marginTop: '2px' }}>
+                        View details <ExternalLink size={10} />
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
-        </div>
+        </ComponentErrorBoundary>
       )}
     </div>
   )

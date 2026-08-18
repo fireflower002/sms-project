@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   Users, BookOpen, Archive, UserX,
-  Sun, Moon, Sunset, CheckCircle, Clock, AlertCircle, ArrowUpRight, Pencil
+  Sun, Moon, Sunset, CheckCircle, CheckCircle2, Clock, AlertCircle, ArrowUpRight, Pencil, Sparkles
 } from 'lucide-react'
 import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
@@ -58,7 +58,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     gap: '6px',
     padding: '6px 12px',
     borderRadius: '20px',
-    backgroundColor: '#F5F5F4',
+    backgroundColor: '#F4F4F5',
     border: `1px solid ${H.border}`,
     fontSize: '12px',
     fontWeight: 500,
@@ -102,7 +102,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   metricValue: {
     fontSize: '26px',
-    fontWeight: 700,
+    fontWeight: 600,
     color: H.textPrimary,
     fontVariantNumeric: 'tabular-nums',
     fontFeatureSettings: '"tnum"',
@@ -120,10 +120,10 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   sideSection: {
     padding: '24px',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#FAFAFA',
   },
   sectionHeader: {
-    fontSize: '16px',
+    fontSize: '15px',
     fontWeight: 600,
     letterSpacing: '-0.01em',
     color: H.textPrimary,
@@ -161,7 +161,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fontFeatureSettings: '"tnum"',
   },
   trHover: {
-    backgroundColor: '#F5F5F4',
+    backgroundColor: '#F4F4F5',
   },
   actionCard: {
     display: 'flex',
@@ -379,8 +379,10 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <div style={styles.statusBadge}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: H.successGreen }} />
-              School Overview • {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+              <CheckCircle2 size={13} style={{ color: '#166534' }} />
+              <span style={{ fontWeight: 600, color: '#166534' }}>System Active</span>
+              <span style={{ color: H.textMuted }}>•</span>
+              {new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
             </div>
           </div>
         </div>
@@ -414,6 +416,75 @@ export default function AdminDashboard() {
             )
           })}
         </div>
+
+        {/* Onboarding Guidance Banner when core setup is incomplete */}
+        {(stats.teachers === 0 || stats.classes === 0 || !activeTimetable) && (
+          <div style={{
+            padding: '14px 20px',
+            backgroundColor: '#F4F4F5',
+            borderBottom: `1px solid ${H.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Sparkles size={16} style={{ color: '#18181B', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: H.textPrimary }}>
+                  Workspace Setup Checklist
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12.5px' }}>
+                  <Link
+                    href="/admin/teachers"
+                    style={{
+                      fontWeight: stats.teachers === 0 ? 700 : 500,
+                      color: stats.teachers === 0 ? '#18181B' : H.textSec,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: stats.teachers === 0 ? '#18181B' : '#E4E4E7', color: stats.teachers === 0 ? '#FFF' : H.textMuted, fontSize: '11px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>1</span>
+                    Add Teachers
+                  </Link>
+                  <span style={{ color: H.textMuted }}>→</span>
+                  <Link
+                    href="/admin/classes"
+                    style={{
+                      fontWeight: stats.classes === 0 ? 700 : 500,
+                      color: stats.classes === 0 ? '#18181B' : H.textSec,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: stats.classes === 0 ? '#18181B' : '#E4E4E7', color: stats.classes === 0 ? '#FFF' : H.textMuted, fontSize: '11px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>2</span>
+                    Create Classes
+                  </Link>
+                  <span style={{ color: H.textMuted }}>→</span>
+                  <Link
+                    href="/admin/timetable"
+                    style={{
+                      fontWeight: !activeTimetable ? 700 : 500,
+                      color: !activeTimetable ? '#18181B' : H.textSec,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                    }}
+                  >
+                    <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: !activeTimetable ? '#18181B' : '#E4E4E7', color: !activeTimetable ? '#FFF' : H.textMuted, fontSize: '11px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>3</span>
+                    Build Timetable
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Contiguous Content Section */}
         <div style={styles.contentGrid}>

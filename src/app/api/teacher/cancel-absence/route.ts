@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit'
 
 const cancelAbsenceSchema = z.object({
   absenceId: z.string().uuid('Invalid absence ID format'),
@@ -9,6 +10,15 @@ const cancelAbsenceSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request)
+    const rateLimit = checkRateLimit(clientIp, '/api/teacher/cancel-absence', {
+      windowMs: 60 * 1000,
+      maxRequests: 10,
+    })
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetInMs)
+    }
+
     const body = await request.json().catch(() => ({}))
     const parseResult = cancelAbsenceSchema.safeParse(body)
 

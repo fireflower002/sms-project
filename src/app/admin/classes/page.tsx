@@ -684,8 +684,8 @@ export default function ClassesPage() {
         {/* Contiguous Header Bar */}
         <header style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <GraduationCap size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GraduationCap size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Grades & Classes</h1>
@@ -708,10 +708,11 @@ export default function ClassesPage() {
                 }}
                 style={{
                   ...styles.addGradeButton,
-                  borderRadius: '10px',
-                  minHeight: '38px',
+                  borderRadius: '8px',
+                  minHeight: '36px',
                   fontSize: '13px',
                   fontWeight: 600,
+                  background: '#18181B',
                   opacity: hasActiveTemplate ? 1 : 0.5,
                   cursor: hasActiveTemplate ? 'pointer' : 'not-allowed',
                 }}

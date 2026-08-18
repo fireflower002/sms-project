@@ -448,20 +448,23 @@ export default function TeacherDetailPage() {
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
       {/* Top Header */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <Link
-          href="/admin/teachers"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: H.textSec,
-            fontSize: '13px',
-            fontWeight: 600,
-            textDecoration: 'none',
-          }}
-        >
-          <ArrowLeft size={16} /> Back to Teacher Management
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: H.textMuted }}>
+          <Link
+            href="/admin/teachers"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: H.textSec,
+              fontWeight: 500,
+              textDecoration: 'none',
+            }}
+          >
+            <ArrowLeft size={16} /> Teacher Management
+          </Link>
+          <span>/</span>
+          <span style={{ color: H.textPrimary, fontWeight: 600 }}>Teacher Details</span>
+        </div>
         <button
           onClick={fetchTeacherData}
           style={{
@@ -545,11 +548,11 @@ export default function TeacherDetailPage() {
         {/* Profile Info Card */}
         <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', padding: '24px', boxShadow: H.cardShadow }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: H.honey, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 800 }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: '#18181B', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 600 }}>
               {teacher.full_name ? teacher.full_name.charAt(0).toUpperCase() : 'T'}
             </div>
             <div>
-              <h1 style={{ fontSize: '20px', fontWeight: 800, color: H.textPrimary, margin: 0 }}>{teacher.full_name}</h1>
+              <h1 style={{ fontSize: '20px', fontWeight: 600, color: H.textPrimary, margin: 0 }}>{teacher.full_name}</h1>
               <p style={{ fontSize: '13px', color: H.textSec, margin: '2px 0 4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Mail size={13} /> {teacher.email}
               </p>
@@ -558,7 +561,7 @@ export default function TeacherDetailPage() {
                   <Phone size={13} /> {teacher.phone || <span style={{ color: H.textMuted, fontStyle: 'italic' }}>No phone provided</span>}
                   <button
                     onClick={() => { setEditingPhone(true); setPhoneInput(teacher.phone || ''); setPhoneError(''); }}
-                    style={{ background: 'none', border: 'none', color: H.honey, cursor: 'pointer', padding: 0, marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}
+                    style={{ background: 'none', border: 'none', color: '#2563EB', cursor: 'pointer', padding: 0, marginLeft: 4, display: 'inline-flex', alignItems: 'center' }}
                     title="Edit Phone Number"
                   >
                     <Edit2 size={12} />

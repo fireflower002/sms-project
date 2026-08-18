@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/Toast'
 const styles: { [key: string]: React.CSSProperties } = {
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
   button: { border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '14px', minHeight: '44px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background-color 0.2s ease', textDecoration: 'none', boxSizing: 'border-box' },
-  buttonPrimary: { background: H.mintGreen, color: '#FFFFFF' },
+  buttonPrimary: { background: '#18181B', color: '#FFFFFF' },
   buttonSecondary: { background: '#F5F5F4', color: H.textSec, border: `1px solid ${H.border}` },
 };
 
@@ -258,11 +258,13 @@ function InventoryPageContent() {
       // Auto-backfill missing public_token for legacy items
       const unbackfilled = list.filter(i => !i.public_token)
       if (unbackfilled.length > 0) {
-        unbackfilled.forEach(async (itemToBackfill) => {
-          const newToken = crypto.randomUUID()
-          itemToBackfill.public_token = newToken
-          await supabase.from('inventory').update({ public_token: newToken }).eq('id', itemToBackfill.id)
-        })
+        await Promise.all(
+          unbackfilled.map(async (itemToBackfill) => {
+            const newToken = crypto.randomUUID()
+            itemToBackfill.public_token = newToken
+            return supabase.from('inventory').update({ public_token: newToken }).eq('id', itemToBackfill.id)
+          })
+        )
       }
 
       if (showLowStock) list = list.filter(i => i.quantity_available <= i.low_stock_threshold)
@@ -322,8 +324,8 @@ function InventoryPageContent() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.mintLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Package size={20} style={{ color: H.mintGreen }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Package size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Inventory Management</h1>

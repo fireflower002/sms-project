@@ -171,12 +171,18 @@ export default function AbsenceDetailPage() {
         <div style={{ maxWidth:1400, margin:'0 auto', padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', height:64 }}>
           <div className="flex items-center gap-3">
             <Link href="/admin/disruptions?tab=absences" style={ghost({ padding:'6px 10px', fontSize:12 })}><ArrowLeft size={16}/></Link>
-            <div style={{ width:32, height:32, borderRadius:8, background:H.surface, display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <GraduationCap size={16} style={{ color:H.honey }}/>
+            <div style={{ width:32, height:32, borderRadius:8, background:'#F4F4F5', border: `1px solid ${H.border}`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <GraduationCap size={16} style={{ color:'#18181B' }}/>
             </div>
             <div>
-              <div style={{ fontWeight:800, fontSize:'14px' }}>Absence Detail</div>
-              <div style={{ fontSize:'11px', color:H.sub }}>{absence.teacher?.full_name}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: H.textMuted }}>
+                <Link href="/admin/disruptions?tab=absences" style={{ color: H.textSec, textDecoration: 'none', fontWeight: 500 }}>
+                  Attendance & Coverage
+                </Link>
+                <span>/</span>
+                <span style={{ color: H.textPrimary, fontWeight: 600 }}>Absence Record</span>
+              </div>
+              <div style={{ fontSize:'11px', color:H.textMuted, marginTop: '2px' }}>{absence.teacher?.full_name}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">

@@ -30,10 +30,6 @@ export async function GET() {
     }
 
     const userEmail = user.email?.toLowerCase() || ''
-    const isAdminByMetaOrEmail =
-      user.user_metadata?.role === 'admin' ||
-      userEmail.startsWith('admin') ||
-      userEmail.includes('admin@')
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -41,8 +37,15 @@ export async function GET() {
       .eq('id', user.id)
       .maybeSingle()
 
-    // If profile is admin or metadata/email indicates admin
-    if (profile?.role === 'admin' || isAdminByMetaOrEmail) {
+    const { data: allowed } = await supabase
+      .from('allowed_users')
+      .select('role, must_change_password')
+      .eq('email', userEmail)
+      .maybeSingle()
+
+    const isAdmin = profile?.role === 'admin' || allowed?.role === 'admin'
+
+    if (isAdmin) {
       if (!profile || profile.role !== 'admin') {
         await supabase.from('profiles').upsert({
           id: user.id,
@@ -59,28 +62,14 @@ export async function GET() {
     }
 
     if (profile?.role) {
-      const { data: allowed } = await supabase
-        .from('allowed_users')
-        .select('must_change_password')
-        .eq('email', userEmail)
-        .maybeSingle()
-
       return NextResponse.json({
         role: profile.role,
         mustChangePassword: allowed?.must_change_password ?? false,
       })
     }
 
-    // Check allowed_users or fallback
-    const { data: allowed } = await supabase
-      .from('allowed_users')
-      .select('must_change_password')
-      .eq('email', userEmail)
-      .maybeSingle()
-
-    const role = (user.user_metadata?.role as string) || (userEmail.startsWith('admin') ? 'admin' : 'teacher')
     return NextResponse.json({
-      role,
+      role: 'teacher',
       mustChangePassword: allowed?.must_change_password ?? false,
     })
   } catch (error: any) {

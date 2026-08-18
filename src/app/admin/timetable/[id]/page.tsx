@@ -11,8 +11,8 @@ import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
-const gBtn  = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:'#14532D', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const gBtn  = (x?:any):React.CSSProperties => ({ background:'#1E3A8A', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 
 const WORK_DAYS = [1,2,3,4,5]
 const LETTERS   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -98,8 +98,8 @@ export default function TemplateDetailPage() {
         {/* Header — Clean icon navigation */}
         <header style={{ padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, flexWrap:'wrap', gap:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Calendar size={20} style={{ color: H.purpleDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -137,14 +137,14 @@ export default function TemplateDetailPage() {
 
           {/* Step 2 Guidance Banner: When classes exist but schedule assignments are not built yet */}
           {classes.length > 0 && assignments.length === 0 && (
-            <div style={{ padding: '16px 20px', borderRadius: 14, background: '#F3E8FF', border: `1px solid #E9D5FF`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+            <div style={{ padding: '16px 20px', borderRadius: 14, background: '#F4F4F5', border: `1px solid ${H.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 280 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 10, background: H.purple, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#18181B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Sparkles size={18} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: H.purpleDark, background: '#E9D5FF', padding: '2px 8px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#18181B', background: '#E4E4E7', padding: '2px 8px', borderRadius: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Step 2 of 2
                     </span>
                     <h3 style={{ fontFamily: H.font, fontSize: 15, fontWeight: 700, color: H.textPrimary, margin: 0 }}>
@@ -190,17 +190,17 @@ export default function TemplateDetailPage() {
                 <h2 style={{ fontFamily:H.font, fontWeight:700, fontSize:16, color:H.text, margin:0 }}>Grade Summaries</h2>
                 <p style={{ fontFamily:H.font, fontSize:12, color:H.sub, margin:'2px 0 0' }}>Overview of schedule coverage per grade level</p>
               </div>
-              <Link href="/admin/classes" style={{ ...ghost({ padding:'6px 14px', fontSize:12 }), background:H.surface, color:H.purple, borderColor:H.purple }}>
+              <Link href="/admin/classes" style={{ ...ghost({ padding:'6px 14px', fontSize:12 }), background:H.surface, color:'#18181B', borderColor:H.border }}>
                 <GraduationCap size={14}/> Manage Grades & Classes →
               </Link>
             </div>
 
             {usedGrades.length===0 ? (
               <div style={card({ padding:'48px 24px', textAlign:'center' })}>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: H.purpleLight, color: H.purpleDark, padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F4F4F5', color: '#18181B', padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>
                   Step 1 of 2
                 </div>
-                <GraduationCap size={40} style={{ color: H.purple, display: 'block', margin: '0 auto 12px', opacity: 0.8 }} />
+                <GraduationCap size={40} style={{ color: '#18181B', display: 'block', margin: '0 auto 12px', opacity: 0.8 }} />
                 <h3 style={{ fontFamily: H.font, fontSize: 18, fontWeight: 700, color: H.text, margin: '0 0 6px' }}>Next Step: Set up your classes</h3>
                 <p style={{ fontFamily: H.font, fontSize: 13, color: H.sub, margin: '0 0 20px', maxWidth: 460, marginLeft: 'auto', marginRight: 'auto' }}>
                   Classes and Class Teachers must be configured in the master directory before building your schedule.

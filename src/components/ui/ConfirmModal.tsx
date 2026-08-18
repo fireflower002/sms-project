@@ -1,8 +1,8 @@
 'use client'
-import { useEffect } from 'react'
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { H } from '@/lib/honey'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import { useFocusTrap } from '@/lib/useFocusTrap'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,23 +40,23 @@ const VARIANT_STYLES: Record<
   { iconBg: string; iconColor: string; confirmBg: string; confirmColor: string; icon: React.FC<{ size: number }> }
 > = {
   danger: {
-    iconBg: H.dangerLight,
-    iconColor: H.danger,
-    confirmBg: H.danger,
+    iconBg: '#FEF2F2',
+    iconColor: '#991B1B',
+    confirmBg: '#991B1B',
     confirmColor: '#FFFFFF',
     icon: ({ size }) => <AlertTriangle size={size} />,
   },
   warning: {
-    iconBg: H.accentLight,
-    iconColor: H.chocolate,
-    confirmBg: H.honey,
+    iconBg: '#FEFCE8',
+    iconColor: '#854D0E',
+    confirmBg: '#D97706',
     confirmColor: '#FFFFFF',
     icon: ({ size }) => <AlertTriangle size={size} />,
   },
   neutral: {
-    iconBg: H.skyLight,
-    iconColor: '#1E40AF',
-    confirmBg: H.honey,
+    iconBg: '#F4F4F5',
+    iconColor: '#18181B',
+    confirmBg: '#18181B',
     confirmColor: '#FFFFFF',
     icon: ({ size }) => <Info size={size} />,
   },
@@ -120,13 +120,10 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onCancel])
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen: open,
+    onClose: loading ? undefined : onCancel,
+  })
 
   if (!open) return null
 
@@ -135,6 +132,10 @@ export default function ConfirmModal({
 
   return (
     <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-modal-title"
       style={{
         position: 'fixed',
         inset: 0,
@@ -147,6 +148,7 @@ export default function ConfirmModal({
     >
       {/* Backdrop */}
       <div
+        aria-hidden="true"
         onClick={loading ? undefined : onCancel}
         style={{
           position: 'absolute',

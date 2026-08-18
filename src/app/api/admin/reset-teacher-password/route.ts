@@ -3,6 +3,7 @@ import { randomInt } from 'crypto'
 import { z } from 'zod'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { checkRateLimit, rateLimitResponse, getClientIp } from '@/lib/rateLimit'
 
 const resetPasswordSchema = z.object({
   teacherId: z.string().uuid('Invalid teacher ID format').optional(),
@@ -60,6 +61,15 @@ export async function POST(request: Request) {
 
     if (!callerUser) {
       return NextResponse.json({ error: 'Unauthorized: No active admin session found.' }, { status: 401 })
+    }
+
+    // Rate Limit Check: max 5 requests per 1 minute per caller user ID
+    const rateLimit = checkRateLimit(callerUser.id || getClientIp(request), '/api/admin/reset-teacher-password', {
+      windowMs: 60 * 1000,
+      maxRequests: 5,
+    })
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.resetInMs)
     }
 
     const { data: adminProfile } = await adminSupabase

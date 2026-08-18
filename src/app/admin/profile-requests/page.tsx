@@ -128,8 +128,8 @@ export default function ProfileRequestsPage() {
         {/* Contiguous Header Bar */}
         <div style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <UserCog size={20} style={{ color: H.skyDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserCog size={20} style={{ color: '#18181B' }} />
             </div>
             <div>
               <h1 style={{ fontSize: '22px', fontWeight: 600, letterSpacing: '-0.02em', color: H.textPrimary, margin: 0 }}>Profile Change Requests</h1>
@@ -148,8 +148,8 @@ export default function ProfileRequestsPage() {
         {/* Contiguous Metric Strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', borderBottom: `1px solid ${H.border}`, backgroundColor: H.surface }}>
           <div style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '16px', borderRight: `1px solid ${H.border}` }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: H.skyLight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AlertCircle size={18} style={{ color: H.skyDark }} />
+            <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle size={18} style={{ color: '#18181B' }} />
             </div>
             <div>
               <div style={{ fontSize: '24px', fontWeight: 700, color: H.textPrimary, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{stats.pending}</div>
@@ -177,7 +177,7 @@ export default function ProfileRequestsPage() {
         </div>
 
         {/* Integrated Filter Toolbar */}
-        <div style={{ padding: '12px 24px', display: 'flex', gap: '8px', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAF9F6' }}>
+        <div style={{ padding: '12px 24px', display: 'flex', gap: '8px', borderBottom: `1px solid ${H.border}`, backgroundColor: '#FAFAFA' }}>
           {(['pending', 'all'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               padding: '6px 14px', borderRadius: '8px', fontWeight: 600, fontSize: '13px', cursor: 'pointer',

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import StaffChat from '@/components/chat/StaffChat'
+import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 import { H } from '@/lib/honey'
 
 export default function TeacherStaffChatPage() {
@@ -78,7 +79,9 @@ export default function TeacherStaffChatPage() {
         transition: isMobile ? 'none' : H.motion.transitionFast,
       }}
     >
-      <StaffChat height="100%" />
+      <ComponentErrorBoundary sectionName="Staff Chat">
+        <StaffChat height="100%" />
+      </ComponentErrorBoundary>
     </div>
   )
 }

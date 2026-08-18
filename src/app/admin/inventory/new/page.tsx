@@ -40,6 +40,7 @@ function InventoryFormContent() {
   const [fetchingItem, setFetching] = useState(!!editId)
   const [error, setError]           = useState('')
   const [staffList, setStaffList]   = useState<any[]>([])
+  const [initialQuantities, setInitialQuantities] = useState<{ total: number; available: number } | null>(null)
   const [savedItem, setSavedItem]   = useState<{
     id: string
     name: string
@@ -63,6 +64,7 @@ function InventoryFormContent() {
       quantity_total: 1, low_stock_threshold: 1,
       location: '', purchase_date: '', purchase_price: '', notes: ''
     })
+    setInitialQuantities(null)
     setError('')
     setSavedItem(null)
     if (editId) {
@@ -94,6 +96,10 @@ function InventoryFormContent() {
       if (fetchErr || !data) {
         setError('Failed to load inventory item details.')
       } else {
+        setInitialQuantities({
+          total: data.quantity_total ?? 1,
+          available: data.quantity_available ?? data.quantity_total ?? 1
+        })
         setForm({
           name: data.name || '',
           description: data.description || '',
@@ -125,6 +131,12 @@ function InventoryFormContent() {
       const { data: { session } } = await supabase.auth.getSession(); const user = session?.user
       const public_token = form.public_token || crypto.randomUUID()
 
+      let computedAvailable = form.quantity_total
+      if (editId && initialQuantities) {
+        const delta = form.quantity_total - initialQuantities.total
+        computedAvailable = Math.max(0, Math.min(initialQuantities.available + delta, form.quantity_total))
+      }
+
       const payload: any = {
         name: form.name.trim(),
         description: form.description.trim() || null,
@@ -136,7 +148,7 @@ function InventoryFormContent() {
         assigned_at: form.assigned_to ? new Date().toISOString() : null,
         public_token: public_token,
         quantity_total: form.quantity_total,
-        quantity_available: form.quantity_total,
+        quantity_available: computedAvailable,
         low_stock_threshold: form.low_stock_threshold,
         location: form.location.trim() || null,
         purchase_date: form.purchase_date || null,
@@ -202,7 +214,7 @@ function InventoryFormContent() {
       <div style={{ minHeight: '100vh', background: H.bg, fontFamily: H.font, color: H.text }}>
         <header style={{ height: 68, padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${H.border}`, background: H.surface, backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 30 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Package size={20} style={{ color: H.mintGreen }} />
+            <Package size={20} style={{ color: '#18181B' }} />
             <div>
               <h1 style={{ fontFamily: H.font, fontSize: 17, fontWeight: 800, color: H.text, margin: 0 }}>Item Saved</h1>
               <p style={{ fontFamily: H.font, fontSize: 11, color: H.muted, margin: 0 }}>Confirmation & Print Actions</p>
@@ -333,7 +345,7 @@ function InventoryFormContent() {
       {/* Header */}
       <header style={{ height:68, padding:'0 28px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <Package size={20} style={{ color: H.mintGreen }} />
+          <Package size={20} style={{ color: '#18181B' }} />
           <div>
             <h1 style={{ fontFamily:H.font, fontSize:17, fontWeight:800, color:H.text, margin:0 }}>
               {editId ? 'Edit Inventory Item' : 'Add Inventory Item'}
@@ -552,7 +564,7 @@ function InventoryFormContent() {
             </Link>
             <button type="submit" disabled={loading}
               style={{
-                background: H.grass,
+                background: '#18181B',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 12,

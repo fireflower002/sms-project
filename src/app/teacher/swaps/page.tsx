@@ -43,10 +43,10 @@ const SWAP_STATUS_VARIANTS: Record<
   SwapRecord['status'],
   { label: string; bg: string; color: string; border: string }
 > = {
-  pending: { label: 'Pending Peer Review', bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' },
-  peer_accepted: { label: 'Peer Accepted (Awaiting Admin)', bg: '#E0F2FE', color: '#0369A1', border: '#7DD3FC' },
-  peer_rejected: { label: 'Peer Declined', bg: '#FEF2F2', color: '#DC2626', border: '#FCA5A5' },
-  accepted: { label: 'Approved & Finalized', bg: '#D1FAE5', color: '#059669', border: '#6EE7B7' },
+  pending: { label: 'Waiting for Teacher Response', bg: '#FEF3C7', color: '#92400E', border: '#FCD34D' },
+  peer_accepted: { label: 'Pending Admin Approval', bg: '#E0F2FE', color: '#0369A1', border: '#7DD3FC' },
+  peer_rejected: { label: 'Teacher Declined', bg: '#FEF2F2', color: '#DC2626', border: '#FCA5A5' },
+  accepted: { label: 'Swap Finalized', bg: '#D1FAE5', color: '#059669', border: '#6EE7B7' },
   rejected: { label: 'Admin Rejected', bg: '#FEF2F2', color: '#DC2626', border: '#FCA5A5' },
   cancelled: { label: 'Cancelled', bg: '#F3F4F6', color: '#4B5563', border: '#D1D5DB' },
 }
@@ -180,7 +180,7 @@ function TeacherSwapsContent() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: H.textPrimary, margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ArrowRightLeft size={26} style={{ color: H.purple }} />
+              <ArrowRightLeft size={26} style={{ color: '#18181B' }} />
               Class Swap Requests
             </h1>
             <p style={{ fontSize: '14px', color: H.textSec, margin: '4px 0 0' }}>
@@ -194,7 +194,7 @@ function TeacherSwapsContent() {
               height: H.targetSizes.buttonMd,
               padding: '0 18px',
               borderRadius: H.radius.lg,
-              backgroundColor: H.purple,
+              backgroundColor: '#18181B',
               color: '#FFFFFF',
               fontWeight: 700,
               fontSize: '13px',
@@ -218,7 +218,7 @@ function TeacherSwapsContent() {
               borderRadius: H.radius.md,
               border: 'none',
               backgroundColor: activeTab === 'incoming' ? H.surface : 'transparent',
-              color: activeTab === 'incoming' ? H.purple : H.textSec,
+              color: activeTab === 'incoming' ? '#18181B' : H.textSec,
               fontWeight: activeTab === 'incoming' ? 800 : 600,
               fontSize: '13px',
               cursor: 'pointer',
@@ -243,7 +243,7 @@ function TeacherSwapsContent() {
               borderRadius: H.radius.md,
               border: 'none',
               backgroundColor: activeTab === 'outgoing' ? H.surface : 'transparent',
-              color: activeTab === 'outgoing' ? H.purple : H.textSec,
+              color: activeTab === 'outgoing' ? '#18181B' : H.textSec,
               fontWeight: activeTab === 'outgoing' ? 800 : 600,
               fontSize: '13px',
               cursor: 'pointer',
@@ -259,7 +259,7 @@ function TeacherSwapsContent() {
 
         {/* Content Section */}
         {loading ? (
-          <LoadingSpinner centered size={32} color={H.purple} />
+          <LoadingSpinner centered size={32} color="#18181B" />
         ) : activeTab === 'incoming' ? (
 
           /* INCOMING REQUESTS */
@@ -297,7 +297,7 @@ function TeacherSwapsContent() {
                         </p>
                       </div>
 
-                      <ArrowRightLeft size={20} style={{ color: H.purple }} />
+                      <ArrowRightLeft size={20} style={{ color: '#18181B' }} />
 
                       <div style={{ textAlign: 'center' }}>
                         <span style={{ fontSize: '11px', fontWeight: 700, color: H.textMuted, textTransform: 'uppercase' }}>You (Target)</span>
@@ -340,7 +340,7 @@ function TeacherSwapsContent() {
                           style={{
                             padding: '8px 20px',
                             borderRadius: H.radius.md,
-                            backgroundColor: H.purple,
+                            backgroundColor: '#18181B',
                             color: '#FFFFFF',
                             border: 'none',
                             fontWeight: 700,

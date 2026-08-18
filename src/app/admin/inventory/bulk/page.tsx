@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { H } from '@/lib/honey'
 
 const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:H.mintGreen, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+const hBtn  = (x?:any):React.CSSProperties => ({ background:'#18181B', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
 const grass = (x?:any):React.CSSProperties => ({ background:H.grass, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 const inp   = (x?:any):React.CSSProperties => ({ width:'100%', padding:'10px 14px', background:H.bg, border:`1px solid ${H.border}`, borderRadius:8, color:H.text, fontFamily:H.font, fontWeight:600, fontSize:13, outline:'none', boxSizing:'border-box' as const, ...x })
@@ -180,8 +180,8 @@ export default function BulkInventoryImportPage() {
     <div style={{ minHeight:'100vh', background:H.bg, fontFamily:H.font, color:H.text }}>
       <header style={{ height:68, padding:'0 24px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:`1px solid ${H.border}`, background:H.surface, backdropFilter:'blur(12px)', position:'sticky', top:0, zIndex:30 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'rgba(6,182,212,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <Package size={20} style={{ color: H.mintGreen }} />
+          <div style={{ width:36, height:36, borderRadius:10, backgroundColor:'#F4F4F5', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Package size={20} style={{ color: '#18181B' }} />
           </div>
           <div>
             <div style={{ fontFamily:H.font, fontWeight:800, fontSize:17, color:H.text }}>Bulk Import Inventory</div>
@@ -192,11 +192,12 @@ export default function BulkInventoryImportPage() {
 
       <main style={{ maxWidth:960, margin:'0 auto', padding:'24px 20px 100px 20px', display:'flex', flexDirection:'column', gap:20 }}>
 
-        {!parsed && (
-          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        {/* Upload dropzone card */}
+        {!done && (
+          <div style={card({ padding: 24 })}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h2 style={{ fontFamily: H.font, fontWeight: 800, fontSize: 16, color: H.text, margin: 0 }}>Upload Inventory File</h2>
+                <h2 style={{ fontFamily: H.font, fontSize: 16, fontWeight: 800, color: H.text, margin: 0 }}>Select File</h2>
                 <p style={{ fontFamily: H.font, fontSize: 12, color: H.muted, margin: '2px 0 0' }}>Upload a .xlsx or .csv file containing inventory item records</p>
               </div>
               <button onClick={downloadTemplate} style={ghost({ padding: '8px 14px', fontSize: 13, gap: 6 })}>
@@ -210,8 +211,8 @@ export default function BulkInventoryImportPage() {
               onDrop={handleDrop}
               onClick={() => document.getElementById('inventory-file-upload-input')?.click()}
               style={{
-                background: isDragging ? 'rgba(6,182,212,0.06)' : H.surface,
-                border: `2px dashed ${isDragging ? H.mintGreen : H.border}`,
+                background: isDragging ? '#F4F4F5' : H.surface,
+                border: `2px dashed ${isDragging ? '#18181B' : H.border}`,
                 borderRadius: 18,
                 padding: '48px 24px',
                 textAlign: 'center',
@@ -231,12 +232,12 @@ export default function BulkInventoryImportPage() {
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
               />
-              <div style={{ width: 52, height: 52, borderRadius: 16, background: 'rgba(6,182,212,0.12)', color: H.mintGreen, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 16, background: '#F4F4F5', color: '#18181B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Upload size={26} />
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: 15, color: H.text }}>
-                  Drop your Excel (.xlsx / .csv) file here, or <span style={{ color: H.mintGreen, textDecoration: 'underline' }}>browse files</span>
+                  Drop your Excel (.xlsx / .csv) file here, or <span style={{ color: '#18181B', textDecoration: 'underline' }}>browse files</span>
                 </div>
                 <div style={{ fontSize: 12, color: H.muted, marginTop: 4 }}>
                   Columns: Item Name, Category, Quantity, Condition, Location, Serial Number, Price, Notes
