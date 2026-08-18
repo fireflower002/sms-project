@@ -38,6 +38,8 @@ export interface ChatMessage {
 interface StaffChatProps {
   height?: string
   fullScreen?: boolean
+  initialMessages?: ChatMessage[]
+  initialUser?: { id: string; full_name?: string; role?: string } | null
 }
 
 // Format timestamp helper
@@ -98,11 +100,11 @@ function formatRawMessage(m: any): ChatMessage {
   }
 }
 
-export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen = false }: StaffChatProps) {
+export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen = false, initialMessages, initialUser }: StaffChatProps) {
   const supabase = createClient()
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [user, setUser] = useState<{ id: string; full_name?: string; role?: string } | null>(null)
-  const [loadingInitial, setLoadingInitial] = useState(true)
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages || [])
+  const [user, setUser] = useState<{ id: string; full_name?: string; role?: string } | null>(initialUser || null)
+  const [loadingInitial, setLoadingInitial] = useState(!initialMessages)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [newMessage, setNewMessage] = useState('')
@@ -128,6 +130,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
   // 1. Fetch current authenticated user profile
   useEffect(() => {
     let mounted = true
+    if (initialUser) return
     const initUser = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
@@ -150,10 +153,11 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     }
     initUser()
     return () => { mounted = false }
-  }, [supabase])
+  }, [supabase, initialUser])
 
   // 2. Fetch initial recent 35 messages
   const fetchInitialMessages = useCallback(async () => {
+    if (initialMessages) return
     setLoadingInitial(true)
     setError(null)
     try {
@@ -175,13 +179,13 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     } finally {
       setLoadingInitial(false)
     }
-  }, [supabase])
+  }, [supabase, initialMessages])
 
   useEffect(() => {
-    if (user) {
+    if (user && !initialMessages) {
       fetchInitialMessages()
     }
-  }, [user, fetchInitialMessages])
+  }, [user, fetchInitialMessages, initialMessages])
 
   const scrollToBottom = (smooth = false) => {
     if (messagesContainerRef.current) {
