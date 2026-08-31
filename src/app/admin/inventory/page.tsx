@@ -12,6 +12,7 @@ import { SkeletonBlock } from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import { exportToCSV } from '@/lib/csvExport'
 import { useToast } from '@/components/ui/Toast'
+import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 
 const styles: { [key: string]: React.CSSProperties } = {
   card: { backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' },
@@ -202,21 +203,72 @@ const InventoryItemCard = ({ item, onDelete, onShowQr }: { item: any; onDelete: 
   )
 }
 
+import useSWR from 'swr'
+
 // MAIN PAGE COMPONENT ========================================================
 function InventoryPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [items, setItems] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [showLowStock, setShowLowStock] = useState(false)
-  const [stats, setStats] = useState({ total: 0, assigned: 0, lowStock: 0, categories: 0 })
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [singleQrItem, setSingleQrItem] = useState<any | null>(null)
   const [showBatchQrModal, setShowBatchQrModal] = useState(false)
   const supabase = createClient()
   const { showToast } = useToast()
+
+  const INVENTORY_PAGE_SIZE = 25
+  const [invPage, setInvPage] = useState(0)
+
+  const { data: rawData, isLoading: loading, mutate } = useSWR(
+    ['admin-inventory-list', category, search, showLowStock, invPage],
+    async () => {
+      let query = supabase
+        .from('inventory')
+        .select('*', { count: 'exact' })
+        .eq('is_active', true)
+
+      if (search.trim()) query = query.ilike('name', `%${search.trim()}%`)
+      if (category !== 'All') query = query.eq('category', category)
+      if (showLowStock) query = query.eq('is_low_stock', true)
+
+      query = query.order('name').range(invPage * INVENTORY_PAGE_SIZE, (invPage + 1) * INVENTORY_PAGE_SIZE - 1)
+
+      const { data, count, error } = await query
+      if (error && showLowStock && error.message.includes('is_low_stock')) {
+        // Fallback query if migration 20260819000007_db05 is pending execution in Supabase Dashboard
+        let fallbackQuery = supabase
+          .from('inventory')
+          .select('*', { count: 'exact' })
+          .eq('is_active', true)
+        if (search.trim()) fallbackQuery = fallbackQuery.ilike('name', `%${search.trim()}%`)
+        if (category !== 'All') fallbackQuery = fallbackQuery.eq('category', category)
+        const { data: fallbackData } = await fallbackQuery.order('name')
+        const filtered = (fallbackData || []).filter((i: any) => (i.quantity_available || 0) <= (i.low_stock_threshold || 5))
+        const paged = filtered.slice(invPage * INVENTORY_PAGE_SIZE, (invPage + 1) * INVENTORY_PAGE_SIZE)
+        return { items: paged, count: filtered.length }
+      }
+      return { items: data || [], count: count || 0 }
+    },
+    {
+      revalidateOnFocus: false,
+      revalidateIfStale: false,
+      revalidateOnMount: false,
+      dedupingInterval: 30000,
+    }
+  )
+
+  const items = rawData?.items || []
+  const totalCount = rawData?.count || 0
+  const totalPages = Math.ceil(totalCount / INVENTORY_PAGE_SIZE)
+
+  const stats = {
+    total: totalCount,
+    assigned: items.filter((i: any) => (i.quantity_total || 0) > (i.quantity_available || 0)).length,
+    lowStock: items.filter((i: any) => (i.quantity_available || 0) <= (i.reorder_level || 5)).length,
+    categories: new Set(items.map((i: any) => i.category)).size,
+  }
 
   useEffect(() => {
     if (searchParams.get('created')) {
@@ -246,81 +298,42 @@ function InventoryPageContent() {
     }
   }
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true)
-    try {
-      let query = supabase.from('inventory').select('*').eq('is_active', true).order('name')
-      if (search) query = query.ilike('name', `%${search}%`)
-      if (category !== 'All') query = query.eq('category', category)
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalState | null>(null)
 
-      const { data } = await query
-      let list = data || []
-
-      // Auto-backfill missing public_token for legacy items using single bulk upsert
-      const unbackfilled = list.filter(i => !i.public_token)
-      if (unbackfilled.length > 0) {
-        const updates = unbackfilled.map(itemToBackfill => {
-          const newToken = crypto.randomUUID()
-          itemToBackfill.public_token = newToken
-          return { id: itemToBackfill.id, public_token: newToken }
-        })
-        await supabase.from('inventory').upsert(updates, { onConflict: 'id' })
-      }
-
-      if (showLowStock) list = list.filter(i => i.quantity_available <= i.low_stock_threshold)
-      setItems(list)
-
-      const { data: allItems } = await supabase.from('inventory').select('category,quantity_available,low_stock_threshold').eq('is_active', true)
-      const all = allItems || []
-      const { count: assignedCount } = await supabase.from('inventory_assignments').select('id', { count: 'exact', head: true }).eq('is_active', true)
-      setStats({
-        total: all.length,
-        assigned: assignedCount || 0,
-        lowStock: all.filter(i => i.quantity_available <= i.low_stock_threshold).length,
-        categories: new Set(all.map(i => i.category)).size
-      })
-    } finally {
-      setLoading(false)
-    }
-  }, [search, category, showLowStock, supabase])
-
-  const handleDeleteItem = async (itemToDelete: any) => {
+  const handleDeleteItem = (itemToDelete: any) => {
     if (!itemToDelete?.id) return
-    const confirmDelete = window.confirm(`Are you sure you want to delete "${itemToDelete.name}"?`)
-    if (!confirmDelete) return
+    setConfirmModal({
+      title: 'Delete Inventory Item?',
+      message: `Are you sure you want to delete "${itemToDelete.name}"? This action cannot be undone.`,
+      variant: 'danger',
+      confirmLabel: 'Delete Item',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { error: updateErr } = await supabase
+            .from('inventory')
+            .update({ is_active: false })
+            .eq('id', itemToDelete.id)
 
-    try {
-      const { error: updateErr } = await supabase
-        .from('inventory')
-        .update({ is_active: false })
-        .eq('id', itemToDelete.id)
+          if (updateErr) {
+            const { error: delErr } = await supabase
+              .from('inventory')
+              .delete()
+              .eq('id', itemToDelete.id)
+            if (delErr) throw delErr
+          }
 
-      if (updateErr) {
-        const { error: delErr } = await supabase
-          .from('inventory')
-          .delete()
-          .eq('id', itemToDelete.id)
-        if (delErr) throw delErr
+          showToast(`Deleted item "${itemToDelete.name}"`, 'info')
+          mutate()
+        } catch (err: any) {
+          console.error('Failed to delete inventory item:', err)
+          showToast('Could not delete inventory item. Please try again.', 'error')
+        }
       }
-
-      setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
-      showToast(`Deleted item "${itemToDelete.name}"`, 'info')
-      fetchItems()
-    } catch (err: any) {
-      console.error('Failed to delete inventory item:', err)
-      showToast('Could not delete inventory item. Please try again.', 'error')
-    }
+    })
   }
 
-  useEffect(() => {
-    const timer = setTimeout(() => fetchItems(), search ? 300 : 0)
-    return () => clearTimeout(timer)
-  }, [fetchItems, search])
-
-  const INVENTORY_PAGE_SIZE = 24
-  const [invPage, setInvPage] = useState(0)
-  const totalPages = Math.ceil(items.length / INVENTORY_PAGE_SIZE)
-  const displayedItems = items.slice(invPage * INVENTORY_PAGE_SIZE, (invPage + 1) * INVENTORY_PAGE_SIZE)
+  const displayedItems = items
 
   useEffect(() => { setInvPage(0) }, [search, category, showLowStock])
 
@@ -342,7 +355,7 @@ function InventoryPageContent() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button onClick={fetchItems} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px' }} title="Refresh">
+            <button onClick={() => mutate()} style={{ ...styles.button, ...styles.buttonSecondary, padding: '8px 12px' }} title="Refresh">
               <RefreshCw size={14} style={loading ? { animation: 'spin 1s linear infinite' } : {}} />
             </button>
             <button
@@ -574,6 +587,12 @@ function InventoryPageContent() {
           </div>
         </div>
       )}
+      {/* Confirm Modal */}
+      <ConfirmModal
+        open={!!confirmModal}
+        {...(confirmModal ?? { title: '', message: '', onConfirm: () => {} })}
+        onCancel={() => setConfirmModal(null)}
+      />
     </div>
   )
 }

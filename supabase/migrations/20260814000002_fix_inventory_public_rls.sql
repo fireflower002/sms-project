@@ -31,7 +31,7 @@ SELECT
   i.assigned_at,
   i.is_active
 FROM inventory i
-LEFT JOIN profiles p ON i.assigned_to = p.id
+LEFT JOIN profiles p ON i.assigned_to::text = p.id::text
 WHERE i.is_active = true;
 
 -- 4. Grant SELECT on public view to anon and authenticated roles

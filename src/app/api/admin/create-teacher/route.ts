@@ -20,12 +20,13 @@ export async function POST(request: Request) {
     // 1. Check server configuration
     if (!supabaseUrl) {
       console.error('[API create-teacher] Missing NEXT_PUBLIC_SUPABASE_URL')
-      return NextResponse.json({ error: 'Server configuration error: NEXT_PUBLIC_SUPABASE_URL is missing.' }, { status: 500 })
+      return NextResponse.json({ success: false, error: 'Server configuration error: NEXT_PUBLIC_SUPABASE_URL is missing.' }, { status: 500 })
     }
 
     if (!serviceRoleKey) {
       console.error('[API create-teacher] Missing SUPABASE_SERVICE_ROLE_KEY in environment')
       return NextResponse.json({
+        success: false,
         error: 'Server configuration error: SUPABASE_SERVICE_ROLE_KEY is missing in environment (.env.local). Please set SUPABASE_SERVICE_ROLE_KEY to enable admin user creation.'
       }, { status: 500 })
     }
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 
     if (!callerUser) {
       console.warn('[API create-teacher] Unauthorized attempt: No active session or valid token')
-      return NextResponse.json({ error: 'Unauthorized: No active admin session found. Please sign in again.' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: No active admin session found. Please sign in again.' }, { status: 401 })
     }
 
     // Rate Limit Check: max 5 requests per 1 minute per caller user ID / IP
@@ -81,7 +82,7 @@ export async function POST(request: Request) {
 
     if (adminProfile?.role !== 'admin') {
       console.warn('[API create-teacher] Forbidden attempt by user:', callerUser.id, 'role:', adminProfile?.role)
-      return NextResponse.json({ error: 'Forbidden: Admin privileges required to create teachers.' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin privileges required to create teachers.' }, { status: 403 })
     }
 
     // 3. Parse & validate payload with Zod schema
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
     const parseResult = createTeacherSchema.safeParse(body)
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid teacher creation payload'
-      return NextResponse.json({ error: firstError }, { status: 400 })
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 })
     }
 
     const { full_name: normalizedName, email: normalizedEmail, phone: rawPhone, tempPassword, subjects } = parseResult.data
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
 
     if (createAuthError) {
       console.error('[API create-teacher] Auth createUser error:', createAuthError)
-      return NextResponse.json({ error: createAuthError.message || 'Failed to create user in Auth system.' }, { status: 400 })
+      return NextResponse.json({ success: false, error: createAuthError.message || 'Failed to create user in Auth system.' }, { status: 400 })
     }
 
     const userId = authData.user.id
@@ -135,9 +136,10 @@ export async function POST(request: Request) {
     const { error: profileErr } = await adminSupabase.from('profiles').upsert(profilePayload, { onConflict: 'id' })
     if (profileErr) console.warn('[API create-teacher] profiles upsert warning:', profileErr.message)
 
-    return NextResponse.json({ success: true, email: normalizedEmail, userId })
-  } catch (err: any) {
+    return NextResponse.json({ success: true, data: { email: normalizedEmail, userId } })
+  } catch (err: unknown) {
     console.error('[API create-teacher] Unexpected server error:', err)
-    return NextResponse.json({ error: err?.message || 'Server error creating teacher' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Server error creating teacher'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

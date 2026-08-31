@@ -10,9 +10,49 @@ import { TimetableSkeleton } from '@/components/ui/Skeleton'
 import SubjectModal, { CURATED_PALETTE, DEFAULT_SUBJECT_COLORS } from '@/components/admin/SubjectModal'
 import { ComponentErrorBoundary } from '@/components/ui/ComponentErrorBoundary'
 
-const card  = (x?:any):React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
-const ghost = (x?:any):React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
-const hBtn  = (x?:any):React.CSSProperties => ({ background:'#1E3A8A', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
+interface TimetableTemplate {
+  id: string
+  name: string
+  academic_year?: string
+  term?: string
+  is_active?: boolean
+  start_time: string
+  end_time: string
+  period_duration: number
+  breaks?: any[]
+}
+
+interface ClassItem {
+  id: string
+  name: string
+  grade_level: number
+  is_active?: boolean
+}
+
+interface TeacherProfile {
+  id: string
+  full_name: string
+  subjects?: string[]
+  subject_colors?: Record<string, string>
+}
+
+interface ScheduleAssignment {
+  id: string
+  template_id: string
+  class_id: string
+  teacher_id: string
+  day_of_week: number
+  period_number: number
+  subject: string
+  color?: string
+  subject_color?: string
+  class?: { name: string; grade_level: number }
+  teacher?: { full_name: string }
+}
+
+const card  = (x?: React.CSSProperties): React.CSSProperties => ({ background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', ...x })
+const ghost = (x?: React.CSSProperties): React.CSSProperties => ({ background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'6px 12px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', ...x })
+const hBtn  = (x?: React.CSSProperties): React.CSSProperties => ({ background:'#1E3A8A', color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', ...x })
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday']
 const DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri']
@@ -28,12 +68,12 @@ export default function AdminTimetableViewPage() {
   const rawId = params?.id
   const targetId = Array.isArray(rawId) ? rawId[0] : (typeof rawId === 'string' ? rawId : null)
 
-  const [loading, setLoading]         = useState(true)
-  const [templates, setTemplates]     = useState<any[]>([])
-  const [template, setTemplate]       = useState<any>(null)
-  const [classes, setClasses]         = useState<any[]>([])
-  const [teachers, setTeachers]       = useState<any[]>([])
-  const [schedule, setSchedule]       = useState<any[]>([])
+  const [loading, setLoading]         = useState(false)
+  const [templates, setTemplates]     = useState<TimetableTemplate[]>([])
+  const [template, setTemplate]       = useState<TimetableTemplate | null>(null)
+  const [classes, setClasses]         = useState<ClassItem[]>([])
+  const [teachers, setTeachers]       = useState<TeacherProfile[]>([])
+  const [schedule, setSchedule]       = useState<ScheduleAssignment[]>([])
   const [selectedDay, setSelectedDay] = useState(1)
   const [selectedGrades, setSelectedGrades] = useState<string[]>([])
   const [allGrades, setAllGrades]     = useState<string[]>([])
@@ -50,8 +90,8 @@ export default function AdminTimetableViewPage() {
     return subjectColors[s] || DEFAULT_SUBJECT_COLORS[s] || CURATED_PALETTE[0]
   }
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (isInitial = false) => {
+    if (!isInitial) setLoading(true)
     const [{ data: tmpls }, { data: cls }, { data: tchs }] = await Promise.all([
       supabase.from('timetable_templates').select('*').order('created_at', { ascending: false }),
       supabase.from('classes').select('*').eq('is_active', true).order('grade_level').order('name'),
@@ -97,7 +137,7 @@ export default function AdminTimetableViewPage() {
     }
 
   useEffect(() => {
-    load()
+    load(true)
   }, [targetId])
 
   const handleTemplateChange = (newId: string) => {

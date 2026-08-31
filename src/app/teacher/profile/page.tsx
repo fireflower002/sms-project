@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, CheckCircle2, KeyRound, AlertTriangle, User, Phone, BookOpen, Info, ShieldCheck, Mail, Lock } from 'lucide-react'
+import { Loader2, CheckCircle2, KeyRound, AlertTriangle, User, Phone, BookOpen, Info, ShieldCheck, Mail, Lock, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { formatSLT } from '@/lib/utils'
 import { H } from '@/lib/honey'
@@ -81,7 +81,7 @@ function getInitials(name?: string) {
 }
 
 export default function TeacherProfilePage() {
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -104,65 +104,70 @@ export default function TeacherProfilePage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) { router.push('/teacher/login'); return }
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.user) { router.push('/teacher/login'); return }
 
-      const userEmail = session.user.email?.toLowerCase()
+        const userEmail = session.user.email?.toLowerCase()
 
-      const [{ data: prof }, { data: pending }, { data: allowed }, { data: schedData }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', session.user.id).single(),
-        supabase.from('profile_change_requests').select('*').eq('teacher_id', session.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        userEmail ? supabase.from('allowed_users').select('subjects, role').eq('email', userEmail).maybeSingle() : Promise.resolve({ data: null }),
-        supabase.from('schedule_assignments').select('subject').eq('teacher_id', session.user.id),
-      ])
+        const [{ data: prof }, { data: pending }, allowedRes, { data: schedData }] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle(),
+          supabase.from('profile_change_requests').select('*').eq('teacher_id', session.user.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+          userEmail ? Promise.resolve(supabase.from('allowed_users').select('subjects, role').eq('email', userEmail).maybeSingle()).catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+          supabase.from('schedule_assignments').select('subject').eq('teacher_id', session.user.id),
+        ])
 
-      let profileData = prof
-      if (!profileData && userEmail) {
-        const isAdmin = allowed?.role === 'admin'
+        const allowed = allowedRes?.data || null
+        let profileData = prof
 
-        profileData = {
-          id: session.user.id,
-          email: userEmail,
-          full_name: session.user.user_metadata?.full_name || userEmail.split('@')[0] || (isAdmin ? 'Admin' : 'Teacher'),
-          role: isAdmin ? 'admin' : 'teacher',
-          subjects: allowed?.subjects || [],
-          must_change_password: false,
-          is_active: true
+        if (!profileData && userEmail) {
+          const isAdmin = allowed?.role === 'admin'
+
+          profileData = {
+            id: session.user.id,
+            email: userEmail,
+            full_name: session.user.user_metadata?.full_name || userEmail.split('@')[0] || (isAdmin ? 'Admin' : 'Teacher'),
+            role: isAdmin ? 'admin' : 'teacher',
+            subjects: allowed?.subjects || [],
+            must_change_password: false,
+            is_active: true
+          }
+          await supabase.from('profiles').upsert(profileData)
         }
-        await supabase.from('profiles').upsert(profileData)
+
+        if (!profileData) { router.push('/teacher/login'); return }
+
+        const existingProfileSubs: string[] = profileData.subjects || []
+        const allowedSubs: string[] = allowed?.subjects || []
+        const schedSubs: string[] = (schedData || []).map((s: any) => s.subject).filter(Boolean)
+
+        const mergedSubjects = Array.from(new Set([...existingProfileSubs, ...allowedSubs, ...schedSubs]))
+          .filter((s): s is string => typeof s === 'string' && s.trim().length > 0 && s !== 'Other')
+          .sort((a, b) => a.localeCompare(b))
+
+        if (JSON.stringify(existingProfileSubs.sort()) !== JSON.stringify(mergedSubjects) && mergedSubjects.length > 0) {
+          await supabase.from('profiles').update({ subjects: mergedSubjects }).eq('id', session.user.id)
+          profileData.subjects = mergedSubjects
+        }
+
+        setProfile(profileData)
+        setPendingRequest(pending || null)
+
+        const initialName: string = pending?.new_full_name ? pending.new_full_name : (profileData.full_name || '')
+        const initialPhone: string = pending?.new_phone ? pending.new_phone : (profileData.phone || '')
+
+        setForm({ full_name: initialName, phone: initialPhone })
+
+        if (profileData.must_change_password) {
+          setShowPasswordModal(true)
+        } else if (typeof window !== 'undefined' && window.location.search.includes('changePassword=true')) {
+          router.replace('/teacher/profile')
+        }
+      } catch (err) {
+        console.error('[TeacherProfilePage] load error:', err)
+      } finally {
+        setLoading(false)
       }
-
-      if (!profileData) { router.push('/teacher/login'); return }
-
-      // AUTOMATIC HEALING DATABASE SYNC:
-      // Merge subjects from profiles.subjects, allowed_users.subjects & schedule_assignments
-      const existingProfileSubs: string[] = profileData.subjects || []
-      const allowedSubs: string[] = allowed?.subjects || []
-      const schedSubs: string[] = (schedData || []).map((s: any) => s.subject).filter(Boolean)
-
-      const mergedSubjects = Array.from(new Set([...existingProfileSubs, ...allowedSubs, ...schedSubs]))
-        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0 && s !== 'Other')
-        .sort((a, b) => a.localeCompare(b))
-
-      // If profiles.subjects is missing any subjects, update database automatically!
-      if (JSON.stringify(existingProfileSubs.sort()) !== JSON.stringify(mergedSubjects) && mergedSubjects.length > 0) {
-        await supabase.from('profiles').update({ subjects: mergedSubjects }).eq('id', session.user.id)
-        profileData.subjects = mergedSubjects
-      }
-
-      setProfile(profileData)
-      setPendingRequest(pending || null)
-
-      const initialName: string = pending?.new_full_name ? pending.new_full_name : (profileData.full_name || '')
-      const initialPhone: string = pending?.new_phone ? pending.new_phone : (profileData.phone || '')
-
-      setForm({ full_name: initialName, phone: initialPhone })
-
-      if (profileData.must_change_password || (typeof window !== 'undefined' && window.location.search.includes('changePassword=true'))) {
-        setShowPasswordModal(true)
-      }
-
-      setLoading(false)
     }
     load()
   }, [router, supabase])
@@ -272,13 +277,32 @@ export default function TeacherProfilePage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowPasswordModal(true)}
-                style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}
-              >
-                <KeyRound size={14} /> Change Password
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordModal(true)}
+                  style={{ ...styles.button, ...styles.buttonSecondary, minHeight: '38px', fontSize: '13px' }}
+                >
+                  <KeyRound size={14} /> Change Password
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await supabase.auth.signOut()
+                    window.location.href = '/'
+                  }}
+                  style={{
+                    ...styles.button,
+                    backgroundColor: '#FEF2F2',
+                    color: '#DC2626',
+                    border: '1px solid #FCA5A5',
+                    minHeight: '38px',
+                    fontSize: '13px'
+                  }}
+                >
+                  <LogOut size={14} /> Sign Out
+                </button>
+              </div>
             </div>
           </div>
 

@@ -58,9 +58,11 @@ export default function LoginForm({
           const res = await fetch('/api/auth/role')
           if (res.ok) {
             const roleData = await res.json()
-            if (roleData.role) {
-              userRole = roleData.role
-              mustChange = Boolean(roleData.mustChangePassword)
+            const r = roleData.data?.role || roleData.role
+            const m = roleData.data?.mustChangePassword ?? roleData.mustChangePassword
+            if (r) {
+              userRole = r
+              mustChange = Boolean(m)
             }
           }
         } catch (e) {
@@ -131,38 +133,26 @@ export default function LoginForm({
 
     setLoading(true)
     try {
-      // 1. Verify user profile exists and is an admin
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('email', trimmedEmail)
-        .maybeSingle()
+      // Dispatch admin password reset request to server API endpoint (bypasses RLS safely and prevents timing enumeration)
+      const res = await fetch('/api/auth/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail }),
+      })
 
-      if (!prof || prof.role !== 'admin') {
-        setError('No administrator account found matching this email address.')
+      const data = await res.json()
+
+      if (!res.ok || (data.success === false) || data.error) {
+        setError(data.error || 'Failed to send OTP code. Please try again.')
         setLoading(false)
         return
       }
 
-      // 2. Dispatch OTP code via Supabase Auth
-      const { error: otpErr } = await supabase.auth.signInWithOtp({
-        email: trimmedEmail,
-        options: { shouldCreateUser: false },
-      })
-
-      if (otpErr) {
-        const { error: resetErr } = await supabase.auth.resetPasswordForEmail(trimmedEmail)
-        if (resetErr) {
-          setError(resetErr.message || 'Failed to send OTP code to email.')
-          setLoading(false)
-          return
-        }
-      }
-
       setOtpStep('verify')
-      setSuccessMsg('A 6-digit verification code has been sent to your email.')
+      const msg = data.data?.message || data.message || 'If an administrator account exists for this email, a verification code has been sent.'
+      setSuccessMsg(msg)
     } catch (err: any) {
-      setError(err.message || 'Failed to send OTP code. Please try again.')
+      setError(err?.message || 'Failed to send OTP code. Please try again.')
     } finally {
       setLoading(false)
     }

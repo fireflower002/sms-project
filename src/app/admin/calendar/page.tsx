@@ -48,7 +48,7 @@ export default function AdminCalendarPage() {
   const [events, setEvents] = useState<SchoolCalendarEvent[]>([])
   const [settings, setSettings] = useState<SchoolSettings>(DEFAULT_SCHOOL_SETTINGS)
   const [syncLogs, setSyncLogs] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
   const [viewMode, setViewMode] = useState<'month' | 'list'>('month')
@@ -79,8 +79,8 @@ export default function AdminCalendarPage() {
   const supabase = createClient()
 
   // Load calendar events, settings & sync logs
-  const loadData = useCallback(async () => {
-    setLoading(true)
+  const loadData = useCallback(async (isInitial = false) => {
+    if (!isInitial) setLoading(true)
     try {
       const [{ data: evs }, { data: sets }, { data: logs }] = await Promise.all([
         supabase.from('school_calendar_events').select('*').order('event_date', { ascending: true }),
@@ -102,7 +102,7 @@ export default function AdminCalendarPage() {
   }, [supabase, showToast])
 
   useEffect(() => {
-    loadData()
+    loadData(true)
   }, [loadData])
 
   // Trigger Sri Lanka holiday sync
@@ -116,7 +116,8 @@ export default function AdminCalendarPage() {
         throw new Error(json.error || 'Failed syncing Sri Lanka public holidays.')
       }
 
-      showToast(`Holiday sync complete! Added ${json.recordsAdded} events.`, 'success')
+      const addedCount = json.data?.recordsAdded ?? json.recordsAdded ?? 0
+      showToast(`Holiday sync complete! Added ${addedCount} events.`, 'success')
       loadData()
     } catch (err: any) {
       showToast(err.message || 'Error executing holiday sync', 'error')
@@ -706,7 +707,7 @@ export default function AdminCalendarPage() {
         </div>
       )}
 
-      <ConfirmModal open={!!modal} {...(modal ?? { title: '', message: '', onConfirm: () => {} })} onCancel={() => setModal(null)} />
+      <ConfirmModal open={!!modal} {...(modal ?? { title: '', message: '', onConfirm: () => { } })} onCancel={() => setModal(null)} />
     </div>
   )
 }

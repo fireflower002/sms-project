@@ -12,6 +12,10 @@ BEGIN
     SELECT 1 
     FROM information_schema.columns 
     WHERE table_name = 'school_settings' AND column_name = 'absence_cutoff_hours_before'
+  ) AND NOT EXISTS (
+    SELECT 1 
+    FROM information_schema.columns 
+    WHERE table_name = 'school_settings' AND column_name = 'absence_cutoff_hours_before_deprecated'
   ) THEN
     ALTER TABLE public.school_settings 
     RENAME COLUMN absence_cutoff_hours_before TO absence_cutoff_hours_before_deprecated;

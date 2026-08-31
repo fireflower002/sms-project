@@ -43,6 +43,7 @@ export const TEACHER_NAV_SECTIONS: TeacherNavSectionDef[] = [
     items: [
       { href: '/teacher/timetable', label: 'Timetable', icon: Calendar, color: '#71717A' },
       { href: '/teacher/report-absence', label: 'Absence', icon: ClipboardList, color: '#71717A' },
+      { href: '/teacher/swaps', label: 'Cover Swaps', icon: ArrowRightLeft, color: '#71717A' },
     ],
   },
   {
@@ -202,6 +203,8 @@ export default function TeacherSidebar() {
             )
           })}
           <button
+            aria-label="Toggle navigation menu"
+            aria-expanded={isMobileMenuOpen}
             onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
             style={{
               background: 'none',
@@ -248,9 +251,56 @@ export default function TeacherSidebar() {
             padding: '16px', boxShadow: '0 -4px 16px rgba(0,0,0,0.1)',
             maxHeight: '80vh', overflowY: 'auto'
           }}>
-            <button onClick={() => setMobileMenuOpen(false)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer' }}>
-              <X size={22} color={H.textMuted} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, color: H.textPrimary }}>Navigation Menu</span>
+              <button aria-label="Close navigation menu" onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <X size={20} color={H.textMuted} />
+              </button>
+            </div>
+
+            {/* Profile & Sign Out prominently placed at TOP of drawer */}
+            <div style={{
+              backgroundColor: '#FAF9F6',
+              border: `1px solid ${H.border}`,
+              borderRadius: '12px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#18181B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px' }}>
+                  {profile?.full_name?.charAt(0) || 'T'}
+                </div>
+                <div>
+                  <span style={{ fontWeight: '700', fontSize: '13px', color: H.textPrimary, display: 'block' }}>{profile?.full_name || 'Teacher'}</span>
+                  <span style={{ fontSize: '11px', color: H.textSec }}>Teacher Portal</span>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                title="Sign Out"
+                aria-label="Sign Out"
+                style={{
+                  background: '#DC2626',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  padding: '8px 14px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  boxShadow: '0 2px 4px rgba(220,38,38,0.2)'
+                }}
+              >
+                <LogOut size={15} color="#FFFFFF" />
+                <span>Sign Out</span>
+              </button>
+            </div>
 
             {TEACHER_NAV_SECTIONS.map((sec, idx) => (
               <div key={idx} style={{ marginBottom: 14 }}>
@@ -268,39 +318,6 @@ export default function TeacherSidebar() {
                 </div>
               </div>
             ))}
-
-            <div style={{ borderTop: `1px solid ${H.border}`, marginTop: 16, paddingTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: '#F4F4F5', color: '#18181B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700' }}>
-                  {profile?.full_name?.charAt(0) || 'T'}
-                </div>
-                <div>
-                  <span style={{ fontWeight: '700', fontSize: '14px', color: H.textPrimary, display: 'block' }}>{profile?.full_name || 'Teacher'}</span>
-                  <span style={{ fontSize: '12px', color: H.textSec }}>Teacher Portal</span>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                title="Sign Out"
-                aria-label="Sign Out"
-                style={{
-                  background: '#F4F4F5',
-                  border: `1px solid ${H.border}`,
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  padding: '6px 12px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  color: H.textSec,
-                }}
-              >
-                <LogOut size={16} color={H.textMuted} />
-                <span>Sign Out</span>
-              </button>
-            </div>
           </div>
         )}
       </div>
@@ -311,7 +328,7 @@ export default function TeacherSidebar() {
     <aside style={{
       width: '240px',
       flexShrink: 0,
-      minHeight: '100vh',
+      height: '100vh',
       backgroundColor: H.surface,
       borderRight: `1px solid ${H.border}`,
       display: 'flex', flexDirection: 'column',

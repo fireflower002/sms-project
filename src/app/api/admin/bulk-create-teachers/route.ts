@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: 'Server configuration error: Missing Supabase credentials.' }, { status: 500 })
+      return NextResponse.json({ success: false, error: 'Server configuration error: Missing Supabase credentials.' }, { status: 500 })
     }
 
     // Verify caller is an authenticated Admin
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     if (!callerUser) {
-      return NextResponse.json({ error: 'Unauthorized: Admin session required.' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: Admin session required.' }, { status: 401 })
     }
 
     // Rate Limit Check: max 3 requests per 5 minutes per caller user ID / IP
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (adminProfile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin privileges required.' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin privileges required.' }, { status: 403 })
     }
 
     // Validate payload with Zod schema
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     const parseResult = bulkCreateTeachersSchema.safeParse(body)
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid bulk teacher creation payload'
-      return NextResponse.json({ error: firstError }, { status: 400 })
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 })
     }
 
     const { teachers } = parseResult.data
@@ -139,13 +139,15 @@ export async function POST(request: Request) {
           tempPassword,
           status: 'success'
         })
-      } catch (err: any) {
-        results.push({ email, full_name: fullName, status: 'failed', error: err?.message || 'Error creating user' })
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Error creating user'
+        results.push({ email, full_name: fullName, status: 'failed', error: errMsg })
       }
     }
 
-    return NextResponse.json({ success: true, results })
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Server error' }, { status: 500 })
+    return NextResponse.json({ success: true, data: { results } })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Server error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

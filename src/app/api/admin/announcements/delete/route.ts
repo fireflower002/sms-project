@@ -14,7 +14,7 @@ async function handleDelete(request: Request) {
 
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid announcement deletion payload'
-      return NextResponse.json({ error: firstError }, { status: 400 })
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 })
     }
 
     const { id } = parseResult.data
@@ -24,7 +24,7 @@ async function handleDelete(request: Request) {
     const { data: { user } } = await serverSupabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized: No active session' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: No active session' }, { status: 401 })
     }
 
     const { data: profile } = await serverSupabase
@@ -34,7 +34,7 @@ async function handleDelete(request: Request) {
       .single()
 
     if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin access required' }, { status: 403 })
     }
 
     // 2. Perform deletion using Admin Client (service role) to guarantee DB execution
@@ -53,17 +53,18 @@ async function handleDelete(request: Request) {
 
     if (error) {
       console.error('[API announcements/delete] Supabase error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 })
     }
 
     if (!data || data.length === 0) {
-      return NextResponse.json({ error: 'Announcement not found or delete failed' }, { status: 404 })
+      return NextResponse.json({ success: false, error: 'Announcement not found or delete failed' }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, deleted: data[0] })
-  } catch (err: any) {
+    return NextResponse.json({ success: true, data: { deleted: data[0] } })
+  } catch (err: unknown) {
     console.error('[API announcements/delete] Server error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Internal server error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 

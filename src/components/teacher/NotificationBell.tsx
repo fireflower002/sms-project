@@ -108,6 +108,8 @@ export default function NotificationBell() {
         type="button"
         onClick={handleToggle}
         title="Notifications"
+        aria-label="Notifications"
+        aria-expanded={isOpen}
         style={{
           position: 'relative',
           background: isOpen ? H.accentLight : 'transparent',

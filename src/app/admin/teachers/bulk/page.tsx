@@ -105,20 +105,22 @@ export default function BulkTeacherImportPage() {
 
     setImporting(true)
 
-    // Check for duplicates in DB
+    // Check for duplicates in DB (capped at 100 safety limit for school scale)
     const emails = validRows.map(r => r.email)
     const { data: existing } = await supabase
       .from('allowed_users')
       .select('email')
       .in('email', emails)
+      .range(0, 99)
 
     const existingEmails = new Set((existing || []).map((e: any) => e.email))
 
-    // Also check profiles
+    // Also check profiles (capped at 100 safety limit for school scale)
     const { data: existingProfiles } = await supabase
       .from('profiles')
       .select('email')
       .in('email', emails)
+      .range(0, 99)
 
     const profileEmails = new Set((existingProfiles || []).map((e: any) => e.email))
 
@@ -139,13 +141,14 @@ export default function BulkTeacherImportPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teachers: toImport }),
       })
-      const data = await res.json()
+      const resData = await res.json()
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to import teachers')
+      if (!res.ok || !resData.success) {
+        throw new Error(resData.error || 'Failed to import teachers')
       }
 
-      const resMap = new Map((data.results || []).map((item: any) => [item.email, item]))
+      const resultsList = resData.data?.results || resData.results || []
+      const resMap = new Map((resultsList as any[]).map((item: any) => [item.email, item]))
 
       setRows(prev => prev.map(r => {
         const item: any = resMap.get(r.email)

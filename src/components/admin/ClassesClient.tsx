@@ -44,7 +44,7 @@ const setStoredClassTeacher = (classId: string, slug: string, data: { teacherId:
     const json = JSON.stringify(data)
     localStorage.setItem(`ct_cache_${classId}`, json)
     localStorage.setItem(`ct_cache_${slug}`, json)
-  } catch (e) {}
+  } catch (e) { }
 }
 
 const fetchAdminClassesData = async () => {
@@ -330,7 +330,7 @@ export default function ClassesClient({ initialData }: { initialData?: any }) {
             class_teacher_periods: 1,
             class_teacher_subject: null,
           }).eq('class_teacher_id', teacherId)
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const basicPayload = {
@@ -452,26 +452,26 @@ export default function ClassesClient({ initialData }: { initialData?: any }) {
 
   const styles = createStyles({
     container: { minHeight: '100vh', background: H.bg },
-    header: { position:'sticky', top:0, zIndex:50, background: H.surface, borderBottom:`1px solid ${H.border}` },
+    header: { position: 'sticky', top: 0, zIndex: 50, background: H.surface, borderBottom: `1px solid ${H.border}` },
     headerContent: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: '64px', maxWidth: '760px', margin: '0 auto', padding: '12px 20px', flexWrap: 'wrap', gap: '12px' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
-    backButton: { background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:8, fontFamily:H.font, fontWeight:600, fontSize:12, minHeight: '44px', padding:'8px 14px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none' },
+    backButton: { background: '#F5F5F4', color: H.muted, border: `1px solid ${H.border}`, borderRadius: 8, fontFamily: H.font, fontWeight: 600, fontSize: 12, minHeight: '44px', padding: '8px 14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none' },
     iconWrapper: { width: '32px', height: '32px', borderRadius: '8px', background: H.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center' },
     icon: { color: H.purpleDark },
-    headerTitle: { fontWeight: 800, fontSize: '14px', color:H.text },
+    headerTitle: { fontWeight: 800, fontSize: '14px', color: H.text },
     headerSubtitle: { fontSize: '11px', color: H.sub },
     headerRight: { display: 'flex', gap: '8px', alignItems: 'center' },
-    addGradeButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, minHeight: '44px', padding:'10px 18px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
+    addGradeButton: { background: H.purple, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 13, minHeight: '44px', padding: '10px 18px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' },
     toast: { position: 'fixed', top: '76px', left: '50%', transform: 'translateX(-50%)', zIndex: 9998, padding: '9px 18px', borderRadius: '10px', background: H.grass, color: 'white', fontSize: '13px', fontWeight: 600, boxShadow: '0 4px 20px rgba(0,0,0,0.15)', whiteSpace: 'nowrap', pointerEvents: 'none' },
-    emptyStateCard: { background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', textAlign: 'center', padding: '64px 32px' },
+    emptyStateCard: { background: H.surface, borderRadius: 16, border: `1px solid ${H.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden', textAlign: 'center', padding: '64px 32px' },
     emptyStateIcon: { margin: '0 auto 16px', color: H.sub },
-    emptyStateButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none' },
+    emptyStateButton: { background: H.purple, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 13, padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none' },
     gradesList: { display: 'flex', flexDirection: 'column', gap: '14px' },
-    gradeCard: { background:H.surface, borderRadius:16, border:`1px solid ${H.border}`, boxShadow:'0 2px 8px rgba(0,0,0,0.06)', overflow:'hidden', padding: '0' },
+    gradeCard: { background: H.surface, borderRadius: 16, border: `1px solid ${H.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden', padding: '0' },
     gradeHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: `1px solid ${H.border}` },
     gradeHeaderLeft: { display: 'flex', alignItems: 'center', gap: '12px' },
     gradeBadge: { width: '44px', height: '44px', borderRadius: '12px', color: 'white', fontWeight: 800, fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-    gradeTitle: { fontWeight: 800, fontSize: '17px', color:H.text },
+    gradeTitle: { fontWeight: 800, fontSize: '17px', color: H.text },
     gradeSubtitle: { fontSize: '12px', color: H.sub },
     gradeControls: { display: 'flex', alignItems: 'center', gap: '8px' },
     controlButton: { width: '34px', height: '34px', borderRadius: '8px', border: `1px solid ${H.border}`, background: H.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '20px', fontWeight: 700, lineHeight: 1 },
@@ -492,7 +492,7 @@ export default function ClassesClient({ initialData }: { initialData?: any }) {
     modalBackdrop: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' },
     modalContent: { position: 'relative', width: '100%', maxWidth: '420px', borderRadius: '16px', overflow: 'hidden', background: H.surface, border: `1px solid ${H.border}`, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' },
     modalHeader: { padding: '22px 24px 0' },
-    modalTitle: { fontWeight: 800, fontSize: '18px', marginBottom: '4px', color:H.text },
+    modalTitle: { fontWeight: 800, fontSize: '18px', marginBottom: '4px', color: H.text },
     modalSubtitle: { fontSize: '13px', color: H.sub, marginBottom: '24px' },
     modalBody: { padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '20px' },
     modalLabel: { fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: H.sub, display: 'block', marginBottom: '10px' },
@@ -508,16 +508,16 @@ export default function ClassesClient({ initialData }: { initialData?: any }) {
     previewPills: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '14px' },
     previewPill: { display: 'flex', alignItems: 'center', borderRadius: '8px', overflow: 'hidden', border: `1px solid ${H.border}` },
     previewLetterBadge: { width: '26px', height: '26px', color: 'white', fontWeight: 800, fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-    previewClassName: { padding: '0 8px', fontSize: '12px', fontWeight: 600, color:H.text },
+    previewClassName: { padding: '0 8px', fontSize: '12px', fontWeight: 600, color: H.text },
     modalButtons: { display: 'flex', gap: '10px', marginTop: '4px' },
-    cancelButton: { background:'#F5F5F4', color:H.muted, border:`1px solid ${H.border}`, borderRadius:10, fontFamily:H.font, fontWeight:600, fontSize:12, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:5, textDecoration:'none', flex: 1 },
-    createGradeButton: { background:H.purple, color:'#FFFFFF', border:'none', borderRadius:10, fontFamily:H.font, fontWeight:700, fontSize:13, padding:'8px 16px', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:6, textDecoration:'none', flex: 1 },
+    cancelButton: { background: '#F5F5F4', color: H.muted, border: `1px solid ${H.border}`, borderRadius: 10, fontFamily: H.font, fontWeight: 600, fontSize: 12, padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none', flex: 1 },
+    createGradeButton: { background: H.purple, color: '#FFFFFF', border: 'none', borderRadius: 10, fontFamily: H.font, fontWeight: 700, fontSize: 13, padding: '8px 16px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', flex: 1 },
   });
 
   return (
     <div style={{ backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 3vw, 28px)', fontFamily: H.font, boxSizing: 'border-box' }}>
       <div style={{ backgroundColor: H.surface, border: `1px solid ${H.border}`, borderRadius: '16px', boxShadow: H.cardShadow, overflow: 'hidden' }}>
-        
+
         <header style={{ padding: '20px 24px', borderBottom: `1px solid ${H.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: H.surface }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#F4F4F5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -654,450 +654,450 @@ export default function ClassesClient({ initialData }: { initialData?: any }) {
         )}
 
         <main style={{ padding: '24px' }}>
-        {loading && !classes.length ? (
-          <TableSkeleton rows={6} columns={4} />
-        ) : usedGrades.length === 0 ? (
-          <div style={styles.emptyStateCard}>
-            <EmptyState
-              icon={<GraduationCap size={48} style={styles.emptyStateIcon} />}
-              title="No grades yet"
-              description="Add a grade to create classes for your school"
-              action={
-                <button
-                  onClick={() => { setNewGradeLevel(6); setNewGradeCount(3); setShowAddGrade(true) }}
-                  style={styles.emptyStateButton}
-                >
-                  <Plus size={15} /> Add First Grade
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          <div style={styles.gradesList}>
-            {usedGrades.map(grade => {
-              const gradeClasses = (byGrade[grade] || []).sort((a, b) => a.name.localeCompare(b.name))
-              const color = gradeColor(grade)
-              const isSaving = saving === grade
+          {loading && !classes.length ? (
+            <TableSkeleton rows={6} columns={4} />
+          ) : usedGrades.length === 0 ? (
+            <div style={styles.emptyStateCard}>
+              <EmptyState
+                icon={<GraduationCap size={48} style={styles.emptyStateIcon} />}
+                title="No grades yet"
+                description="Add a grade to create classes for your school"
+                action={
+                  <button
+                    onClick={() => { setNewGradeLevel(6); setNewGradeCount(3); setShowAddGrade(true) }}
+                    style={styles.emptyStateButton}
+                  >
+                    <Plus size={15} /> Add First Grade
+                  </button>
+                }
+              />
+            </div>
+          ) : (
+            <div style={styles.gradesList}>
+              {usedGrades.map(grade => {
+                const gradeClasses = (byGrade[grade] || []).sort((a, b) => a.name.localeCompare(b.name))
+                const color = gradeColor(grade)
+                const isSaving = saving === grade
 
-              return (
-                <div key={grade} style={styles.gradeCard}>
-                  <div style={{...styles.gradeHeader, background: `linear-gradient(135deg, ${color}18, ${color}08)`}}>
-                    <div style={styles.gradeHeaderLeft}>
-                      <div style={{...styles.gradeBadge, background: color, boxShadow: `0 4px 12px ${color}55`}}>
-                        {grade}
-                      </div>
-                      <div>
-                        <div style={styles.gradeTitle}>Grade {grade}</div>
-                        <div style={styles.gradeSubtitle}>
-                          {gradeClasses.length} class{gradeClasses.length !== 1 ? 'es' : ''}
+                return (
+                  <div key={grade} style={styles.gradeCard}>
+                    <div style={{ ...styles.gradeHeader, background: `linear-gradient(135deg, ${color}18, ${color}08)` }}>
+                      <div style={styles.gradeHeaderLeft}>
+                        <div style={{ ...styles.gradeBadge, background: color, boxShadow: `0 4px 12px ${color}55` }}>
+                          {grade}
                         </div>
-                      </div>
-                    </div>
-
-                    <div style={styles.gradeControls}>
-                      {isSaving ? (
-                        <Loader2 size={18} style={{ animation:'spin 0.7s linear infinite', color: H.muted }} />
-                      ) : (
-                        <>
-                          <button
-                            onClick={() => handleMinusClass(grade)}
-                            disabled={gradeClasses.length === 0}
-                            title="Remove last class"
-                            style={{
-                              ...styles.controlButton, ...styles.minusButton,
-                              cursor: gradeClasses.length === 0 ? 'not-allowed' : 'pointer',
-                              opacity: gradeClasses.length === 0 ? 0.4 : 1,
-                              background: hoveredGradeBtn === `minus-${grade}` ? '#F5F5F4' : H.surface,
-                            }}
-                            onMouseEnter={() => setHoveredGradeBtn(`minus-${grade}`)}
-                            onMouseLeave={() => setHoveredGradeBtn(null)}
-                          >
-                            −
-                          </button>
-
-                          <div style={{...styles.gradeCountDisplay, borderColor: color, background: `${color}15`, color: color}}>
-                            {gradeClasses.length}
+                        <div>
+                          <div style={styles.gradeTitle}>Grade {grade}</div>
+                          <div style={styles.gradeSubtitle}>
+                            {gradeClasses.length} class{gradeClasses.length !== 1 ? 'es' : ''}
                           </div>
-
-                          <button
-                            onClick={() => handlePlusClass(grade)}
-                            disabled={gradeClasses.length >= 26}
-                            title="Add next class"
-                            style={{
-                              ...styles.controlButton, ...styles.plusButton,
-                              cursor: gradeClasses.length >= 26 ? 'not-allowed' : 'pointer',
-                              opacity: gradeClasses.length >= 26 ? 0.4 : 1,
-                              background: hoveredGradeBtn === `plus-${grade}` ? '#F5F5F4' : H.surface,
-                            }}
-                            onMouseEnter={() => setHoveredGradeBtn(`plus-${grade}`)}
-                            onMouseLeave={() => setHoveredGradeBtn(null)}
-                          >
-                            +
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteGrade(grade)}
-                            title="Delete entire grade"
-                            style={{
-                              ...styles.deleteGradeButton,
-                              background: hoveredGradeBtn === `delete-${grade}` ? '#F5F5F4' : H.surface,
-                            }}
-                            onMouseEnter={() => setHoveredGradeBtn(`delete-${grade}`)}
-                            onMouseLeave={() => setHoveredGradeBtn(null)}
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div style={styles.classPillsContainer}>
-                    {gradeClasses.map((cls, idx) => (
-                      <div key={cls.id} style={{
-                        ...styles.classPill,
-                        borderColor: `${color}55`,
-                        background: `${color}10`,
-                      }}>
-                        <div style={{...styles.classLetterBadge, background: color}}>
-                          {LETTERS[idx]}
                         </div>
+                      </div>
 
-                        {renamingId === cls.id ? (
-                          <>
-                            <input
-                              autoFocus
-                              value={renameVal}
-                              onChange={e => setRenameVal(e.target.value)}
-                              onKeyDown={e => { if (e.key === 'Enter') handleRename(cls.id); if (e.key === 'Escape') setRenamingId(null) }}
-                              style={styles.renameInput}
-                            />
-                            <button onClick={() => handleRename(cls.id)} style={styles.renameConfirmButton}>
-                              <Check size={12} />
-                            </button>
-                            <button onClick={() => setRenamingId(null)} style={styles.renameCancelButton}>
-                              <X size={12} />
-                            </button>
-                          </>
+                      <div style={styles.gradeControls}>
+                        {isSaving ? (
+                          <Loader2 size={18} style={{ animation: 'spin 0.7s linear infinite', color: H.muted }} />
                         ) : (
                           <>
-                            <span
-                              onClick={() => openEditModal(cls)}
-                              style={{ ...styles.classDisplayName, cursor: 'pointer' }}
-                              title="Click to edit Class Teacher & Default Periods"
-                            >
-                              {cls.name}
-                              {cls.class_teacher?.full_name ? (
-                                <span style={{ fontSize: '10px', color: H.purple, fontWeight: 700, marginLeft: '6px', opacity: 0.9 }}>
-                                  ⭐ {cls.class_teacher.full_name.split(' ')[0]} (P1{cls.class_teacher_periods === 2 ? '-P2' : ''}{cls.class_teacher_subject ? ` ${cls.class_teacher_subject}` : ''})
-                                </span>
-                              ) : (
-                                <span style={{ fontSize: '10px', color: '#D97706', background: '#FEF3C7', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>
-                                  ⭐ Unassigned
-                                </span>
-                              )}
-                            </span>
                             <button
-                              onClick={() => openEditModal(cls)}
-                              title="Edit Class Teacher & Default Periods"
-                              style={{ ...styles.renameButton, opacity: 0.9, color: cls.class_teacher_id ? H.purple : H.muted }}
+                              onClick={() => handleMinusClass(grade)}
+                              disabled={gradeClasses.length === 0}
+                              title="Remove last class"
+                              style={{
+                                ...styles.controlButton, ...styles.minusButton,
+                                cursor: gradeClasses.length === 0 ? 'not-allowed' : 'pointer',
+                                opacity: gradeClasses.length === 0 ? 0.4 : 1,
+                                background: hoveredGradeBtn === `minus-${grade}` ? '#F5F5F4' : H.surface,
+                              }}
+                              onMouseEnter={() => setHoveredGradeBtn(`minus-${grade}`)}
+                              onMouseLeave={() => setHoveredGradeBtn(null)}
                             >
-                              <UserCheck size={12} />
+                              −
                             </button>
+
+                            <div style={{ ...styles.gradeCountDisplay, borderColor: color, background: `${color}15`, color: color }}>
+                              {gradeClasses.length}
+                            </div>
+
                             <button
-                              onClick={() => { setRenamingId(cls.id); setRenameVal(cls.name) }}
-                              title="Rename"
-                              style={{...styles.renameButton, opacity: hoveredClassPill === cls.id ? 1 : 0.6}}
-                              onMouseEnter={() => setHoveredClassPill(cls.id)}
-                              onMouseLeave={() => setHoveredClassPill(null)}
+                              onClick={() => handlePlusClass(grade)}
+                              disabled={gradeClasses.length >= 26}
+                              title="Add next class"
+                              style={{
+                                ...styles.controlButton, ...styles.plusButton,
+                                cursor: gradeClasses.length >= 26 ? 'not-allowed' : 'pointer',
+                                opacity: gradeClasses.length >= 26 ? 0.4 : 1,
+                                background: hoveredGradeBtn === `plus-${grade}` ? '#F5F5F4' : H.surface,
+                              }}
+                              onMouseEnter={() => setHoveredGradeBtn(`plus-${grade}`)}
+                              onMouseLeave={() => setHoveredGradeBtn(null)}
                             >
-                              <Pencil size={11} />
+                              +
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteGrade(grade)}
+                              title="Delete entire grade"
+                              style={{
+                                ...styles.deleteGradeButton,
+                                background: hoveredGradeBtn === `delete-${grade}` ? '#F5F5F4' : H.surface,
+                              }}
+                              onMouseEnter={() => setHoveredGradeBtn(`delete-${grade}`)}
+                              onMouseLeave={() => setHoveredGradeBtn(null)}
+                            >
+                              <Trash2 size={14} />
                             </button>
                           </>
                         )}
                       </div>
-                    ))}
-
-                    {gradeClasses.length < 26 && !isSaving && (
-                      <button
-                        onClick={() => handlePlusClass(grade)}
-                        title={`Add Grade ${grade} ${LETTERS[gradeClasses.length]}`}
-                        style={{
-                          ...styles.quickAddButton,
-                          borderColor: color,
-                          color: color,
-                          opacity: hoveredAddClassBtn === grade ? 1 : 0.7,
-                        }}
-                        onMouseEnter={() => setHoveredAddClassBtn(grade)}
-                        onMouseLeave={() => setHoveredAddClassBtn(null)}
-                      >
-                        <Plus size={12} /> Grade {grade} {LETTERS[gradeClasses.length]}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </main>
-
-      {showAddGrade && (
-        <div style={styles.modalOverlay}>
-          <div onClick={() => setShowAddGrade(false)} style={styles.modalBackdrop} />
-          <div style={styles.modalContent}>
-            <div style={styles.modalHeader}>
-              <div style={styles.modalTitle}>Add New Grade</div>
-              <div style={styles.modalSubtitle}>
-                Choose the grade and how many classes to create
-              </div>
-            </div>
-
-            <div style={styles.modalBody}>
-              <div>
-                <label style={styles.modalLabel}>Select Grade Level</label>
-                <div style={styles.gradeSelector}>
-                  {unusedGrades.map(g => (
-                    <button
-                      key={g}
-                      onClick={() => setNewGradeLevel(g)}
-                      style={{
-                        ...styles.gradeSelectorButton,
-                        borderColor: newGradeLevel === g ? gradeColor(g) : H.border,
-                        background: newGradeLevel === g ? `${gradeColor(g)}20` : '#F5F5F4',
-                        color: newGradeLevel === g ? gradeColor(g) : H.text,
-                      }}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={styles.modalLabel}>Number of Classes to Create</label>
-                <div style={styles.gradeCountControls}>
-                  <button
-                    onClick={() => setNewGradeCount(Math.max(1, newGradeCount - 1))}
-                    style={{ ...styles.gradeCountButton, ...styles.minusCountButton }}
-                  >
-                    -
-                  </button>
-                  <div style={styles.modalGradeCountDisplay}>
-                    <div style={{ ...styles.gradeCountNumber, color: gradeColor(newGradeLevel) }}>
-                      {newGradeCount}
                     </div>
-                    <div style={styles.gradeCountLabel}>
-                      {newGradeCount === 1 ? 'class' : 'classes'}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setNewGradeCount(Math.min(6, newGradeCount + 1))}
-                    style={{ ...styles.gradeCountButton, ...styles.plusCountButton }}
-                  >
-                    +
-                  </button>
-                </div>
 
-                <div style={styles.previewPills}>
-                  {Array.from({ length: newGradeCount }, (_, i) => LETTERS[i]).map((letter, i) => (
-                    <div key={i} style={{ ...styles.previewPill, borderColor: `${gradeColor(newGradeLevel)}44` }}>
-                      <div style={{ ...styles.previewLetterBadge, background: gradeColor(newGradeLevel) }}>
-                        {letter}
-                      </div>
-                      <div style={styles.previewClassName}>
-                        Grade {newGradeLevel} {letter}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    <div style={styles.classPillsContainer}>
+                      {gradeClasses.map((cls, idx) => (
+                        <div key={cls.id} style={{
+                          ...styles.classPill,
+                          borderColor: `${color}55`,
+                          background: `${color}10`,
+                        }}>
+                          <div style={{ ...styles.classLetterBadge, background: color }}>
+                            {LETTERS[idx]}
+                          </div>
 
-                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={styles.modalLabel}>Assign Class Teachers in Charge (Optional)</label>
-                  {Array.from({ length: newGradeCount }, (_, i) => LETTERS[i]).map(suffix => {
-                    const selTeacherId = newClassTeachers[suffix] || ''
-                    const selTeacherObj = teachers.find(t => t.id === selTeacherId)
-                    const teacherSubjects = selTeacherObj?.subjects?.length ? selTeacherObj.subjects : ['English', 'Mathematics', 'Science', 'History', 'Geography', 'ICT', 'Buddhism', 'Tamil', 'Health', 'Art', 'Music', 'Physical Education']
-
-                    return (
-                      <div key={suffix} style={{ padding: '10px 12px', borderRadius: '10px', background: '#F5F5F4', border: `1px solid ${H.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <div style={{ fontSize: '12px', fontWeight: 800, color: H.textPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <UserCheck size={13} style={{ color: H.purple }} /> Grade {newGradeLevel} {suffix}
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <select
-                            value={selTeacherId}
-                            onChange={e => {
-                              const val = e.target.value
-                              setNewClassTeachers(p => ({ ...p, [suffix]: val }))
-                              const t = teachers.find(x => x.id === val)
-                              if (t && t.subjects?.length) {
-                                setNewClassSubjects(p => ({ ...p, [suffix]: t.subjects[0] }))
-                              } else {
-                                setNewClassSubjects(p => ({ ...p, [suffix]: '' }))
-                              }
-                            }}
-                            style={{ padding: '7px 10px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '12px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
-                          >
-                            <option value="">-- No Class Teacher --</option>
-                            {teachers.map(t => {
-                              const curClass = getOtherClassAssignedToTeacher(t.id)
-                              const selectedInOtherSuffix = Object.entries(newClassTeachers).find(([s, id]) => id === t.id && s !== suffix)?.[0]
-                              const isTaken = Boolean(curClass || selectedInOtherSuffix)
-                              return (
-                                <option key={t.id} value={t.id} disabled={isTaken}>
-                                  {t.full_name}
-                                  {curClass ? ` (Already Class Teacher for ${curClass})` : selectedInOtherSuffix ? ` (Selected for Grade ${newGradeLevel} ${selectedInOtherSuffix})` : ''}
-                                </option>
-                              )
-                            })}
-                          </select>
-
-                          {selTeacherId && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <select
-                                value={newClassPeriods[suffix] || 1}
-                                onChange={e => setNewClassPeriods(p => ({ ...p, [suffix]: Number(e.target.value) }))}
-                                style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '11px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
+                          {renamingId === cls.id ? (
+                            <>
+                              <input
+                                autoFocus
+                                value={renameVal}
+                                onChange={e => setRenameVal(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') handleRename(cls.id); if (e.key === 'Escape') setRenamingId(null) }}
+                                style={styles.renameInput}
+                              />
+                              <button onClick={() => handleRename(cls.id)} style={styles.renameConfirmButton}>
+                                <Check size={12} />
+                              </button>
+                              <button onClick={() => setRenamingId(null)} style={styles.renameCancelButton}>
+                                <X size={12} />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span
+                                onClick={() => openEditModal(cls)}
+                                style={{ ...styles.classDisplayName, cursor: 'pointer' }}
+                                title="Click to edit Class Teacher & Default Periods"
                               >
-                                <option value={1}>First 1 Period (P1)</option>
-                                <option value={2}>First 2 Periods (P1-P2)</option>
-                              </select>
-
-                              <select
-                                value={newClassSubjects[suffix] || ''}
-                                onChange={e => setNewClassSubjects(p => ({ ...p, [suffix]: e.target.value }))}
-                                style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '11px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
+                                {cls.name}
+                                {cls.class_teacher?.full_name ? (
+                                  <span style={{ fontSize: '10px', color: H.purple, fontWeight: 700, marginLeft: '6px', opacity: 0.9 }}>
+                                    ⭐ {cls.class_teacher.full_name.split(' ')[0]} (P1{cls.class_teacher_periods === 2 ? '-P2' : ''}{cls.class_teacher_subject ? ` ${cls.class_teacher_subject}` : ''})
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: '10px', color: '#D97706', background: '#FEF3C7', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', marginLeft: '6px' }}>
+                                    ⭐ Unassigned
+                                  </span>
+                                )}
+                              </span>
+                              <button
+                                onClick={() => openEditModal(cls)}
+                                title="Edit Class Teacher & Default Periods"
+                                style={{ ...styles.renameButton, opacity: 0.9, color: cls.class_teacher_id ? H.purple : H.muted }}
                               >
-                                <option value="">-- Select Subject --</option>
-                                {teacherSubjects.map((s: string) => (
-                                  <option key={s} value={s}>{s}</option>
-                                ))}
-                              </select>
-                            </div>
+                                <UserCheck size={12} />
+                              </button>
+                              <button
+                                onClick={() => { setRenamingId(cls.id); setRenameVal(cls.name) }}
+                                title="Rename"
+                                style={{ ...styles.renameButton, opacity: hoveredClassPill === cls.id ? 1 : 0.6 }}
+                                onMouseEnter={() => setHoveredClassPill(cls.id)}
+                                onMouseLeave={() => setHoveredClassPill(null)}
+                              >
+                                <Pencil size={11} />
+                              </button>
+                            </>
                           )}
                         </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+                      ))}
 
-              <div style={styles.modalButtons}>
-                <button onClick={() => setShowAddGrade(false)} style={styles.cancelButton}>
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddGrade}
-                  disabled={saving === -1}
-                  style={styles.createGradeButton}
-                >
-                  {saving === -1 ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : `Create Grade ${newGradeLevel}`}
-                </button>
-              </div>
+                      {gradeClasses.length < 26 && !isSaving && (
+                        <button
+                          onClick={() => handlePlusClass(grade)}
+                          title={`Add Grade ${grade} ${LETTERS[gradeClasses.length]}`}
+                          style={{
+                            ...styles.quickAddButton,
+                            borderColor: color,
+                            color: color,
+                            opacity: hoveredAddClassBtn === grade ? 1 : 0.7,
+                          }}
+                          onMouseEnter={() => setHoveredAddClassBtn(grade)}
+                          onMouseLeave={() => setHoveredAddClassBtn(null)}
+                        >
+                          <Plus size={12} /> Grade {grade} {LETTERS[gradeClasses.length]}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        </div>
-      )}
+          )}
+        </main>
 
-      {editingClassTeacher && (
-        <div style={styles.modalOverlay}>
-          <div onClick={() => setEditingClassTeacher(null)} style={styles.modalBackdrop} />
-          <div style={{ ...styles.modalContent, maxWidth: '460px' }}>
-            <form onSubmit={handleSaveClassTeacher}>
+        {showAddGrade && (
+          <div style={styles.modalOverlay}>
+            <div onClick={() => setShowAddGrade(false)} style={styles.modalBackdrop} />
+            <div style={styles.modalContent}>
               <div style={styles.modalHeader}>
-                <div style={styles.modalTitle}>Class Teacher Settings</div>
+                <div style={styles.modalTitle}>Add New Grade</div>
                 <div style={styles.modalSubtitle}>
-                  Set the Teacher-in-Charge for <strong>{editingClassTeacher.name}</strong>. This teacher takes the first 1 or 2 periods of every day.
+                  Choose the grade and how many classes to create
                 </div>
               </div>
 
               <div style={styles.modalBody}>
                 <div>
-                  <label style={styles.modalLabel}>Class Teacher (In Charge)</label>
-                  <select
-                    value={ctTeacherId}
-                    onChange={e => {
-                      const id = e.target.value
-                      setCtTeacherId(id)
-                      const t = teachers.find(x => x.id === id)
-                      if (t && t.subjects?.length) setCtSubject(t.subjects[0])
-                      else setCtSubject('')
-                    }}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${H.border}`, background: H.bg, color: H.textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none' }}
-                  >
-                    <option value="">-- No Class Teacher Assigned --</option>
-                    {teachers.map(t => {
-                      const curClass = getOtherClassAssignedToTeacher(t.id, editingClassTeacher.id)
-                      const isOther = Boolean(curClass)
-                      return (
-                        <option key={t.id} value={t.id} disabled={isOther}>
-                          {t.full_name}{isOther ? ` (Already Class Teacher for ${curClass})` : ''}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={styles.modalLabel}>First Periods Assigned Every Day</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => setCtPeriods(1)}
-                      style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${ctPeriods === 1 ? H.purple : H.border}`, background: ctPeriods === 1 ? `${H.purple}15` : H.bg, color: ctPeriods === 1 ? H.purple : H.textPrimary, fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                    >
-                      First 1 Period (P1)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCtPeriods(2)}
-                      style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${ctPeriods === 2 ? H.purple : H.border}`, background: ctPeriods === 2 ? `${H.purple}15` : H.bg, color: ctPeriods === 2 ? H.purple : H.textPrimary, fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
-                    >
-                      First 2 Periods (P1-P2)
-                    </button>
+                  <label style={styles.modalLabel}>Select Grade Level</label>
+                  <div style={styles.gradeSelector}>
+                    {unusedGrades.map(g => (
+                      <button
+                        key={g}
+                        onClick={() => setNewGradeLevel(g)}
+                        style={{
+                          ...styles.gradeSelectorButton,
+                          borderColor: newGradeLevel === g ? gradeColor(g) : H.border,
+                          background: newGradeLevel === g ? `${gradeColor(g)}20` : '#F5F5F4',
+                          color: newGradeLevel === g ? gradeColor(g) : H.text,
+                        }}
+                      >
+                        {g}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 <div>
-                  <label style={styles.modalLabel}>Class Teacher Subject</label>
-                  {(() => {
-                    const selTeacherObj = teachers.find(t => t.id === ctTeacherId)
-                    const teacherSubjects = selTeacherObj?.subjects?.length ? selTeacherObj.subjects : ['English', 'Mathematics', 'Science', 'History', 'Geography', 'ICT', 'Buddhism', 'Tamil', 'Health', 'Art', 'Music', 'Physical Education']
-                    return (
-                      <select
-                        value={ctSubject}
-                        onChange={e => setCtSubject(e.target.value)}
-                        style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${H.border}`, background: H.bg, color: H.textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none' }}
-                      >
-                        <option value="">-- Select Subject --</option>
-                        {teacherSubjects.map((s: string) => (
-                          <option key={s} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    )
-                  })()}
+                  <label style={styles.modalLabel}>Number of Classes to Create</label>
+                  <div style={styles.gradeCountControls}>
+                    <button
+                      onClick={() => setNewGradeCount(Math.max(1, newGradeCount - 1))}
+                      style={{ ...styles.gradeCountButton, ...styles.minusCountButton }}
+                    >
+                      -
+                    </button>
+                    <div style={styles.modalGradeCountDisplay}>
+                      <div style={{ ...styles.gradeCountNumber, color: gradeColor(newGradeLevel) }}>
+                        {newGradeCount}
+                      </div>
+                      <div style={styles.gradeCountLabel}>
+                        {newGradeCount === 1 ? 'class' : 'classes'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setNewGradeCount(Math.min(6, newGradeCount + 1))}
+                      style={{ ...styles.gradeCountButton, ...styles.plusCountButton }}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div style={styles.previewPills}>
+                    {Array.from({ length: newGradeCount }, (_, i) => LETTERS[i]).map((letter, i) => (
+                      <div key={i} style={{ ...styles.previewPill, borderColor: `${gradeColor(newGradeLevel)}44` }}>
+                        <div style={{ ...styles.previewLetterBadge, background: gradeColor(newGradeLevel) }}>
+                          {letter}
+                        </div>
+                        <div style={styles.previewClassName}>
+                          Grade {newGradeLevel} {letter}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <label style={styles.modalLabel}>Assign Class Teachers in Charge (Optional)</label>
+                    {Array.from({ length: newGradeCount }, (_, i) => LETTERS[i]).map(suffix => {
+                      const selTeacherId = newClassTeachers[suffix] || ''
+                      const selTeacherObj = teachers.find(t => t.id === selTeacherId)
+                      const teacherSubjects = selTeacherObj?.subjects?.length ? selTeacherObj.subjects : ['English', 'Mathematics', 'Science', 'History', 'Geography', 'ICT', 'Buddhism', 'Tamil', 'Health', 'Art', 'Music', 'Physical Education']
+
+                      return (
+                        <div key={suffix} style={{ padding: '10px 12px', borderRadius: '10px', background: '#F5F5F4', border: `1px solid ${H.border}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: 800, color: H.textPrimary, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <UserCheck size={13} style={{ color: H.purple }} /> Grade {newGradeLevel} {suffix}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <select
+                              value={selTeacherId}
+                              onChange={e => {
+                                const val = e.target.value
+                                setNewClassTeachers(p => ({ ...p, [suffix]: val }))
+                                const t = teachers.find(x => x.id === val)
+                                if (t && t.subjects?.length) {
+                                  setNewClassSubjects(p => ({ ...p, [suffix]: t.subjects[0] }))
+                                } else {
+                                  setNewClassSubjects(p => ({ ...p, [suffix]: '' }))
+                                }
+                              }}
+                              style={{ padding: '7px 10px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '12px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
+                            >
+                              <option value="">-- No Class Teacher --</option>
+                              {teachers.map(t => {
+                                const curClass = getOtherClassAssignedToTeacher(t.id)
+                                const selectedInOtherSuffix = Object.entries(newClassTeachers).find(([s, id]) => id === t.id && s !== suffix)?.[0]
+                                const isTaken = Boolean(curClass || selectedInOtherSuffix)
+                                return (
+                                  <option key={t.id} value={t.id} disabled={isTaken}>
+                                    {t.full_name}
+                                    {curClass ? ` (Already Class Teacher for ${curClass})` : selectedInOtherSuffix ? ` (Selected for Grade ${newGradeLevel} ${selectedInOtherSuffix})` : ''}
+                                  </option>
+                                )
+                              })}
+                            </select>
+
+                            {selTeacherId && (
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <select
+                                  value={newClassPeriods[suffix] || 1}
+                                  onChange={e => setNewClassPeriods(p => ({ ...p, [suffix]: Number(e.target.value) }))}
+                                  style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '11px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
+                                >
+                                  <option value={1}>First 1 Period (P1)</option>
+                                  <option value={2}>First 2 Periods (P1-P2)</option>
+                                </select>
+
+                                <select
+                                  value={newClassSubjects[suffix] || ''}
+                                  onChange={e => setNewClassSubjects(p => ({ ...p, [suffix]: e.target.value }))}
+                                  style={{ flex: 1, padding: '6px 8px', borderRadius: '6px', border: `1px solid ${H.border}`, fontSize: '11px', fontWeight: 600, background: H.bg, color: H.textPrimary }}
+                                >
+                                  <option value="">-- Select Subject --</option>
+                                  {teacherSubjects.map((s: string) => (
+                                    <option key={s} value={s}>{s}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 <div style={styles.modalButtons}>
-                  <button type="button" onClick={() => setEditingClassTeacher(null)} style={styles.cancelButton}>
+                  <button onClick={() => setShowAddGrade(false)} style={styles.cancelButton}>
                     Cancel
                   </button>
-                  <button type="submit" disabled={savingCT} style={{ ...styles.createGradeButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                    {savingCT ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} Save Settings
+                  <button
+                    onClick={handleAddGrade}
+                    disabled={saving === -1}
+                    style={styles.createGradeButton}
+                  >
+                    {saving === -1 ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : `Create Grade ${newGradeLevel}`}
                   </button>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
-    
-      <ConfirmModal
-        open={!!modal}
-        {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
-        onCancel={() => setModal(null)}
-      />
+        )}
+
+        {editingClassTeacher && (
+          <div style={styles.modalOverlay}>
+            <div onClick={() => setEditingClassTeacher(null)} style={styles.modalBackdrop} />
+            <div style={{ ...styles.modalContent, maxWidth: '460px' }}>
+              <form onSubmit={handleSaveClassTeacher}>
+                <div style={styles.modalHeader}>
+                  <div style={styles.modalTitle}>Class Teacher Settings</div>
+                  <div style={styles.modalSubtitle}>
+                    Set the Teacher-in-Charge for <strong>{editingClassTeacher.name}</strong>. This teacher takes the first 1 or 2 periods of every day.
+                  </div>
+                </div>
+
+                <div style={styles.modalBody}>
+                  <div>
+                    <label style={styles.modalLabel}>Class Teacher (In Charge)</label>
+                    <select
+                      value={ctTeacherId}
+                      onChange={e => {
+                        const id = e.target.value
+                        setCtTeacherId(id)
+                        const t = teachers.find(x => x.id === id)
+                        if (t && t.subjects?.length) setCtSubject(t.subjects[0])
+                        else setCtSubject('')
+                      }}
+                      style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${H.border}`, background: H.bg, color: H.textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none' }}
+                    >
+                      <option value="">-- No Class Teacher Assigned --</option>
+                      {teachers.map(t => {
+                        const curClass = getOtherClassAssignedToTeacher(t.id, editingClassTeacher.id)
+                        const isOther = Boolean(curClass)
+                        return (
+                          <option key={t.id} value={t.id} disabled={isOther}>
+                            {t.full_name}{isOther ? ` (Already Class Teacher for ${curClass})` : ''}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={styles.modalLabel}>First Periods Assigned Every Day</label>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setCtPeriods(1)}
+                        style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${ctPeriods === 1 ? H.purple : H.border}`, background: ctPeriods === 1 ? `${H.purple}15` : H.bg, color: ctPeriods === 1 ? H.purple : H.textPrimary, fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                      >
+                        First 1 Period (P1)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCtPeriods(2)}
+                        style={{ flex: 1, padding: '10px', borderRadius: '10px', border: `2px solid ${ctPeriods === 2 ? H.purple : H.border}`, background: ctPeriods === 2 ? `${H.purple}15` : H.bg, color: ctPeriods === 2 ? H.purple : H.textPrimary, fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                      >
+                        First 2 Periods (P1-P2)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={styles.modalLabel}>Class Teacher Subject</label>
+                    {(() => {
+                      const selTeacherObj = teachers.find(t => t.id === ctTeacherId)
+                      const teacherSubjects = selTeacherObj?.subjects?.length ? selTeacherObj.subjects : ['English', 'Mathematics', 'Science', 'History', 'Geography', 'ICT', 'Buddhism', 'Tamil', 'Health', 'Art', 'Music', 'Physical Education']
+                      return (
+                        <select
+                          value={ctSubject}
+                          onChange={e => setCtSubject(e.target.value)}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: `1px solid ${H.border}`, background: H.bg, color: H.textPrimary, fontSize: '13px', fontWeight: 600, outline: 'none' }}
+                        >
+                          <option value="">-- Select Subject --</option>
+                          {teacherSubjects.map((s: string) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      )
+                    })()}
+                  </div>
+
+                  <div style={styles.modalButtons}>
+                    <button type="button" onClick={() => setEditingClassTeacher(null)} style={styles.cancelButton}>
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={savingCT} style={{ ...styles.createGradeButton, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                      {savingCT ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={14} />} Save Settings
+                    </button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        <ConfirmModal
+          open={!!modal}
+          {...(modal ?? { title: '', message: '', onConfirm: () => { } })}
+          onCancel={() => setModal(null)}
+        />
 
       </div>
       <style>{STYLE}</style>

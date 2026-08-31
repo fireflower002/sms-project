@@ -22,6 +22,11 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
   const [success, setSuccess] = useState(false)
   const [focusedField, setFocusedField] = useState<string | null>(null)
 
+  const containerRef = useFocusTrap<HTMLDivElement>({
+    isOpen,
+    onClose: isForced ? undefined : onClose,
+  })
+
   if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,6 +48,7 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
     try {
       const { error: updateErr } = await supabase.auth.updateUser({
         password: newPass,
+        data: { must_change_password: false },
       })
 
       if (updateErr) {
@@ -72,7 +78,8 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
         setNewPass('')
         setConfirm('')
         onClose()
-      }, 1500)
+        window.location.href = '/teacher'
+      }, 1200)
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.')
       setLoading(false)
@@ -92,11 +99,6 @@ export default function ChangePasswordModal({ isOpen, onClose, isForced = false 
     boxSizing: 'border-box',
     outline: 'none',
     transition: 'border-color 0.2s ease',
-  })
-
-  const containerRef = useFocusTrap<HTMLDivElement>({
-    isOpen,
-    onClose: isForced ? undefined : onClose,
   })
 
   return (

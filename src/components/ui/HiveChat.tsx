@@ -19,24 +19,7 @@ interface ChatMessage {
 
 import { H } from '@/lib/honey'
 
-// Design System Tokens
-const colors = {
-  primary_background: H.bg,
-  card_background: H.surface,
-  card_border: H.border,
-  card_shadow: H.cardShadow,
-  primary_accent: H.honey,
-  primary_dark: H.chocolate,
-  primary_light: H.accentLight,
-  danger_background: H.dangerLight,
-  danger_text: H.danger,
-  danger_border: '#FECACA',
-  text_primary: H.textPrimary,
-  text_secondary: H.textSec,
-  text_muted: H.textMuted,
-  input_background: H.bg,
-  input_border: H.border,
-};
+
 
 const styles = {
   container: (compact: boolean): React.CSSProperties => ({
@@ -44,43 +27,43 @@ const styles = {
     flexDirection: 'column',
     height: compact ? '380px' : 'calc(100vh - 200px)',
     maxHeight: '600px',
-    backgroundColor: colors.card_background,
-    border: `1px solid ${colors.card_border}`,
+    backgroundColor: H.surface,
+    border: `1px solid ${H.border}`,
     borderRadius: '16px',
-    boxShadow: colors.card_shadow,
+    boxShadow: H.cardShadow,
     overflow: 'hidden',
     fontFamily: "'Plus Jakarta Sans', sans-serif",
   }),
-  loading: { padding: '24px', textAlign: 'center' as const, color: colors.text_muted },
+  loading: { padding: '24px', textAlign: 'center' as const, color: H.textMuted },
   messagesContainer: { flex: 1, overflowY: 'auto' as const, padding: '16px' },
-  noMessages: { textAlign: 'center' as const, color: colors.text_muted, fontSize: '14px', marginTop: '20px' },
+  noMessages: { textAlign: 'center' as const, color: H.textMuted, fontSize: '14px', marginTop: '20px' },
   message: { display: 'flex', gap: '12px', marginBottom: '16px' },
   avatar: {
-    width: '32px', height: '32px', borderRadius: '50%', background: colors.primary_light,
-    color: colors.primary_dark, display: 'flex', alignItems: 'center',
+    width: '32px', height: '32px', borderRadius: '50%', background: H.accentLight,
+    color: H.chocolate, display: 'flex', alignItems: 'center',
     justifyContent: 'center', fontWeight: '700', fontSize: '14px', flexShrink: 0
   },
   messageContent: { flex: 1 },
   messageHeader: { display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px' },
-  author: { fontSize: '14px', fontWeight: '700', color: colors.text_primary },
-  timestamp: { fontSize: '11px', color: colors.text_muted },
-  messageText: { fontSize: '14px', color: colors.text_secondary, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
-  form: { padding: '16px', borderTop: `1px solid ${colors.card_border}`, display: 'flex', gap: '12px' },
+  author: { fontSize: '14px', fontWeight: '700', color: H.textPrimary },
+  timestamp: { fontSize: '11px', color: H.textMuted },
+  messageText: { fontSize: '14px', color: H.textSec, lineHeight: 1.5, whiteSpace: 'pre-wrap' },
+  form: { padding: '16px', borderTop: `1px solid ${H.border}`, display: 'flex', gap: '12px' },
   inputWrapper: { position: 'relative', flex: 1 } as React.CSSProperties,
   input: (isFocused: boolean): React.CSSProperties => ({
     width: '100%',
     padding: '10px 16px',
     borderRadius: '10px',
-    border: `2px solid ${isFocused ? colors.primary_accent : colors.input_border}`,
-    background: colors.input_background,
-    color: colors.text_primary,
+    border: `2px solid ${isFocused ? H.honey : H.border}`,
+    background: H.bg,
+    color: H.textPrimary,
     fontSize: '14px',
     outline: 'none',
     transition: 'border-color 0.2s ease',
   }),
   button: (disabled: boolean): React.CSSProperties => ({
-    background: colors.primary_accent,
-    color: colors.primary_dark,
+    background: H.honey,
+    color: H.chocolate,
     border: 'none',
     borderRadius: '12px',
     fontWeight: '700',
@@ -95,9 +78,9 @@ const styles = {
     transition: 'opacity 0.2s ease',
   }),
   error: {
-    padding: '12px 16px', background: colors.danger_background, color: colors.danger_text,
+    padding: '12px 16px', background: H.dangerLight, color: H.danger,
     fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px',
-    borderTop: `1px solid ${colors.danger_border}`
+    borderTop: `1px solid ${H.border}`
   }
 };
 
@@ -171,8 +154,9 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
 
     fetchMessages()
 
+    const channelTopic = `hive_messages_widget_${user.id}`
     const channel = supabase
-      .channel('public:hive_messages')
+      .channel(channelTopic)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'hive_messages' },
@@ -192,7 +176,10 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
             full_name: profile?.full_name || 'Staff Member',
           }
 
-          setMessages((prev) => [...prev, formattedMsg])
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === formattedMsg.id)) return prev
+            return [...prev, formattedMsg]
+          })
           setTimeout(scrollToBottom, 100)
         }
       )
@@ -209,10 +196,12 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
           }
         }
       )
-      .subscribe();
-      
-    return () => { supabase.removeChannel(channel) }
-  }, [loading, user])
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loading, user?.id])
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -244,9 +233,9 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
   return (
     <div style={styles.container(compact)}>
       {(title || subtitle) && (
-        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${colors.card_border}`, background: colors.primary_background }}>
-          {title && <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: colors.text_primary }}>{title}</h3>}
-          {subtitle && <p style={{ margin: '2px 0 0', fontSize: '12px', color: colors.text_secondary }}>{subtitle}</p>}
+        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${H.border}`, background: H.bg }}>
+          {title && <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: H.textPrimary }}>{title}</h3>}
+          {subtitle && <p style={{ margin: '2px 0 0', fontSize: '12px', color: H.textSec }}>{subtitle}</p>}
         </div>
       )}
       <div ref={messagesContainerRef} style={styles.messagesContainer}>
@@ -287,7 +276,7 @@ export default function HiveChat({ compact = false, title, subtitle }: HiveChatP
             style={styles.input(isInputFocused)}
           />
         </div>
-        <button type="submit" disabled={!newMessage.trim() || sending} style={styles.button(!newMessage.trim() || sending)}>
+        <button type="submit" aria-label="Send chat message" disabled={!newMessage.trim() || sending} style={styles.button(!newMessage.trim() || sending)}>
           <Send size={16} />
         </button>
       </form>

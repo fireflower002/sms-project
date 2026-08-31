@@ -26,7 +26,7 @@ export async function GET() {
 
     const { data: { user }, error: userErr } = await supabase.auth.getUser()
     if (userErr || !user) {
-      return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthenticated' }, { status: 401 })
     }
 
     const userEmail = user.email?.toLowerCase() || ''
@@ -56,23 +56,33 @@ export async function GET() {
         })
       }
       return NextResponse.json({
-        role: 'admin',
-        mustChangePassword: false,
+        success: true,
+        data: {
+          role: 'admin',
+          mustChangePassword: false,
+        }
       })
     }
 
     if (profile?.role) {
       return NextResponse.json({
-        role: profile.role,
-        mustChangePassword: allowed?.must_change_password ?? false,
+        success: true,
+        data: {
+          role: profile.role,
+          mustChangePassword: allowed?.must_change_password ?? false,
+        }
       })
     }
 
     return NextResponse.json({
-      role: 'teacher',
-      mustChangePassword: allowed?.must_change_password ?? false,
+      success: true,
+      data: {
+        role: 'teacher',
+        mustChangePassword: allowed?.must_change_password ?? false,
+      }
     })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Internal Error' }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Internal Error'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

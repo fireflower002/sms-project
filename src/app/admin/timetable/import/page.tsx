@@ -99,7 +99,7 @@ export default function AdminTimetableImportPage() {
 
       setParsedRows(parseRes.rows)
 
-      // Fetch profiles & classes for validation
+      // Fetch profiles & classes for client validation pre-flight
       const [{ data: profiles }, { data: classes }] = await Promise.all([
         supabase.from('profiles').select('id, full_name, email').eq('role', 'teacher').eq('is_active', true),
         supabase.from('classes').select('id, name, slug').eq('is_active', true),
@@ -107,7 +107,27 @@ export default function AdminTimetableImportPage() {
 
       const valResult = validateTimetableRows(parseRes.rows, profiles || [], classes || [])
       setValidationResult(valResult)
+
+      // Execute SERVER-SIDE DRY-RUN for authoritative pre-flight preview (Zero DB mutation)
+      const res = await fetch('/api/admin/timetable/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          academicYear,
+          fileName: selectedFile.name,
+          replaceExisting,
+          dryRun: true,
+          rows: valResult.validRows,
+        }),
+      })
+
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Server dry-run pre-flight check failed.')
+      }
+
       setStep(2)
+      showToast('Server pre-flight dry-run completed cleanly.', 'success')
     } catch (err: any) {
       showToast(`Error parsing file: ${err?.message || 'Invalid file format'}`, 'error')
     } finally {
@@ -131,7 +151,7 @@ export default function AdminTimetableImportPage() {
     showToast('Downloaded official sample timetable template', 'success')
   }
 
-  // Execute Batch Import via API
+  // Execute Batch Import via API (dryRun = false)
   const handleConfirmImport = async () => {
     if (!validationResult || validationResult.validRows.length === 0) {
       showToast('No valid rows available for import.', 'error')
@@ -147,6 +167,7 @@ export default function AdminTimetableImportPage() {
           academicYear,
           fileName: file?.name || 'timetable_import.csv',
           replaceExisting,
+          dryRun: false,
           rows: validationResult.validRows,
         }),
       })
@@ -157,7 +178,8 @@ export default function AdminTimetableImportPage() {
         throw new Error(json.error || 'Timetable import failed.')
       }
 
-      showToast(`Successfully imported ${json.importedCount} schedule slots for ${academicYear}!`, 'success')
+      const count = json.data?.importedCount ?? json.importedCount ?? json.imported ?? 0
+      showToast(`Successfully imported ${count} schedule slots for ${academicYear}!`, 'success')
       setStep(3)
       loadInitialData()
     } catch (err: any) {

@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: 'Server configuration error: missing Supabase environment variables.' }, { status: 500 })
+      return NextResponse.json({ success: false, error: 'Server configuration error: missing Supabase environment variables.' }, { status: 500 })
     }
 
     // 1. Verify caller is an authenticated Admin
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     if (!callerUser) {
-      return NextResponse.json({ error: 'Unauthorized: No active admin session found.' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: No active admin session found.' }, { status: 401 })
     }
 
     // Rate Limit Check: max 5 requests per 1 minute per caller user ID
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (adminProfile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin privileges required to reset teacher passwords.' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin privileges required to reset teacher passwords.' }, { status: 403 })
     }
 
     // 2. Parse & validate request payload with Zod
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     const parseResult = resetPasswordSchema.safeParse(body)
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid password reset payload'
-      return NextResponse.json({ error: firstError }, { status: 400 })
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 })
     }
 
     const { teacherId, email } = parseResult.data
@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     }
 
     if (!targetUserId) {
-      return NextResponse.json({ error: 'Teacher account not found.' }, { status: 404 })
+      return NextResponse.json({ success: false, error: 'Teacher account not found.' }, { status: 404 })
     }
 
     // 4. Generate random temporary password
@@ -121,13 +121,13 @@ export async function POST(request: Request) {
 
     if (updateAuthError) {
       console.error('[API reset-teacher-password] Auth updateUserById error:', updateAuthError)
-      return NextResponse.json({ error: updateAuthError.message || 'Failed to reset teacher password in Auth.' }, { status: 400 })
+      return NextResponse.json({ success: false, error: updateAuthError.message || 'Failed to reset teacher password in Auth.' }, { status: 400 })
     }
 
     // Force server-side session invalidation so target user's stale JWT is revoked immediately
     try {
       await adminSupabase.auth.admin.signOut(targetUserId, 'global')
-    } catch (signOutErr) {
+    } catch (signOutErr: unknown) {
       console.warn('[API reset-teacher-password] Target user sign-out warning:', signOutErr)
     }
 
@@ -146,12 +146,15 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      tempPassword,
-      email: targetEmail,
-      userId: targetUserId,
+      data: {
+        tempPassword,
+        email: targetEmail,
+        userId: targetUserId,
+      }
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[API reset-teacher-password] Unexpected error:', err)
-    return NextResponse.json({ error: err?.message || 'Server error resetting teacher password' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Server error resetting teacher password'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

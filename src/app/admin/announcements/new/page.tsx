@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2, Pin, Send, Megaphone, AlertCircle, Calendar as CalendarIcon, Users as UsersIcon } from 'lucide-react'
+import sanitizeHtml from 'sanitize-html'
 import { createClient } from '@/lib/supabase/client'
 
 import { H } from '@/lib/honey'
@@ -63,24 +64,33 @@ export default function NewAnnouncementPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     let hasError = false
-    if (!form.title.trim()) {
+    const cleanTitle = sanitizeHtml(form.title.trim(), { allowedTags: [], allowedAttributes: {} })
+    const cleanBody = sanitizeHtml(form.body.trim(), { allowedTags: [], allowedAttributes: {} })
+
+    if (!cleanTitle) {
       setTitleError('Title is required.')
+      hasError = true
+    } else if (cleanTitle.length > 200) {
+      setTitleError('Title must not exceed 200 characters.')
       hasError = true
     } else {
       setTitleError('')
     }
 
-    if (!form.body.trim()) {
+    if (!cleanBody) {
       setBodyError('Message content is required.')
+      hasError = true
+    } else if (cleanBody.length > 5000) {
+      setBodyError('Message content must not exceed 5,000 characters.')
       hasError = true
     } else {
       setBodyError('')
     }
 
     if (hasError) {
-      setError('Please fill in all required fields before posting.')
+      setError('Please fix input validation errors before posting.')
       return
     }
 
@@ -89,8 +99,8 @@ export default function NewAnnouncementPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession(); const user = session?.user
       const insertPayload: any = {
-        title: form.title.trim(),
-        body: form.body.trim(),
+        title: cleanTitle,
+        body: cleanBody,
         category: form.category,
         priority: form.priority,
         is_pinned: form.is_pinned,
@@ -154,9 +164,10 @@ export default function NewAnnouncementPage() {
             body: JSON.stringify({ title: form.title.trim(), body: form.body.trim(), priority: form.priority }),
           })
           const tgData = await tgRes.json().catch(() => ({}))
-          if (tgData?.telegram?.status) {
-            tgParam = tgData.telegram.status
-          } else if (tgRes.ok) {
+          const status = tgData.data?.telegram?.status || tgData.telegram?.status
+          if (status) {
+            tgParam = status
+          } else if (tgRes.ok && (tgData.success !== false)) {
             tgParam = 'sent'
           } else {
             tgParam = 'failed'

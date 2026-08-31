@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const { data: { user }, error: authErr } = await serverSupabase.auth.getUser()
 
     if (authErr || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Authentication required' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: Authentication required' }, { status: 401 })
     }
 
     // Verify admin role
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       .single()
 
     if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin access required to run calendar sync' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin access required to run calendar sync' }, { status: 403 })
     }
 
     const currentYear = new Date().getFullYear()
@@ -95,8 +95,9 @@ export async function POST(request: Request) {
             else addedCount++
           }
         }
-      } catch (err: any) {
-        errors.push(`Network error fetching ${year} holidays: ${err.message}`)
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : 'Unknown network error'
+        errors.push(`Network error fetching ${year} holidays: ${errMsg}`)
       }
     }
 
@@ -132,13 +133,16 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      status: syncStatus,
-      recordsAdded: addedCount,
-      recordsUpdated: updatedCount,
-      errors: errors.length > 0 ? errors : undefined,
+      data: {
+        status: syncStatus,
+        recordsAdded: addedCount,
+        recordsUpdated: updatedCount,
+        errors: errors.length > 0 ? errors : undefined,
+      }
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[API /api/admin/calendar/sync] Unexpected error:', err)
-    return NextResponse.json({ error: err?.message || 'Server error syncing calendar holidays' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Server error syncing calendar holidays'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

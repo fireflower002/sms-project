@@ -50,7 +50,7 @@ export default function ReportAbsencePage() {
   const [submitting, setSubmitting] = useState(false)
   const [cancelling, setCancelling] = useState(false)
   const [cancelSuccess, setCancelSuccess] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
   const [isLateSubmitted, setIsLateSubmitted] = useState(false)
   const [error, setError] = useState('')

@@ -144,7 +144,7 @@ export default function DirectCoverDrawer({
     const [{ data: absentSlots }, { data: allSlots }, { data: activeSubstitutions }] = await Promise.all([
       supabase.from('schedule_assignments').select('id,period_number,subject,class_id,class:classes(name)').eq('teacher_id', teacherId).eq('day_of_week', dayOfWeek).eq('template_id', tmpl.id),
       supabase.from('schedule_assignments').select('teacher_id,period_number').eq('day_of_week', dayOfWeek).eq('template_id', tmpl.id),
-      supabase.from('substitutions').select('substitute_teacher_id,period_number,absence:absences!absence_id(absence_date)').filter('substitute_teacher_id', 'not.is', null)
+      supabase.from('substitutions').select('substitute_teacher_id,period_number,absence:absences!absence_id!inner(absence_date)').filter('substitute_teacher_id', 'not.is', null).eq('absence.absence_date', dateStr)
     ])
 
     const heldMap = new Map((absentSlots || []).map((s: any) => [s.period_number, s]))
@@ -370,7 +370,7 @@ export default function DirectCoverDrawer({
           })
 
           const json = await notifRes.json().catch(() => ({}))
-          if (!notifRes.ok || json.error) {
+          if (!notifRes.ok || (json.success === false) || json.error) {
             throw new Error(json.error || `HTTP ${notifRes.status}`)
           }
 
@@ -428,7 +428,7 @@ export default function DirectCoverDrawer({
       })
 
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || json.error) throw new Error(json.error || `HTTP ${res.status}`)
+      if (!res.ok || (json.success === false) || json.error) throw new Error(json.error || `HTTP ${res.status}`)
 
       await supabase.from('substitutions').update({ notified: true, notified_at: new Date().toISOString() }).eq('absence_id', currentAbsenceId).eq('period_number', pNum)
       setNotified(p => ({ ...p, [pNum]: true }))

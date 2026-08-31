@@ -56,13 +56,14 @@ export default function RegisterForm() {
 
       const data = await res.json()
 
-      if (!res.ok) {
+      if (!res.ok || (data.success === false) || data.error) {
         setError(data.error || 'Failed to send registration link.')
         setLoading(false)
         return
       }
 
-      setSentEmail(trimmedEmail)
+      const registeredEmail = data.data?.email || data.email || trimmedEmail
+      setSentEmail(registeredEmail)
       setSuccess(true)
       setLoading(false)
     } catch (err: any) {

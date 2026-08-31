@@ -19,9 +19,10 @@ export async function GET() {
       .eq('school_id', 'default')
       .maybeSingle()
 
-    return NextResponse.json({ settings: settings || null })
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Error fetching school settings' }, { status: 500 })
+    return NextResponse.json({ success: true, data: { settings: settings || null } })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Error fetching school settings'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
 
@@ -31,13 +32,13 @@ export async function POST(request: Request) {
     const { data: { user }, error: authErr } = await serverSupabase.auth.getUser()
 
     if (authErr || !user) {
-      return NextResponse.json({ error: 'Unauthorized: Session required' }, { status: 401 })
+      return NextResponse.json({ success: false, error: 'Unauthorized: Session required' }, { status: 401 })
     }
 
     const body = await request.json().catch(() => ({}))
     const parseResult = settingsSchema.safeParse(body)
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.issues[0]?.message || 'Invalid settings' }, { status: 400 })
+      return NextResponse.json({ success: false, error: parseResult.error.issues[0]?.message || 'Invalid settings' }, { status: 400 })
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 
     const { data: profile } = await dbClient.from('profiles').select('role').eq('id', user.id).single()
     if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 })
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin role required' }, { status: 403 })
     }
 
     const payload = {
@@ -65,11 +66,12 @@ export async function POST(request: Request) {
       .single()
 
     if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      return NextResponse.json({ success: false, error: updateErr.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, settings: updated })
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Server error updating settings' }, { status: 500 })
+    return NextResponse.json({ success: true, data: { settings: updated } })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Server error updating settings'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }

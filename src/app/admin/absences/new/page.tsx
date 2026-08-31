@@ -295,7 +295,7 @@ function NewAbsenceContent() {
       })
 
       const json = await res.json().catch(() => ({}))
-      if (!res.ok || json.error) {
+      if (!res.ok || (json.success === false) || json.error) {
         throw new Error(json.error || 'Failed to send notification')
       }
 

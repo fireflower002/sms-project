@@ -151,6 +151,28 @@ export default function TimetableBuildPage() {
     }
 
     const key=`${classId}-${day}-${period}`; setSavingKey(key); setErrorMsg(null)
+
+    // Pre-check Double-Booking conflict: verify teacher is not already assigned to another class during this period & day
+    if (card.teacherId) {
+      const { data: conflictRow } = await supabase
+        .from('schedule_assignments')
+        .select('id, class:classes(name)')
+        .eq('template_id', templateId)
+        .eq('teacher_id', card.teacherId)
+        .eq('day_of_week', day)
+        .eq('period_number', period)
+        .neq('class_id', classId)
+        .maybeSingle()
+
+      if (conflictRow) {
+        const teacherName = card.teacherName || teachers.find(t => t.id === card.teacherId)?.full_name || 'This teacher'
+        const conflictingClassName = (conflictRow.class as any)?.name || 'another class'
+        setErrorMsg(`Double-Booking Conflict (409): ${teacherName} is already assigned to ${conflictingClassName} during Period P${period} on ${DAYS[day - 1]}. Double-booking is blocked.`)
+        setSavingKey(null)
+        return
+      }
+    }
+
     const existing=getAssignment(classId,day,period); let err:any=null
     if (existing) {
       const { error } = await supabase.from('schedule_assignments')

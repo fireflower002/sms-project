@@ -343,7 +343,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, supabase])
+  }, [user?.id, supabase])
 
   // 6. Send Message
   const handleSend = async (e: React.FormEvent) => {
@@ -433,7 +433,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       })
       const data = await res.json()
 
-      if (!res.ok || data.error) {
+      if (!res.ok || (data.success === false) || data.error) {
         setError(`Delete failed: ${data.error || 'Server error'}`)
       } else {
         setMessages((prev) => prev.filter((m) => m.id !== msgId))
@@ -457,7 +457,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       })
       const data = await res.json()
 
-      if (!res.ok || data.error) {
+      if (!res.ok || (data.success === false) || data.error) {
         setError(`Failed to clear your messages: ${data.error || 'Server error'}`)
       } else {
         setMessages((prev) => prev.filter((m) => m.sender_id !== user.id))
@@ -481,7 +481,7 @@ export default function StaffChat({ height = 'calc(100vh - 200px)', fullScreen =
       })
       const data = await res.json()
 
-      if (!res.ok || data.error) {
+      if (!res.ok || (data.success === false) || data.error) {
         setError(`Failed to clear channel: ${data.error || 'Server error'}`)
       } else {
         setMessages([])

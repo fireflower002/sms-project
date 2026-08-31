@@ -32,8 +32,8 @@ import { H } from '@/lib/honey'
 import Badge from '@/components/ui/Badge'
 import { ProfileDetailSkeleton } from '@/components/ui/Skeleton'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
-import SubjectModal from '@/components/admin/SubjectModal'
-import { getSubjectSuggestion, formatSubjectName } from '@/lib/subjectUtils'
+import { useToast } from '@/components/ui/Toast'
+import ReassignClassTeacherModal from '@/components/admin/ReassignClassTeacherModal'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
@@ -46,6 +46,7 @@ const PREDEFINED_SUBJECTS = [
 export default function TeacherDetailClient({ teacherId, initialData }: { teacherId: string; initialData?: any }) {
   const router = useRouter()
   const supabase = createClient()
+  const { showToast } = useToast()
 
   const [teacher, setTeacher] = useState<any>(initialData?.teacher || null)
   const [schedule, setSchedule] = useState<any[]>(initialData?.schedule || [])
@@ -54,6 +55,13 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
   const [loading, setLoading] = useState(!initialData)
   const [actionLoading, setActionLoading] = useState(false)
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
+
+  // Reassignment Modal State
+  const [reassignModal, setReassignModal] = useState<{
+    isOpen: boolean
+    assignedClasses: any[]
+    candidates: any[]
+  } | null>(null)
 
   // Phone Editing State
   const [editingPhone, setEditingPhone] = useState(false)
@@ -214,19 +222,32 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
 
   const handleToggleActive = async () => {
     if (!teacher) return
-    const newStatus = !teacher.is_active
+    const currentlyActive = Boolean(teacher.is_active)
+    const newStatus = !currentlyActive
     const actionLabel = newStatus ? 'Activate' : 'Deactivate'
 
     setModal({
       title: `${actionLabel} Teacher Account?`,
-      message: `Are you sure you want to ${actionLabel.toLowerCase()} ${teacher.full_name}'s account access?`,
-      variant: newStatus ? 'neutral' : 'danger',
+      message: currentlyActive
+        ? `Are you sure you want to deactivate ${teacher.full_name}'s account access? They will lose access to the portal until reactivated.`
+        : `Are you sure you want to activate ${teacher.full_name}'s account access? They will regain access to the portal.`,
+      variant: currentlyActive ? 'danger' : 'neutral',
       confirmLabel: actionLabel,
       onConfirm: async () => {
         setModal(null)
         setActionLoading(true)
         const { error } = await supabase.from('profiles').update({ is_active: newStatus }).eq('id', teacherId)
-        if (!error) fetchTeacherData()
+        if (teacher.email) {
+          await supabase.from('allowed_users').update({ is_active: newStatus }).eq('email', teacher.email)
+        }
+        await supabase.from('allowed_users').update({ is_active: newStatus }).eq('id', teacherId)
+
+        if (error) {
+          showToast('Failed to update teacher status: ' + error.message, 'error')
+        } else {
+          showToast(`Successfully ${newStatus ? 'activated' : 'deactivated'} ${teacher.full_name}'s account.`, 'success')
+          fetchTeacherData()
+        }
         setActionLoading(false)
       },
     })
@@ -254,7 +275,7 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
         body: JSON.stringify({ teacherId: teacher.id, email: teacher.email }),
       })
       const data = await res.json()
-      if (!res.ok || data.error) {
+      if (!res.ok || (data.success === false) || data.error) {
         setModal({
           title: 'Password Reset Failed',
           message: data.error || 'Failed to reset teacher password.',
@@ -264,7 +285,8 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
           onConfirm: () => setModal(null),
         })
       } else {
-        setResetTempPassword(data.tempPassword)
+        const pass = data.data?.tempPassword || data.tempPassword
+        setResetTempPassword(pass)
         fetchTeacherData()
       }
     } catch (err: any) {
@@ -334,20 +356,126 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
     setSubjectsList(prev => prev.filter(s => s !== sub))
   }
 
-  const handleDeleteTeacher = () => {
-    setModal({
-      title: 'Delete Teacher?',
-      message: `Are you sure you want to delete ${teacher?.full_name}? This action cannot be undone.`,
-      variant: 'danger',
-      confirmLabel: 'Delete Teacher',
-      onConfirm: async () => {
-        setModal(null)
-        setActionLoading(true)
-        await supabase.from('profiles').delete().eq('id', teacherId)
-        await supabase.from('allowed_users').delete().eq('email', teacher.email)
-        router.push('/admin/teachers')
-      },
-    })
+  const executeAtomicTeacherDelete = async (reassignments: Record<string, string | null>) => {
+    try {
+      setActionLoading(true)
+
+      const { data: { session } } = await supabase.auth.getSession()
+
+      const res = await fetch('/api/admin/delete-teacher', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          teacherId,
+          reassignments,
+        }),
+      })
+
+      const result = await res.json().catch(() => ({}))
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || 'Failed to permanently delete teacher account.')
+      }
+
+      showToast(result.message || `Permanently deleted teacher profile for ${teacher?.full_name}.`, 'success')
+      router.push('/admin/teachers')
+    } catch (err: any) {
+      setActionLoading(false)
+      showToast(err?.message || 'Failed to delete teacher profile', 'error')
+    }
+  }
+
+  const handleDeleteTeacher = async () => {
+    try {
+      setActionLoading(true)
+
+      // 1. Check if teacher is assigned as class teacher for any class
+      const { data: clsData, error: clsErr } = await supabase
+        .from('classes')
+        .select('id, name, grade_level')
+        .eq('class_teacher_id', teacherId)
+
+      if (clsErr) {
+        setActionLoading(false)
+        showToast('Error checking class teacher assignments: ' + clsErr.message, 'error')
+        return
+      }
+
+      if (clsData && clsData.length > 0) {
+        // Teacher IS a Class Teacher -> Fetch candidate replacement teachers
+        const [{ data: allTeachers }, { data: allAssignedClasses }] = await Promise.all([
+          supabase
+            .from('profiles')
+            .select('id, full_name, email, subjects')
+            .eq('role', 'teacher')
+            .eq('is_active', true)
+            .neq('id', teacherId),
+          supabase
+            .from('classes')
+            .select('class_teacher_id, name')
+            .not('class_teacher_id', 'is', null)
+        ])
+
+        const existingClassTeacherMap = new Map<string, string>()
+        ;(allAssignedClasses || []).forEach((ac: any) => {
+          if (ac.class_teacher_id) {
+            existingClassTeacherMap.set(ac.class_teacher_id, ac.name)
+          }
+        })
+
+        const teacherSubjectList: string[] = teacher?.subjects || []
+
+        const candidates = (allTeachers || []).map((t: any) => {
+          const isSameSubject = (t.subjects || []).some((s: string) => teacherSubjectList.includes(s))
+          const isClassTeacher = existingClassTeacherMap.has(t.id)
+          const assignedClassName = existingClassTeacherMap.get(t.id)
+          return {
+            id: t.id,
+            full_name: t.full_name,
+            subjects: t.subjects || [],
+            isSameSubject,
+            isClassTeacher,
+            assignedClassName,
+          }
+        })
+
+        // Sort candidates: Tier 1 (Same subject & free) > Tier 2 (Free) > Tier 3 (Class teacher elsewhere)
+        candidates.sort((a: any, b: any) => {
+          if (a.isSameSubject && !a.isClassTeacher && (!b.isSameSubject || b.isClassTeacher)) return -1
+          if (b.isSameSubject && !b.isClassTeacher && (!a.isSameSubject || a.isClassTeacher)) return 1
+          if (!a.isClassTeacher && b.isClassTeacher) return -1
+          if (!b.isClassTeacher && a.isClassTeacher) return 1
+          return a.full_name.localeCompare(b.full_name)
+        })
+
+        setActionLoading(false)
+        setReassignModal({
+          isOpen: true,
+          assignedClasses: clsData,
+          candidates,
+        })
+        return
+      }
+
+      // 2. Teacher is NOT a class teacher -> Standard confirm modal
+      setActionLoading(false)
+      setModal({
+        title: 'Delete Teacher Profile?',
+        message: `Are you sure you want to permanently delete ${teacher?.full_name}? All schedule assignments and profile data will be removed.`,
+        variant: 'danger',
+        confirmLabel: 'Delete Profile',
+        onConfirm: async () => {
+          setModal(null)
+          await executeAtomicTeacherDelete({})
+        },
+      })
+    } catch (err: any) {
+      setActionLoading(false)
+      showToast(err?.message || 'Error checking teacher profile', 'error')
+    }
   }
 
   if (loading) {
@@ -542,6 +670,28 @@ export default function TeacherDetailClient({ teacherId, initialData }: { teache
         {...(modal ?? { title: '', message: '', onConfirm: () => {} })}
         onCancel={() => setModal(null)}
       />
+
+      {reassignModal && (
+        <ReassignClassTeacherModal
+          isOpen={reassignModal.isOpen}
+          teacherName={teacher?.full_name || 'Teacher'}
+          teacherSubjects={teacher?.subjects || []}
+          assignedClasses={reassignModal.assignedClasses}
+          candidates={reassignModal.candidates}
+          loading={actionLoading}
+          onClose={() => setReassignModal(null)}
+          onEditProfileInstead={() => {
+            setReassignModal(null)
+            setEditingPhone(true)
+            setEditingSubjects(true)
+          }}
+          onConfirmReassignAndDelete={async (reassignments) => {
+            const modalData = reassignModal
+            setReassignModal(null)
+            await executeAtomicTeacherDelete(reassignments)
+          }}
+        />
+      )}
     </div>
   )
 }

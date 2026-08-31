@@ -4,23 +4,14 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 
+import { H } from '@/lib/honey'
+
 interface Props {
   teacherId: string
   isActive: boolean
   teacherName: string
   onDone: () => void
 }
-
-// Design System Tokens
-const colors = {
-  success_green: '#10B981',
-  success_dark: '#065F46',
-  success_light: '#D1FAE5',
-  success_border: '#A7F3D0',
-  danger_background: '#FEF2F2',
-  danger_text: '#DC2626',
-  danger_border: '#FECACA',
-};
 
 const styles = {
   button: {
@@ -31,21 +22,21 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '6px',
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontFamily: H.font,
     fontSize: '13px',
     fontWeight: '700',
     border: '1px solid transparent',
     transition: 'opacity 0.2s ease',
   },
   activate: {
-    background: colors.success_light,
-    color: colors.success_dark,
-    borderColor: colors.success_border,
+    background: H.successLight,
+    color: H.successGreen,
+    borderColor: H.border,
   },
   deactivate: {
-    background: colors.danger_background,
-    color: colors.danger_text,
-    borderColor: colors.danger_border,
+    background: H.dangerLight,
+    color: H.danger,
+    borderColor: H.border,
   },
   loading: {
     opacity: 0.7,
@@ -58,37 +49,49 @@ export default function TeacherActions({ teacherId, isActive, teacherName, onDon
   const [modal, setModal] = useState<ConfirmModalState | null>(null)
   const supabase = createClient()
 
+  const currentlyActive = Boolean(isActive)
+
   const handleToggle = async () => {
-    const action = isActive ? 'Deactivate' : 'Activate';
+    const nextStatus = !currentlyActive
+    const action = nextStatus ? 'Activate' : 'Deactivate'
+
     setModal({
-      title: `${action} Teacher?`,
-      message: `Are you sure you want to ${action.toLowerCase()} ${teacherName}'s account access?`,
-      variant: isActive ? 'danger' : 'neutral',
+      title: `${action} Teacher Account?`,
+      message: currentlyActive
+        ? `Are you sure you want to deactivate ${teacherName}'s account? They will lose access to the portal until reactivated.`
+        : `Are you sure you want to activate ${teacherName}'s account? They will regain access to the portal.`,
+      variant: currentlyActive ? 'danger' : 'neutral',
       confirmLabel: action,
       onConfirm: async () => {
-        setModal(null);
-        setLoading(true);
+        setModal(null)
+        setLoading(true)
         try {
-          const { error } = await supabase
+          // Update both profiles and allowed_users tables to keep state in sync
+          const { error: profErr } = await supabase
             .from('profiles')
-            .update({ is_active: !isActive })
-            .eq('id', teacherId);
+            .update({ is_active: nextStatus })
+            .eq('id', teacherId)
 
-          if (error) {
-            console.error('Failed to update teacher status:', error.message);
+          await supabase
+            .from('allowed_users')
+            .update({ is_active: nextStatus })
+            .eq('id', teacherId)
+
+          if (profErr) {
+            console.error('Failed to update teacher status:', profErr.message)
             setModal({
-              title: 'Error',
-              message: 'Could not update teacher status. Please check your connection and try again.',
+              title: 'Error Updating Status',
+              message: 'Could not update teacher status: ' + profErr.message,
               variant: 'danger',
               confirmLabel: 'OK',
               cancelLabel: '',
               onConfirm: () => setModal(null),
-            });
+            })
           } else {
-            onDone();
+            onDone()
           }
         } catch (e: any) {
-          console.error('Unexpected error updating teacher status:', e.message);
+          console.error('Unexpected error updating teacher status:', e.message)
           setModal({
             title: 'Unexpected Error',
             message: 'An unexpected error occurred. Please refresh the page and try again.',
@@ -96,15 +99,15 @@ export default function TeacherActions({ teacherId, isActive, teacherName, onDon
             confirmLabel: 'OK',
             cancelLabel: '',
             onConfirm: () => setModal(null),
-          });
+          })
         } finally {
-          setLoading(false);
+          setLoading(false)
         }
-      }
-    });
+      },
+    })
   }
 
-  const currentStyle = isActive ? styles.deactivate : styles.activate;
+  const currentStyle = currentlyActive ? styles.deactivate : styles.activate
 
   return (
     <>
@@ -119,7 +122,7 @@ export default function TeacherActions({ teacherId, isActive, teacherName, onDon
       >
         {loading ? (
           <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
-        ) : isActive ? (
+        ) : currentlyActive ? (
           <>
             <XCircle size={14} /> Deactivate
           </>

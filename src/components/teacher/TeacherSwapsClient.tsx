@@ -96,6 +96,46 @@ function TeacherSwapsContent({ initialData }: { initialData?: any }) {
     if (!currentUser?.id) return
     setActionProcessing(swap.id)
     try {
+      if (accept) {
+        // Pre-check 1: Check if either teacher is marked absent on swap_date
+        const { data: absentTeachers } = await supabase
+          .from('absences')
+          .select('teacher_id, profiles!absences_teacher_id_fkey(full_name)')
+          .eq('absence_date', swap.swap_date)
+          .in('teacher_id', [swap.requester_id, swap.target_teacher_id])
+          .neq('status', 'rejected')
+          .neq('status', 'cancelled')
+
+        if (absentTeachers && absentTeachers.length > 0) {
+          const name = (absentTeachers[0] as any)?.profiles?.full_name || 'A teacher'
+          setToastMessage(`Cannot accept swap: ${name} is marked absent on ${swap.swap_date}.`)
+          setActionProcessing(null)
+          return
+        }
+
+        // Pre-check 2: Check if either teacher is assigned to a substitution cover for affected periods on swap_date
+        const { data: subCovers } = await supabase
+          .from('substitutions')
+          .select('substitute_teacher_id, period_number, absences!inner(absence_date, status), profiles:substitute_teacher_id(full_name)')
+          .in('substitute_teacher_id', [swap.requester_id, swap.target_teacher_id])
+          .eq('absences.absence_date', swap.swap_date)
+          .neq('absences.status', 'rejected')
+          .neq('absences.status', 'cancelled')
+
+        if (subCovers && subCovers.length > 0) {
+          for (const sub of subCovers) {
+            const isReq = sub.substitute_teacher_id === swap.requester_id
+            const periodToCheck = isReq ? swap.target_period : swap.requester_period
+            if (sub.period_number === periodToCheck) {
+              const teacherName = (sub as any)?.profiles?.full_name || 'A teacher'
+              setToastMessage(`Cannot accept swap: ${teacherName} is already assigned to cover Period ${sub.period_number} on ${swap.swap_date}.`)
+              setActionProcessing(null)
+              return
+            }
+          }
+        }
+      }
+
       const newStatus = accept ? 'peer_accepted' : 'peer_rejected'
       const nowIso = new Date().toISOString()
 
@@ -124,9 +164,10 @@ function TeacherSwapsContent({ initialData }: { initialData?: any }) {
 
       setToastMessage(accept ? 'Swap request accepted! Sent to Admin for final approval.' : 'Swap request declined.')
       mutate()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating swap request:', err)
-      setToastMessage('Could not update swap request. Please try again.')
+      const msg = err instanceof Error ? err.message : typeof err === 'object' && err && 'message' in err ? String((err as any).message) : 'Could not update swap request. Please try again.'
+      setToastMessage(msg)
     } finally {
       setActionProcessing(null)
     }

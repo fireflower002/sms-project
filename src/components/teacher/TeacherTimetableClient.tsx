@@ -84,6 +84,7 @@ export default function TeacherTimetableClient({ initialData }: { initialData?: 
         supabase.from('substitutions')
           .select('*, absence:absences!absence_id!inner(absence_date, teacher:profiles!teacher_id(full_name)), class:classes(name,grade_level)')
           .eq('substitute_teacher_id', session.user.id)
+          .gte('absence.absence_date', todayStr)
           .in('status', ['assigned', 'swap_requested', 'confirmed'])
           .order('created_at', { ascending: false }),
       ])
@@ -92,11 +93,7 @@ export default function TeacherTimetableClient({ initialData }: { initialData?: 
       setSchedule(asgn || [])
       if (prof?.subject_colors) setSubjectColors(prof.subject_colors)
 
-      const activeRelief = (subData || []).filter((s: any) => {
-        const date = s.absence?.absence_date
-        return date && date >= todayStr
-      })
-      setReliefDuties(activeRelief)
+      setReliefDuties(subData || [])
       setLoading(false)
     }
     load()

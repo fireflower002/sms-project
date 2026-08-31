@@ -6,13 +6,13 @@ export const dynamic = 'force-dynamic'
 
 export default async function TeacherTimetablePage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  if (!session?.user) {
+  if (!user) {
     return <TeacherTimetableClient initialData={{ template: null, schedule: [], reliefDuties: [], subjectColors: {} }} />
   }
 
-  const userId = session.user.id
+  const userId = user.id
   const todayStr = todaySLT()
 
   const [{ data: tmpl }, { data: asgn }, { data: prof }, { data: subData }] = await Promise.all([
@@ -22,14 +22,12 @@ export default async function TeacherTimetablePage() {
     supabase.from('substitutions')
       .select('*, absence:absences!absence_id!inner(absence_date, teacher:profiles!teacher_id(full_name)), class:classes(name,grade_level)')
       .eq('substitute_teacher_id', userId)
+      .gte('absence.absence_date', todayStr)
       .in('status', ['assigned', 'swap_requested', 'confirmed'])
       .order('created_at', { ascending: false }),
   ])
 
-  const activeRelief = (subData || []).filter((s: any) => {
-    const date = s.absence?.absence_date
-    return date && date >= todayStr
-  })
+  const activeRelief = subData || []
 
   const initialData = {
     template: tmpl || null,

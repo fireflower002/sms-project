@@ -1,6 +1,17 @@
 import { type NextRequest, NextResponse } from 'next/server'
 
-// In-memory sliding window rate limiter
+/**
+ * ARCHITECTURAL NOTICE (PRE-LAUNCH BLOCKER FOR MULTI-REGION PRODUCTION):
+ * The sliding window rate limiter below uses an in-memory JS Map (`rateLimitMap`).
+ * In a multi-instance or serverless deployment (e.g., Vercel / Next.js Lambdas),
+ * memory state is NOT shared across region instances or lambda invocations.
+ *
+ * TODO (Production Pre-Launch Requirement):
+ * Replace this in-memory Map with a distributed store such as Upstash Redis (`@upstash/ratelimit` & `@upstash/redis`):
+ * 1. Provision Upstash Redis database and set `UPSTASH_REDIS_REST_URL` & `UPSTASH_REDIS_REST_TOKEN` in env.
+ * 2. Instantiate `Ratelimit` sliding window: `const ratelimit = new Ratelimit({ redis: Redis.fromEnv(), limiter: Ratelimit.slidingWindow(60, '1 m') })`.
+ * 3. Invoke `await ratelimit.limit(identifier)` inside `middleware`.
+ */
 const rateLimitMap = new Map<string, { count: number; expiresAt: number }>()
 
 function isRateLimited(key: string, limit = 60, windowMs = 60000): boolean {
@@ -153,14 +164,15 @@ async function verifyUserWithSupabase(accessToken: string, supabaseUrl: string, 
   }
 }
 
-async function fetchProfileRoleFromDb(userId: string, email: string, supabaseUrl: string, anonKey: string) {
+async function fetchProfileRoleFromDb(userId: string, email: string, supabaseUrl: string, anonKey: string, accessToken: string) {
   try {
+    const authHeader = accessToken ? `Bearer ${accessToken}` : `Bearer ${anonKey}`
     const [profRes, allowRes] = await Promise.all([
       fetch(`${supabaseUrl}/rest/v1/profiles?id=eq.${userId}&select=role,must_change_password`, {
-        headers: { 'apikey': anonKey, 'Authorization': `Bearer ${anonKey}` },
+        headers: { 'apikey': anonKey, 'Authorization': authHeader },
       }),
       fetch(`${supabaseUrl}/rest/v1/allowed_users?email=eq.${encodeURIComponent(email)}&select=role,must_change_password`, {
-        headers: { 'apikey': anonKey, 'Authorization': `Bearer ${anonKey}` },
+        headers: { 'apikey': anonKey, 'Authorization': authHeader },
       }),
     ])
 
@@ -272,16 +284,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  // Logged in — read role & password change requirement
+  // Logged in — read role & database password change requirement
   let role = userPayload.app_metadata?.role || userPayload.user_metadata?.role || userPayload.role
-  let mustChangePassword = Boolean(userPayload.app_metadata?.must_change_password ?? userPayload.user_metadata?.must_change_password)
+  const dbProfile = await fetchProfileRoleFromDb(userPayload.sub, userPayload.email || '', supabaseUrl, anonKey, accessToken)
 
-  // Fallback to database lookup if claims are not in JWT token
-  if (!role) {
-    const dbProfile = await fetchProfileRoleFromDb(userPayload.sub, userPayload.email || '', supabaseUrl, anonKey)
-    role = dbProfile.role
-    mustChangePassword = dbProfile.mustChangePassword
-  }
+  if (!role) role = dbProfile.role
+  const mustChangePassword = dbProfile.mustChangePassword
 
   // Force password change redirect for teachers
   if (role === 'teacher' && mustChangePassword && pathname !== '/teacher/profile') {

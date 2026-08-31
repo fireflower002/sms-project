@@ -21,35 +21,18 @@ const CURATED_PALETTE = [
   '#7C3AED', '#F43F5E', '#14B8A6', '#6366F1', '#B45309', '#0EA5E9'
 ]
 
-// Design System Tokens
-const colors = {
-  primary_background: H.bg,
-  card_background: H.surface,
-  card_border: H.border,
-  card_shadow: H.shadows.modal,
-  success_green: H.successGreen,
-  success_dark: '#065F46',
-  success_light: H.successLight,
-  danger_background: H.dangerLight,
-  danger_text: H.danger,
-  text_primary: H.textPrimary,
-  text_secondary: H.textSec,
-  text_muted: H.textMuted,
-  input_background: H.bg,
-  input_border: H.border,
-  overlay_background: 'rgba(28, 25, 23, 0.6)',
-}
+
 
 const styles = {
   triggerButton: {
-    background: colors.success_green,
+    background: H.honey,
     color: '#FFFFFF',
     border: 'none',
-    borderRadius: '12px',
-    fontWeight: '700',
-    fontSize: '14px',
+    borderRadius: H.radius.xl,
+    fontWeight: H.fontWeight.semibold,
+    fontSize: H.fontSize.base,
     padding: '10px 20px',
-    minHeight: '44px',
+    minHeight: H.targetSizes.touchTarget,
     cursor: 'pointer',
     display: 'inline-flex',
     alignItems: 'center',
@@ -65,7 +48,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: '16px',
-    backgroundColor: colors.overlay_background,
+    backgroundColor: 'rgba(9, 9, 11, 0.6)',
     backdropFilter: 'blur(4px)',
   },
   modalContent: {
@@ -73,11 +56,11 @@ const styles = {
     width: '100%',
     maxWidth: '520px',
     borderRadius: '16px',
-    backgroundColor: colors.card_background,
-    border: `1px solid ${colors.card_border}`,
-    boxShadow: colors.card_shadow,
+    backgroundColor: H.surface,
+    border: `1px solid ${H.border}`,
+    boxShadow: H.shadows.modal,
     padding: 'clamp(20px, 5vw, 32px)',
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontFamily: H.font,
     boxSizing: 'border-box' as const,
   },
   header: {
@@ -88,21 +71,21 @@ const styles = {
     marginBottom: '20px'
   },
   headerTitle: {
-    fontWeight: 800,
+    fontWeight: 600,
     fontSize: '22px',
-    color: colors.text_primary,
+    color: H.textPrimary,
     margin: 0,
   },
   headerSubtitle: {
     fontSize: '14px',
-    color: colors.text_secondary,
+    color: H.textSec,
     marginTop: '4px',
     margin: '4px 0 0 0',
   },
   closeButton: {
-    background: colors.primary_background,
-    border: `1px solid ${colors.card_border}`,
-    color: colors.text_secondary,
+    background: H.bg,
+    border: `1px solid ${H.border}`,
+    color: H.textSec,
     borderRadius: '50%',
     width: '40px',
     height: '40px',
@@ -118,20 +101,20 @@ const styles = {
     display: 'block',
     fontSize: '11px',
     fontWeight: 700,
-    color: colors.text_muted,
+    color: H.textMuted,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.06em',
     marginBottom: '8px',
   },
   inputContainer: { position: 'relative' as const, display: 'flex', alignItems: 'center' },
-  inputIcon: { position: 'absolute' as const, left: '14px', color: colors.text_muted, pointerEvents: 'none' as const },
+  inputIcon: { position: 'absolute' as const, left: '14px', color: H.textMuted, pointerEvents: 'none' as const },
   errorBanner: {
     padding: '12px 16px',
     borderRadius: '10px',
-    background: colors.danger_background,
-    border: `1px solid ${colors.danger_text}`,
+    background: H.dangerLight,
+    border: `1px solid ${H.danger}`,
     fontSize: '13px',
-    color: colors.danger_text,
+    color: H.danger,
     display: 'flex',
     alignItems: 'flex-start',
     gap: '10px',
@@ -142,7 +125,7 @@ const styles = {
     width: '100%',
     minHeight: '44px',
     padding: '12px 16px',
-    background: colors.success_green,
+    background: H.successGreen,
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '12px',
@@ -161,9 +144,9 @@ const inputStyle = (isFocused: boolean) => ({
   minHeight: '44px',
   padding: '12px 16px 12px 42px',
   borderRadius: '10px',
-  border: `2px solid ${isFocused ? colors.success_green : colors.input_border}`,
-  background: colors.input_background,
-  color: colors.text_primary,
+  border: `2px solid ${isFocused ? H.successGreen : H.border}`,
+  background: H.bg,
+  color: H.textPrimary,
   fontSize: '14px',
   outline: 'none',
   boxSizing: 'border-box' as const,
@@ -330,14 +313,15 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
 
       const data = await res.json()
 
-      if (!res.ok || data.error) {
+      if (!res.ok || (data.success === false) || data.error) {
         const errMsg = data.error || `Server returned error status ${res.status}`
         setError(errMsg)
         setLoading(false)
         return
       }
 
-      if (data.userId) setCreatedUserId(data.userId)
+      const createdId = data.data?.userId || data.userId
+      if (createdId) setCreatedUserId(createdId)
       setCreatedPassword(tempPassword)
       setLoading(false)
     } catch (err: any) {
@@ -395,8 +379,8 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
 
             {createdPassword ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ padding: '16px', borderRadius: '12px', background: colors.primary_background, border: `1px solid ${colors.card_border}` }}>
-                  <p style={{ fontSize: '13px', fontWeight: 600, color: colors.text_secondary, margin: '0 0 8px' }}>
+                <div style={{ padding: '16px', borderRadius: '12px', background: H.bg, border: `1px solid ${H.border}` }}>
+                  <p style={{ fontSize: '13px', fontWeight: 600, color: H.textSec, margin: '0 0 8px' }}>
                     Teacher added successfully for <strong>{email}</strong>.
                   </p>
                   <label style={styles.label}>Temporary Password</label>
@@ -410,7 +394,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                         fontWeight: 700,
                         fontSize: '16px',
                         letterSpacing: '0.05em',
-                        color: colors.text_primary,
+                        color: H.textPrimary,
                         padding: '10px 14px',
                       }}
                     />
@@ -419,7 +403,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                       onClick={handleCopy}
                       style={{
                         padding: '12px 18px',
-                        background: copied ? colors.success_green : colors.text_primary,
+                        background: copied ? H.successGreen : H.textPrimary,
                         color: '#FFFFFF',
                         border: 'none',
                         borderRadius: '10px',
@@ -433,7 +417,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                       {copied ? 'Copied!' : 'Copy'}
                     </button>
                   </div>
-                  <p style={{ fontSize: '12px', color: colors.danger_text, marginTop: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <p style={{ fontSize: '12px', color: H.danger, marginTop: '10px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <AlertTriangle size={14} /> This is the only time the temporary password will be shown. Please copy and share it manually with the teacher.
                   </p>
                 </div>
@@ -582,7 +566,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                 </div>
 
                 <div>
-                  <label style={styles.label} htmlFor="phone">Phone Number <span style={{ textTransform: 'none', fontWeight: 500, color: colors.text_muted }}>(Optional)</span></label>
+                  <label style={styles.label} htmlFor="phone">Phone Number <span style={{ textTransform: 'none', fontWeight: 500, color: H.textMuted }}>(Optional)</span></label>
                   <div style={styles.inputContainer}>
                     <Phone size={16} style={styles.inputIcon} />
                     <input
@@ -602,7 +586,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <label style={{ ...styles.label, marginBottom: 0 }} htmlFor="subjectSelect">
-                      Subject * <span style={{ textTransform: 'none', fontWeight: 500, color: colors.danger_text }}>(Required)</span>
+                      Subject * <span style={{ textTransform: 'none', fontWeight: 500, color: H.danger }}>(Required)</span>
                     </label>
                     <button
                       type="button"
@@ -610,7 +594,7 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: colors.success_green,
+                        color: H.successGreen,
                         fontSize: '12px',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -691,12 +675,12 @@ export default function AddTeacherModal({ onSuccess }: { onSuccess: () => void }
                   </div>
 
                   {subjectNotice && (
-                    <p style={{ fontSize: '12px', color: colors.success_dark, marginTop: '6px', fontWeight: 600 }}>
+                    <p style={{ fontSize: '12px', color: H.successGreen, marginTop: '6px', fontWeight: 600 }}>
                       ✓ {subjectNotice}
                     </p>
                   )}
                   {selectedSubjects.length === 0 && (
-                    <p style={{ fontSize: '12px', color: colors.text_muted, marginTop: '6px' }}>
+                    <p style={{ fontSize: '12px', color: H.textMuted, marginTop: '6px' }}>
                       At least one subject must be assigned to the teacher.
                     </p>
                   )}

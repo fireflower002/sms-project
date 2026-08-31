@@ -27,3 +27,18 @@ yarn-error.log*
 .env
 .env.production
 .env.development
+
+# database backups & dump files
+backup_pre_migration_*.sql
+/*.sql
+
+# Supabase CLI binaries
+supabase.exe
+supabase-go.exe
+
+# Supabase temporary files
+supabase/.temp/
+
+# Scratch/audit files
+scratch_*.js
+scratch_*.json

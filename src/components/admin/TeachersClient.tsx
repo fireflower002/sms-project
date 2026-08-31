@@ -16,7 +16,7 @@ import ConfirmModal, { ConfirmModalState } from '@/components/ui/ConfirmModal'
 import { exportToCSV } from '@/lib/csvExport'
 import { useToast } from '@/components/ui/Toast'
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 25;
 
 const styles: { [key: string]: React.CSSProperties } = {
   page: { backgroundColor: H.bg, minHeight: '100vh', padding: 'clamp(16px, 4vw, 32px)', boxSizing: 'border-box' },
@@ -325,8 +325,8 @@ export default function TeachersClient({ initialData }: { initialData?: any }) {
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', true),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'teacher').eq('is_active', false),
-        supabase.from('allowed_users').select('*').eq('is_registered', false).order('created_at', { ascending: false }),
-        supabase.from('profiles').select('email').eq('role', 'teacher'),
+        supabase.from('allowed_users').select('id, email, full_name, created_at').eq('is_registered', false).order('created_at', { ascending: false }).range(0, 99),
+        supabase.from('profiles').select('email').eq('role', 'teacher').range(0, 99),
       ]);
 
       const registeredEmails = new Set((profileEmails || []).map(p => p.email?.toLowerCase()));

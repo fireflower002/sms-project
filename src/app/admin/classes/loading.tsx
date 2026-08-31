@@ -1,5 +1,5 @@
-import { GradeCardsSkeleton } from '@/components/ui/Skeleton'
+import { TableSkeleton } from '@/components/ui/Skeleton'
 
 export default function ClassesLoading() {
-  return <GradeCardsSkeleton gradeCount={3} />
+  return <TableSkeleton rows={8} columns={4} />
 }

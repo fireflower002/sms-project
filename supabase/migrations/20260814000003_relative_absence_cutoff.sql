@@ -3,9 +3,13 @@
 -- PURPOSE:   Transition absence cutoff time to relative hours before start
 -- ============================================================
 
--- Rename the old column for safety instead of dropping it
-ALTER TABLE public.school_settings 
-RENAME COLUMN absence_cutoff_time TO absence_cutoff_time_deprecated;
+-- Rename the old column for safety instead of dropping it (if it exists)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'school_settings' AND column_name = 'absence_cutoff_time') THEN
+    ALTER TABLE public.school_settings RENAME COLUMN absence_cutoff_time TO absence_cutoff_time_deprecated;
+  END IF;
+END $$;
 
 -- Add the new hours-before column
 ALTER TABLE public.school_settings 

@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     if (!parseResult.success) {
       const firstError = parseResult.error.issues[0]?.message || 'Invalid email address'
-      return NextResponse.json({ error: firstError }, { status: 400 })
+      return NextResponse.json({ success: false, error: firstError }, { status: 400 })
     }
 
     const { email } = parseResult.data
@@ -47,12 +47,14 @@ export async function POST(request: Request) {
 
     if (lookupErr || !allowed) {
       return NextResponse.json({
+        success: false,
         error: 'This email has not been added by an administrator. Contact your school admin to be registered.'
       }, { status: 403 })
     }
 
     if (allowed.is_registered) {
       return NextResponse.json({
+        success: false,
         error: 'An account already exists for this email. Please sign in instead.'
       }, { status: 400 })
     }
@@ -66,12 +68,13 @@ export async function POST(request: Request) {
 
     if (resetErr) {
       console.error('[API teacher-register] Auth resetPasswordForEmail error:', resetErr)
-      return NextResponse.json({ error: resetErr.message || 'Failed to send registration link' }, { status: 500 })
+      return NextResponse.json({ success: false, error: resetErr.message || 'Failed to send registration link' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, email })
-  } catch (err: any) {
+    return NextResponse.json({ success: true, data: { email } })
+  } catch (err: unknown) {
     console.error('[API teacher-register] Unexpected error:', err)
-    return NextResponse.json({ error: err?.message || 'Server error during registration' }, { status: 500 })
+    const message = err instanceof Error ? err.message : 'Server error during registration'
+    return NextResponse.json({ success: false, error: message }, { status: 500 })
   }
 }
