@@ -9,9 +9,11 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@serwist/next": "^9.5.12",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "@types/sanitize-html": "^2.16.1",
+    "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^4.4.0",
     "lucide-react": "^1.25.0",
     "next": "^15.0.0",
@@ -19,6 +21,7 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "sanitize-html": "^2.17.7",
+    "serwist": "^9.5.12",
     "swr": "^2.5.1",
     "xlsx": "^0.18.5",
     "zod": "^4.4.3"

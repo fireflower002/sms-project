@@ -221,14 +221,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Public pages — no auth required
+  // Public pages & PWA assets — no auth required
   const publicRoutes = [
     '/',
     '/admin/login',
     '/teacher/login',
     '/reset-password',
+    '/offline',
+    '/sw.js',
+    '/manifest.webmanifest',
   ]
-  if (publicRoutes.some(r => pathname === r)) {
+  if (
+    publicRoutes.some(r => pathname === r) ||
+    pathname.startsWith('/icons/') ||
+    pathname.startsWith('/swe-worker-')
+  ) {
     return NextResponse.next()
   }
 
@@ -311,6 +318,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2|ttf|map|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sw\\.js|swe-worker-.*|manifest\\.webmanifest|offline|icons/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|css|js|woff|woff2|ttf|map|ico)$).*)',
   ],
 }

@@ -39,6 +39,11 @@ supabase-go.exe
 # Supabase temporary files
 supabase/.temp/
 
+# Service Worker generated artifacts
+public/sw.js
+public/swe-worker-*.js
+public/sw.js.map
+
 # Scratch/audit files
 scratch_*.js
 scratch_*.json

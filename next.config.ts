@@ -1,8 +1,16 @@
+import path from 'path'
 import type { NextConfig } from 'next'
 import withBundleAnalyzer from '@next/bundle-analyzer'
+import withSerwistInit from '@serwist/next'
 
 const bundleAnalyzer = withBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
+})
+
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
 })
 
 const securityHeaders = [
@@ -33,6 +41,7 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(__dirname, './'),
   experimental: {
     optimizePackageImports: ['lucide-react', 'date-fns'],
   },
@@ -46,4 +55,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default bundleAnalyzer(nextConfig)
+export default bundleAnalyzer(withSerwist(nextConfig))
